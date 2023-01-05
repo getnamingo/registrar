@@ -1317,15 +1317,27 @@ class Registrar_Adapter_EPP extends Registrar_AdapterAbstract
 		return @fclose($this->socket);
 	}
 
-	public function generateObjectPW($objType = 'none')
+	function generateObjectPW($objType = 'none')
 	{
 		$result = '';
-		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!=+-_@#$%^&*()";
+		$uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$lowercaseChars = "abcdefghijklmnopqrstuvwxyz";
+		$numbers = "1234567890";
+		$specialSymbols = "!=+-";
 		$minLength = 13;
 		$maxLength = 13;
 		$length = mt_rand($minLength, $maxLength);
-		while ($length--) {
-			$result .= $chars[mt_rand(1, strlen($chars) - 1) ];
+
+		// Include at least one character from each set
+		$result .= $uppercaseChars[mt_rand(0, strlen($uppercaseChars) - 1)];
+		$result .= $lowercaseChars[mt_rand(0, strlen($lowercaseChars) - 1)];
+		$result .= $numbers[mt_rand(0, strlen($numbers) - 1)];
+		$result .= $specialSymbols[mt_rand(0, strlen($specialSymbols) - 1)];
+
+		// Append random characters to reach the desired length
+		while (strlen($result) < $length) {
+			$chars = $uppercaseChars . $lowercaseChars . $numbers . $specialSymbols;
+			$result .= $chars[mt_rand(0, strlen($chars) - 1)];
 		}
 
 		return 'aA1' . $result;
