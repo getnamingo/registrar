@@ -2,7 +2,7 @@
 
 1. Download and install [WHMCS](https://whmcs.com/)
 
-2. Place the **epp** directory in `[WHMCS]/modules/registrars`
+2. Place the **epp** directory in `[WHMCS]/modules/registrars`, place your key.pem and cert.pem files in the same epp directory.
 
 3. Activate from Configuration -> Apps & Integrations -> (search for _epp_) -> Activate
 
