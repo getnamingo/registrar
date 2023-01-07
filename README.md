@@ -1,4 +1,9 @@
 # Indera
+
+[![StandWithUkraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
+
+[![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
+
 Welcome to our ICANN-accredited domain registrar management system!
 
 **Indera** is a free and open source platform licensed under the MIT license. It is designed to help you streamline your domain registration processes and improve customer satisfaction. It is compatible with popular billing systems such as WHMCS, Blesta and FOSSBilling, and can be modified to work with other billing systems as well.
