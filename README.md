@@ -18,8 +18,8 @@ Whether you are a domain registrar looking to become ICANN-accredited and improv
 
 ## FOSSBilling
 
-(EPP Registrar Module for FOSSBilling (Generic RFC EPP)[https://github.com/getpinga/fossbilling-epp-rfc]
+(EPP Registrar Module for FOSSBilling (Generic RFC EPP))[https://github.com/getpinga/fossbilling-epp-rfc]
 
 ## WHMCS
 
-(EPP Registrar Module for WHMCS (Generic RFC EPP)[https://github.com/getpinga/whmcs-epp-rfc]
+(EPP Registrar Module for WHMCS (Generic RFC EPP))[https://github.com/getpinga/whmcs-epp-rfc]
