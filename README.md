@@ -15,3 +15,11 @@ Some of the key features of Indera include:
 - Customizable workflow: Streamline your processes and reduce costs
 
 Whether you are a domain registrar looking to become ICANN-accredited and improve your business or a developer looking to contribute to the project, Indera is the perfect choice. Join us and revolutionize the world of domain registration!
+
+## FOSSBilling
+
+(EPP Registrar Module for FOSSBilling (Generic RFC EPP)[https://github.com/getpinga/fossbilling-epp-rfc]
+
+## WHMCS
+
+(EPP Registrar Module for WHMCS (Generic RFC EPP)[https://github.com/getpinga/whmcs-epp-rfc]
