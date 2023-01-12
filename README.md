@@ -22,6 +22,8 @@ To utilize our solution, you will require a billing system, currently, we offer 
 
 [EPP Registrar Module for WHMCS (Generic RFC EPP)](https://github.com/getpinga/whmcs-epp-rfc)
 
+[EPP Registrar Module for WHMCS (Hostmaster.ua)](https://github.com/getpinga/whmcs-epp-ua)
+
 ## WHOIS Server
 
 Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [whois.php](whois.php) server.
