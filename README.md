@@ -30,7 +30,7 @@ Please note that this is a draft version and contributions are welcome. Once we 
 
 ## Escrow
 
-https://github.com/getpinga/kaya
+Pleaase check the [Kaya](https://github.com/getpinga/kaya) project for a functional escrow generation script.
 
 ## TMCH
 
