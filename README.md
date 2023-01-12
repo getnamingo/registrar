@@ -16,16 +16,26 @@ Some of the key features of Indera include:
 
 Whether you are a domain registrar looking to become ICANN-accredited and improve your business or a developer looking to contribute to the project, Indera is the perfect choice. Join us and revolutionize the world of domain registration!
 
-## Escrow
+## Billing System
 
-https://github.com/getpinga/kaya
+You will need your choice of a billing system, for the moment we support one of the FOSSBilling and WHMCS. You can use our EPP modules that integrate directly with the regisries.
 
-## FOSSBilling
+### FOSSBilling
 
 [EPP Registrar Module for FOSSBilling (Generic RFC EPP)](https://github.com/getpinga/fossbilling-epp-rfc)
 
 [EPP Registrar Module for FOSSBilling (FRED Registry)](https://github.com/getpinga/fossbilling-epp-fred)
 
-## WHMCS
+### WHMCS
 
 [EPP Registrar Module for WHMCS (Generic RFC EPP)](https://github.com/getpinga/whmcs-epp-rfc)
+
+## WHOIS Server
+
+## RDAP Server
+
+## Escrow
+
+https://github.com/getpinga/kaya
+
+
