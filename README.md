@@ -32,10 +32,22 @@ You will need your choice of a billing system, for the moment we support one of 
 
 ## WHOIS Server
 
+Use provided whois.php server
+
 ## RDAP Server
+
+Use provided rdap.php server
 
 ## Escrow
 
 https://github.com/getpinga/kaya
+
+## TMCH
+
+Use provided tmch.php
+
+## WDRP
+
+Use provided wdrp.php
 
 
