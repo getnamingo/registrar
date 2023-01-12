@@ -34,11 +34,11 @@ Pleaase check the [Kaya](https://github.com/getpinga/kaya) project for a functio
 
 ## TMCH
 
-Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [tmch.php](tmch.php) server.
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [tmch.php](tmch.php) script.
 
 ## WDRP
 
-Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [wdrp.php](wdrp.php) server.
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [wdrp.php](wdrp.php) cron.
 
 ## ERRP
 
