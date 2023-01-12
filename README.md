@@ -32,11 +32,11 @@ You will need your choice of a billing system, for the moment we support one of 
 
 ## WHOIS Server
 
-Use provided whois.php server
+Use provided [whois.php](whois.php) server
 
 ## RDAP Server
 
-Use provided rdap.php server
+Use provided [rdap.php](rdap.php) server
 
 ## Escrow
 
@@ -44,11 +44,11 @@ https://github.com/getpinga/kaya
 
 ## TMCH
 
-Use provided tmch.php
+Use provided [tmch.php](tmch.php)
 
 ## WDRP
 
-Use provided wdrp.php
+Use provided [wdrp.php](wdrp.php)
 
 ## ERRP
 
