@@ -4,21 +4,11 @@
 
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
-Welcome to our ICANN-accredited domain registrar management system!
-
-**Indera** is a free and open source platform licensed under the MIT license. It is designed to help you streamline your domain registration processes and improve customer satisfaction. It is compatible with popular billing systems such as WHMCS, Blesta and FOSSBilling, and can be modified to work with other billing systems as well.
-
-Some of the key features of Indera include:
-
-- ICANN accreditation: Meet all industry standards and regulations with Indera's support for escrow deposit generation and out-of-the-box WHOIS/RDAP servers.
-
-- Customizable workflow: Streamline your processes and reduce costs
-
-Whether you are a domain registrar looking to become ICANN-accredited and improve your business or a developer looking to contribute to the project, Indera is the perfect choice. Join us and revolutionize the world of domain registration!
+**Indera** aims to develop addons for WHMCS or FOSSBilling, turning these platform into a complete and open-source ICANN accredited registrar management system. The addons will enhance the capabilities of these billing and management systems, allowing them to handle the registration, renewal, and management of domain names as an ICANN accredited registrar. By using these addons, businesses will have access to a powerful and flexible solution for managing their domains and customers, while adhering to the strict standards set by ICANN. The project will enable businesses to streamline their domain management operations, improve efficiency and save costs.
 
 ## Billing System
 
-You will need your choice of a billing system, for the moment we support one of the FOSSBilling and WHMCS. You can use our EPP modules that integrate directly with the regisries.
+To utilize our solution, you will require a billing system, currently, we offer compatibility with either FOSSBilling or WHMCS. Our EPP modules integrate directly with the registries to provide a seamless experience for domain management.
 
 ### FOSSBilling
 
@@ -32,11 +22,11 @@ You will need your choice of a billing system, for the moment we support one of 
 
 ## WHOIS Server
 
-Use provided [whois.php](whois.php) server
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [whois.php](whois.php) server.
 
 ## RDAP Server
 
-Use provided [rdap.php](rdap.php) server
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [rdap.php](rdap.php) server.
 
 ## Escrow
 
@@ -44,14 +34,14 @@ https://github.com/getpinga/kaya
 
 ## TMCH
 
-Use provided [tmch.php](tmch.php)
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [tmch.php](tmch.php) server.
 
 ## WDRP
 
-Use provided [wdrp.php](wdrp.php)
+Please note that this is a draft version and contributions are welcome. Once we have a first release, you can use the provided [wdrp.php](wdrp.php) server.
 
 ## ERRP
 
-Use provided errp.php
+Draft expected soon.
 
 
