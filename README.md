@@ -16,6 +16,8 @@ To utilize our solution, you will require a billing system, currently, we offer 
 
 [EPP Registrar Module for FOSSBilling (FRED Registry)](https://github.com/getpinga/fossbilling-epp-fred)
 
+[EPP Registrar Module for FOSSBilling (Hostmaster.ua)](https://github.com/getpinga/fossbilling-epp-ua)
+
 ### WHMCS
 
 [EPP Registrar Module for WHMCS (Generic RFC EPP)](https://github.com/getpinga/whmcs-epp-rfc)
