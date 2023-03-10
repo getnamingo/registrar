@@ -1,46 +1,72 @@
 <?php
 
-// Connect to the database
-$dsn = "mysql:host=localhost;dbname=whois";
-$pdo = new PDO($dsn, "username", "password");
+use Swoole\Server;
 
-$server = new Swoole\Server("0.0.0.0", 43);
+// Create a new Swoole TCP server
+$server = new Server('127.0.0.1', 9501, SWOOLE_PROCESS, SWOOLE_SOCK_TCP);
 
-$server->on("receive", function (Swoole\Server $server, $fd, $reactor_id, $data) use ($pdo) {
-    // Sanitize the domain to prevent SQL injection attacks
-    $domain = $pdo->quote($data);
+// Define the callback function for handling new connections
+$server->on('connect', function (Server $server, $fd) {
+    echo "New client connected: {$fd}\n";
+});
 
-    // Search the database for the domain
-    $stmt = $pdo->query("SELECT * FROM domains WHERE domain = $domain");
-    $row = $stmt->fetch();
-
-    if ($row === false) {
-        // No matching domain was found
-        $response = file_get_contents("no_domain.tpl");
-    } else {
-        // A matching domain was found, so return some data about it
-        $response = file_get_contents("domain_info.tpl");
-        $response = str_replace("{domain}", $row['domain'], $response);
-        $response = str_replace("{owner}", $row['owner'], $response);
-        $response = str_replace("{expiration_date}", $row['expiration_date'], $response);
+// Define the callback function for handling incoming data
+$server->on('receive', function (Server $server, $fd, $from_id, $data) {
+    // Validate the input data
+    $query = trim($data);
+    if (!preg_match('/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $query)) {
+        $error = "Invalid domain name";
+        $server->send($fd, $error);
+        return;
     }
 
-    $server->send($fd, $response);
+    // Query the database for the specified domain
+    $dsn = 'mysql:host=localhost;dbname=database_name';
+    $username = 'username';
+    $password = 'password';
+
+    try {
+        $pdo = new PDO($dsn, $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        $error = "Failed to connect to database: {$e->getMessage()}";
+        $server->send($fd, $error);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM domains WHERE name=:name");
+        $stmt->bindParam(':name', $query);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = "Failed to query database: {$e->getMessage()}";
+        $server->send($fd, $error);
+        return;
+    }
+
+    if (!$row) {
+        $error = "Domain not found";
+        $server->send($fd, $error);
+        return;
+    }
+
+    $details = "Domain Name: {$row['name']}\n";
+    $details .= "Registrar WHOIS Server: {$row['registrar_whois_server']}\n";
+    $details .= "Registrar URL: {$row['registrar_url']}\n";
+    $details .= "Updated Date: {$row['updated_date']}\n";
+    // Include additional domain details as necessary
+
+    // Send the details back to the client
+    $server->send($fd, $details);
 });
 
-$server->start();
-
-// Close the database connection when the server shuts down
-$server->on("shutdown", function () use ($pdo) {
-    $pdo = null;
+// Define the callback function for handling errors
+$server->on('error', function (Server $server, $error_code, $error_message) {
+    echo "Error {$error_code}: {$error_message}\n";
 });
 
-/*
-$placeholders = [
-    "{domain}" => $row['domain'],
-    "{owner}" => $row['owner'],
-    "{expiration_date}" => $row['expiration_date'],
-];
-$response = strtr(file_get_contents("domain_info.tpl"), $placeholders);
-*/
-?>
+// Start the server
+if (!$server->start()) {
+    echo "Failed to start server\n";
+}
