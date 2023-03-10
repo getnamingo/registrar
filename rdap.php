@@ -1,69 +1,84 @@
 <?php
 
-use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
-use PDO;
+use Swoole\Http\Server;
 
-// Replace these values with your own database connection details
-const HOSTNAME = 'localhost';
-const USERNAME = 'username';
-const PASSWORD = 'password';
-const DATABASE = 'rdap';
+// Create a new Swoole HTTP server
+$server = new Server('127.0.0.1', 9501);
 
-$server = new Server("0.0.0.0", 80);
-
+// Define the callback function for handling incoming requests
 $server->on('request', function (Request $request, Response $response) {
-    // Get the domain from the URL path
-    $uri = $request->server['request_uri'];
-    $parts = explode('/', $uri);
-    if (count($parts) < 3) {
+    // Validate the input data
+    $query = trim($request->get['name']);
+    if (!preg_match('/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $query)) {
+        $error = "Invalid domain name";
         $response->status(400);
-        $response->end('Invalid request');
+        $response->end($error);
         return;
     }
-    $domain = $parts[2];
 
-    // Sanitize the domain to prevent SQL injection attacks
-    $domain = str_replace("'", "''", $domain);
-    $domain = str_replace('"', '""', $domain);
-    $domain = str_replace(';', '', $domain);
+    // Query the database for the specified domain
+    $dsn = 'mysql:host=localhost;dbname=database_name';
+    $username = 'username';
+    $password = 'password';
 
-    // Connect to the database
-    $pdo = new PDO("mysql:host=" . HOSTNAME . ";dbname=" . DATABASE, USERNAME, PASSWORD);
+    try {
+        $pdo = new PDO($dsn, $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        $error = "Failed to connect to database: {$e->getMessage()}";
+        $response->status(500);
+        $response->end($error);
+        return;
+    }
 
-    // Search the database for the domain
-    $stmt = $pdo->prepare('SELECT * FROM domains WHERE domain = ?');
-    $stmt->execute([$domain]);
-    $row = $stmt->fetch();
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM domains WHERE name=:name");
+        $stmt->bindParam(':name', $query);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = "Failed to query database: {$e->getMessage()}";
+        $response->status(500);
+        $response->end($error);
+        return;
+    }
+
     if (!$row) {
-        // No matching domain was found
+        $error = "Domain not found";
         $response->status(404);
-        $response->header('Content-Type', 'application/json');
-        $response->end(json_encode([
-            'errorCode' => 404,
-            'title' => 'Not Found',
-            'description' => "The requested domain '$domain' was not found",
-        ]));
+        $response->end($error);
         return;
     }
 
-    // A matching domain was found, so return some data about it
-    $response->header('Content-Type', 'application/json');
-    $response->end(json_encode([
+    // Construct the RDAP response object
+    $rdap_object = [
+        'objectClassName' => 'domain',
+        'rdapConformance' => ['rdap_level_0'],
         'handle' => $row['handle'],
-        'ldhName' => $row['ldh_name'],
-        'unicodeName' => $row['unicode_name'],
-        'entities' => [
-            [
-                'handle' => $row['entity_handle'],
-                'fn' => $row['entity_fn'],
-                'ln' => $row['entity_ln'],
-                'email' => $row['entity_email'],
-            ],
-        ],
-    ]));
+        'ldhName' => $row['name'],
+        'status' => ['active'],
+        'entities' => [],
+        'events' => [],
+        'nameservers' => [],
+        // Include additional domain details as necessary
+    ];
+
+    // Encode the RDAP response object as JSON
+    $rdap_json = json_encode($rdap_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+    // Set the response content type and send the JSON response back to the client
+    $response->header('Content-Type', 'application/rdap+json');
+    $response->end($rdap_json);
 });
 
-$server->start();
-?>
+// Define the callback function for handling errors
+$server->on('error', function (Server $server, $error_code, $error_message) {
+    echo "Error {$error_code}: {$error_message}\n";
+});
+
+// Start the server
+if (!$server->start()) {
+    echo "Failed to start server\n";
+}
