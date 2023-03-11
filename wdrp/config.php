@@ -1,4 +1,12 @@
 <?php
+/**
+ * Indera Registrar System
+ *
+ * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ *
+ * @license MIT
+ */
+
 $config = array(
     'db' => array(
         'host' => getenv('DB_HOST'),
