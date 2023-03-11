@@ -6,6 +6,8 @@
 
 **Indera** aims to develop addons for WHMCS or FOSSBilling, turning these platform into a complete and open-source ICANN accredited registrar management system. The addons will enhance the capabilities of these billing and management systems, allowing them to handle the registration, renewal, and management of domain names as an ICANN accredited registrar. By using these addons, businesses will have access to a powerful and flexible solution for managing their domains and customers, while adhering to the strict standards set by ICANN. The project will enable businesses to streamline their domain management operations, improve efficiency and save costs.
 
+**Attention: We are pleased to announce that all features for the project have been implemented. However, it is not yet ready for production use. We will continue to expand our services gradually, making it easier to work with the billing systems that we support. We welcome any questions or contributions you may have, and we thank you for your patience and support.**
+
 ## Billing System
 
 To utilize our solution, you will require a billing system, currently, we offer compatibility with either FOSSBilling or WHMCS. Our EPP modules integrate directly with the registries to provide a seamless experience for domain management.
