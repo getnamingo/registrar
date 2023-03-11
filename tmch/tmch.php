@@ -1,4 +1,11 @@
 <?php
+/**
+ * Indera Registrar System
+ *
+ * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ *
+ * @license MIT
+ */
 
 $brand = '';
 
@@ -84,7 +91,4 @@ foreach($claims as $claim){
     $note .= PHP_EOL;
 }
 
-
-echo $note; 
-
-?>
+echo $note;
