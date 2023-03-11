@@ -1,4 +1,11 @@
 <?php
+/**
+ * Indera Registrar System
+ *
+ * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ *
+ * @license MIT
+ */
 
 use Swoole\Http\Request;
 use Swoole\Http\Response;
