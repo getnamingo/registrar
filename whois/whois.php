@@ -3,7 +3,7 @@
 use Swoole\Server;
 
 // Create a new Swoole TCP server
-$server = new Server('127.0.0.1', 9501, SWOOLE_PROCESS, SWOOLE_SOCK_TCP);
+$server = new Server('0.0.0.0', 43, SWOOLE_PROCESS, SWOOLE_SOCK_TCP);
 
 // Define the callback function for handling new connections
 $server->on('connect', function (Server $server, $fd) {
