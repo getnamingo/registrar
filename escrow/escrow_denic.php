@@ -7,8 +7,8 @@
  * @license MIT
  */
 
-// Include the Composer autoloader
-require_once 'vendor/autoload.php';
+// Include the generator
+require_once 'includes/DENICEscrowGenerator.php';
 
 // Use the DENICEscrowGenerator class
 use Pinga\Kaya\DENICEscrowGenerator;
