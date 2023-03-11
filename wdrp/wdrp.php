@@ -1,4 +1,12 @@
 <?php
+/**
+ * Indera Registrar System
+ *
+ * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ *
+ * @license MIT
+ */
+
 date_default_timezone_set('UTC');
 
 require_once 'config.php';
