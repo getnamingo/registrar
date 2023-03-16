@@ -7,7 +7,7 @@
  * @license MIT
  */
 
-// Include the generator
+// Include the generator (DENICEscrowGenerator or WHMCSDENICEscrowGenerator)
 require_once 'includes/NCCEscrowGenerator.php';
 
 // Use the NCCEscrowGenerator class
