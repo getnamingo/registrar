@@ -1,0 +1,17 @@
+<?php
+
+return [
+    'db_type' => 'mysql',
+    'db_host' => 'localhost',
+    'db_port' => 3306,
+    'db_database' => 'your_database_name',
+    'db_username' => 'your_username',
+    'db_password' => 'your_password',
+    'privacy' => false,
+    'registrar_whois' => 'whois.example.com',
+    'registrar_url' => 'https://example.com',
+    'registrar_name' => 'Example Registrar LLC',
+    'registrar_iana' => '1000',
+    'abuse_email' => 'abuse@example.com',
+    'abuse_phone' => '+1.234567890'
+];
