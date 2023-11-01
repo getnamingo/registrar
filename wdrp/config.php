@@ -1,11 +1,11 @@
 <?php
 /**
- * Indera Registrar System
+ * Namingo Registrar WDRP
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
- */
+*/
 
 $config = array(
     'db' => array(
@@ -21,5 +21,12 @@ $config = array(
         'return-path' => 'no-reply@example.com',
         'subject' => 'Domain Expiration Notice',
         'message' => "Dear Registrant,\n\nThis is a reminder that your domain %s is set to expire on %s. We recommend renewing your domain to avoid any disruptions to your services.\n\nPlease log in to your account and renew your domain or contact our support team for assistance.\n\nBest Regards,\nDomain Registrar Team",
+        'smtp' => [
+            'host' => 'your_smtp_host',
+            'username' => 'your_smtp_username',
+            'password' => 'your_smtp_password',
+            'encryption' => 'tls',  // or 'ssl'
+            'port' => 587,  // or 465 for ssl
+        ],
     ),
 );
