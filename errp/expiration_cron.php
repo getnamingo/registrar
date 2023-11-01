@@ -1,13 +1,13 @@
 <?php
 /**
- * Indera Registrar System
+ * Namingo Registrar
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
- */
+*/
 
-// Establish database connection using PDO
+// Establish database connection
 $dsn = "mysql:host=localhost;dbname=mydatabase";
 $username = "myusername";
 $password = "mypassword";
@@ -47,20 +47,20 @@ function sendRenewalReminderEmail($to_email, $days_until_expiry) {
 // Define function to check for expiring domain names and send renewal reminder emails
 function sendRenewalReminders($db) {
     // Get all domain names that will expire in the next 30 days
-    $sql = "SELECT * FROM domains WHERE status = 'active' AND expiry_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+    $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     $stmt = $db->prepare($sql);
     try {
         $stmt->execute();
         $expiring_domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($expiring_domains as $domain) {
             // Calculate days until expiry
-            $expiry_date = new DateTime($domain['expiry_date']);
+            $expiry_date = new DateTime($domain['expires_at']);
             $now = new DateTime();
             $days_until_expiry = $expiry_date->diff($now)->days;
 
             // Send renewal reminder emails 30 days, 7 days, and 1 day before expiry
             if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1) {
-                sendRenewalReminderEmail($domain['registrant_email'], $days_until_expiry);
+                sendRenewalReminderEmail($domain['contact_email'], $days_until_expiry);
             }
         }
     } catch (PDOException $e) {
