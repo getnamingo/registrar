@@ -1,24 +1,24 @@
 <?php
 /**
- * Kaya Registrar Escrow library
+ * Namingo Registrar Escrow
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
- */
+*/
 
-// Include the generator (DENICEscrowGenerator or WHMCSDENICEscrowGenerator)
-require_once 'includes/DENICEscrowGenerator.php';
+// Include the generator (FOSS or WHMCS)
+require_once 'includes/FOSS.php';
 
-// Use the DENICEscrowGenerator class
-use Pinga\Kaya\DENICEscrowGenerator;
+// Use the FOSS class by default
+use Namingo\Registrar\FOSS;
 
-$full = '/opt/kaya/full.csv';
-$hdl = '/opt/kaya/hdl.csv';
+$full = '/opt/namingo/escrow/full.csv';
+$hdl = '/opt/namingo/escrow/hdl.csv';
 $pdo = new PDO("mysql:host=localhost;dbname=database", 'username', 'password');
 
-// Create the Escrow generator
-$escrowGenerator = new DENICEscrowGenerator($pdo, $full, $hdl);
+// Initialise the escrow generator
+$escrowGenerator = new FOSS($pdo, $full, $hdl);
 
 // Generate the escrow deposits
 $escrowGenerator->generateFull();

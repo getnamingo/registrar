@@ -1,15 +1,15 @@
 <?php
 /**
- * Kaya Registrar Escrow library
+ * Namingo Registrar Escrow
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
- */
+*/
 
-namespace Pinga\Kaya;
+namespace Namingo\Registrar;
 
-class WHMCSDENICEscrowGenerator
+class FOSS
 {
     private $pdo;
     private $full;
@@ -24,21 +24,19 @@ class WHMCSDENICEscrowGenerator
 
     public function generateFull(): void
     {
-        // Query the WHMCS database for the domain data
-        $stmt = $this->pdo->prepare("SELECT d.domain AS domain, d.status, d.registrationdate, d.expirydate, d.nextduedate, c.id AS aid
-                                      FROM tbldomains d
-                                      JOIN tblclients c ON d.userid = c.id");
+        // Query the database for the domain data
+        $stmt = $this->pdo->prepare("SELECT CONCAT(s.sld, '', s.tld) AS domain, s.ns1, s.ns2, s.ns3, s.ns4, s.expires_at, c.aid, DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate` FROM service_domain s JOIN client c ON s.client_id = c.id");
         $stmt->execute();
 
         // Open the file for writing
         $file = fopen($this->full, 'w');
 
         // Write the CSV header row
-        fwrite($file, '"domain","status","registration_date","expiry_date","next_due_date","rt-handle","tc-handle","ac-handle","bc-handle","prt-handle","ptc-handle","pac-handle","pbc-handle"' . "\n");
+        fwrite($file, '"domain","ns1","ns2","ns3","ns4","expiration_date","rt-handle","tc-handle","ac-handle","bc-handle","prt-handle","ptc-handle","pac-handle","pbc-handle"' . "\n");
 
         // Write the data rows to the file
         while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
-            $line = "\"{$row['domain']}\",\"{$row['status']}\",\"{$row['registrationdate']}\",\"{$row['expirydate']}\",\"{$row['nextduedate']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\"";
+            $line = "\"{$row['domain']}\",\"{$row['ns1']}\",\"{$row['ns2']}\",\"{$row['ns3']}\",\"{$row['ns4']}\",\"{$row['exdate']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\",\"{$row['aid']}\"";
             fwrite($file, "$line\n");
         }
 
@@ -48,8 +46,8 @@ class WHMCSDENICEscrowGenerator
 
     public function generateHDL(): void
     {
-        // Query the WHMCS database for the registrant data
-        $stmt = $this->pdo->prepare("SELECT id AS aid, CONCAT(firstname, ' ', lastname) AS name, address1, state, postcode, city, country, email, phonenumber AS phone FROM tblclients");
+        // Query the database for the registrant data
+        $stmt = $this->pdo->prepare("SELECT aid, CONCAT(first_name, ' ', last_name) AS name, address_1, state, postcode, city, country, email, CONCAT('+', phone_cc, '.', phone) AS phone FROM client");
         $stmt->execute();
 
         // Open the file for writing
@@ -60,6 +58,10 @@ class WHMCSDENICEscrowGenerator
 
         // Write the data rows to the file
         while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            // Ensure the phone number starts with a single '+'
+            if (isset($row['phone'])) {
+                $row['phone'] = '+' . ltrim($row['phone'], '+');
+            }
             // Join the values with a comma separator and surround them with double quotes
             $line = '"' . implode('","', $row) . '"';
             // Add the value for fax that does not exist
