@@ -25,23 +25,23 @@ $server->set([
     'package_eof' => "\r\n"
 ]);
 
+// Connect to the database
+try {
+    $c = require_once 'config.php';
+    $pdo = new PDO("{$c['db_type']}:host={$c['db_host']};dbname={$c['db_database']}", $c['db_username'], $c['db_password']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    $server->send($fd, "Error connecting to database");
+    $server->close($fd);
+}
+
 // Register a callback to handle incoming connections
 $server->on('connect', function ($server, $fd) {
     echo "Client connected: {$fd}\r\n";
 });
 
 // Register a callback to handle incoming requests
-$server->on('receive', function ($server, $fd, $reactorId, $data) {
-    // Connect to the database
-    try {
-        $c = require_once 'config.php';
-        $pdo = new PDO("{$c['db_type']}:host={$c['db_host']};dbname={$c['db_database']}", $c['db_username'], $c['db_password']);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch (PDOException $e) {
-        $server->send($fd, "Error connecting to database");
-        $server->close($fd);
-    }
-    
+$server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pdo) {
     $privacy = $c['privacy'];
     
     // Validate and sanitize the data
@@ -97,11 +97,13 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) {
                 ."\nRegistrar URL: ".$c['registrar_url']
                 ."\nUpdated Date: ".$f['update']
                 ."\nCreation Date: ".$f['crdate']
-                ."\nRegistry Expiry Date: ".$f['exdate']
+                ."\nRegistrar Registration Expiration Date: ".$f['exdate']
                 ."\nRegistrar: ".$c['registrar_name']
                 ."\nRegistrar IANA ID: ".$c['registrar_iana']
                 ."\nRegistrar Abuse Contact Email: ".$c['abuse_email']
-                ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone'];
+                ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone']
+                ."\nReseller: ".'TODO'
+                ."\nReseller URL: ".'TODO';
                 
             $res .= "\nDomain Status: " . 'TODO' . " https://icann.org/epp#" . 'TODO';
 
@@ -221,7 +223,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) {
             $res .= "\n";
             $res .= "\nFor more information on Whois status codes, please visit https://icann.org/epp";
             $res .= "\n\n";
-            $res .= "Access to WHOIS information is provided by the Registrar to help"
+            $res .= "Terms of Use: Access to WHOIS information is provided by the Registrar to help"
                 ."\nindividuals determine details of a domain name registration record"
                 ."\nin the Registrar's WHOIS database. This record's data is for"
                 ."\ninformational purposes only, and the Registrar makes no guarantees"
@@ -265,6 +267,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) {
 
     // Close the connection
     $pdo = null;
+
 });
 
 // Register a callback to handle client disconnections
