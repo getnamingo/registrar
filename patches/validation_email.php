@@ -18,25 +18,25 @@ $db = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_
 $contact_id = '123456';
 
 // Check if contact is in database and not yet validated
-$stmt = $db->prepare("SELECT * FROM contacts WHERE id = :id AND validated = 0");
+$stmt = $db->prepare("SELECT * FROM client WHERE custom_3 = :id AND custom_2 = 0");
 $stmt->bindParam(':id', $contact_id);
 $stmt->execute();
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($row) {
   // Generate unique link ID
-  $uuid = uniqid();
+  $token = uniqid();
 
   // Update database with link ID
-  $stmt = $db->prepare("UPDATE contacts SET uuid = :uuid WHERE id = :id");
-  $stmt->bindParam(':uuid', $uuid);
+  $stmt = $db->prepare("UPDATE client SET custom_1 = :token WHERE id = :id");
+  $stmt->bindParam(':token', $token);
   $stmt->bindParam(':id', $contact_id);
   $stmt->execute();
 
   // Send email with validation link
   $to = 'contact_email@example.com';
   $subject = 'Validation Link';
-  $link = "https://validate.example.com/?$uuid";
+  $link = "https://example.com/validate.php?token=$token";
   $message = "Please click the following link to validate your contact information:\n\n$link";
   $headers = "From: noreply@example.com\r\n";
   mail($to, $subject, $message, $headers);

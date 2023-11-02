@@ -14,30 +14,30 @@ $db_user = 'your_db_user';
 $db_pass = 'your_db_password';
 $db = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
 
-// Check if UUID is provided in URL
-if (isset($_GET['uuid'])) {
-  $uuid = $_GET['uuid'];
+// Check if token is provided in URL
+if (isset($_GET['token'])) {
+  $token = $_GET['token'];
 
-  // Look up UUID in database
-  $stmt = $db->prepare("SELECT * FROM contacts WHERE uuid = :uuid");
-  $stmt->bindParam(':uuid', $uuid);
+  // Look up token in database
+  $stmt = $db->prepare("SELECT * FROM client WHERE custom_1 = :token");
+  $stmt->bindParam(':token', $token);
   $stmt->execute();
   $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  // If UUID is found and not yet validated, update database and display success message
-  if ($row && $row['validated'] == 0) {
+  // If token is found and not yet validated, update database and display success message
+  if ($row && $row['custom_2'] == 0) {
     $contact_id = $row['id'];
-    $stmt = $db->prepare("UPDATE contacts SET validated = 1 WHERE id = :id");
+    $stmt = $db->prepare("UPDATE client SET custom_2 = 1 WHERE id = :id");
     $stmt->bindParam(':id', $contact_id);
     $stmt->execute();
     $message = 'Contact information validated successfully!';
   }
-  // If UUID is not found or already validated, display error message
+  // If token is not found or already validated, display error message
   else {
     $message = 'Error: Invalid or already validated validation link.';
   }
 }
-// If UUID is not provided in URL, display default message
+// If token is not provided in URL, display default message
 else {
   $message = 'Please provide a validation link.';
 }
@@ -48,7 +48,7 @@ else {
 <head>
   <meta charset="UTF-8">
   <title>Contact Validation</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
 </head>
 <body>
   <div class="container">

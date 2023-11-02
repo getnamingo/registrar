@@ -110,3 +110,14 @@ Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the insta
 Ensure you make all contact details/profile mandatory for your users within the FOSSBilling settings or configuration.
 
 ## WHOIS
+
+## Contact Validation
+
+1. Move `validate.php`:
+
+```bash
+mv patches/validate.php /var/www/icann/validate.php
+```
+
+2. Configure Database Access in validate.php:
+Open the `/var/www/icann/validate.php` file in your preferred text editor. Locate the section for database configuration and update it with your database access details, such as database name, username, password, and host.
