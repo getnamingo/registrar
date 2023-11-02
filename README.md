@@ -1,76 +1,68 @@
-# Namingo Registrar
+# Namingo Registrar Platform
+
+Open source ICANN-accredited domain registrar management system.
 
 [![StandWithUkraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
-**Namingo** aims to develop addons for WHMCS or FOSSBilling, turning these platform into a complete and open-source ICANN accredited registrar management system. The addons will enhance the capabilities of these billing and management systems, allowing them to handle the registration, renewal, and management of domain names as an ICANN accredited registrar. By using these addons, businesses will have access to a powerful and flexible solution for managing their domains and customers, while adhering to the strict standards set by ICANN. The project will enable businesses to streamline their domain management operations, improve efficiency and save costs.
+## Introduction
 
-**Attention: We are pleased to announce that all features for the project have been implemented. However, it is not yet ready for production use. We will continue to expand our services gradually, making it easier to work with the billing systems that we support. We welcome any questions or contributions you may have, and we thank you for your patience and support.**
+**Namingo Registrar Platform**, built atop [FOSSBilling](https://fossbilling.org/), transforms the system into a comprehensive and open-source [ICANN](https://icann.org/) accredited registrar management system. It provides a powerful and flexible solution for managing domain names as an ICANN accredited registrar, adhering to the stringent standards set by ICANN.
 
-## Billing System
+While our platform is primarily designed for FOSSBilling, it can be adapted to work with [WHMCS](https://www.whmcs.com/). Using Namingo, businesses can streamline domain management operations, enhance efficiency, and reduce costs.
 
-To utilize our solution, you will require a billing system, currently, we offer compatibility with either FOSSBilling or WHMCS. Our EPP modules integrate directly with the registries to provide a seamless experience for domain management.
+**📢 Announcement: We're thrilled to report that all the project's features have been implemented. However, the platform isn't ready for production use just yet. As we continue to refine and expand our services, we aim to provide a seamless experience for our users. Your questions or contributions are always welcome. Thank you for your continued patience and support.**
 
-### FOSSBilling
+## Get Involved
 
-[EPP Registrar Module for FOSSBilling (Generic RFC EPP)](https://github.com/getpinga/fossbilling-epp-rfc)
+We're on a mission to make **Namingo** the best it can be, and we need your expertise! Whether you're adept in development, have a keen eye for design, or simply brim with innovative ideas, your contribution can make a world of difference.
 
-[EPP Registrar Module for FOSSBilling (FRED Registry)](https://github.com/getpinga/fossbilling-epp-fred)
+### Current Status:
 
-[EPP Registrar Module for FOSSBilling (Hostmaster.ua)](https://github.com/getpinga/fossbilling-epp-ua)
+- **Contact Validation** and **TMCH** need more work.
 
-### WHMCS
+## Features
 
-[EPP Registrar Module for WHMCS (Generic RFC EPP)](https://github.com/getpinga/whmcs-epp-rfc)
+- **Billing System**: Manages domain registrations, renewals, and payments as an ICANN accredited registrar, while also establishing EPP connections to registries for seamless domain operations.
 
-[EPP Registrar Module for WHMCS (Hostmaster.ua)](https://github.com/getpinga/whmcs-epp-ua)
+- **WHOIS Server**: Provides instant domain registration information in line with ICANN's format.
 
-## WHOIS Server
+- **RDAP Server**: Modern protocol offering structured domain registration data, accessible via HTTP in JSON format.
 
-The WHOIS server is an essential tool for anyone looking to retrieve important information about a domain name, including its owner, registration and expiration dates, and contact information. The ICANN requires all registrars to provide access to this data via a WHOIS server.
+- **Escrow**: Safeguards domain registrants by depositing registration data with a trusted escrow agent, mandated by ICANN.
 
-To comply with these requirements, the WHOIS server connects to a billing system database to retrieve registration information for a given domain name. This information includes details like the domain name itself, the registrar responsible for its management, and the contact information associated with the domain.
+- **TMCH**: Allows trademark holders to register their marks and receive domain registration alerts.
 
-The WHOIS server is designed to handle a large number of concurrent connections efficiently. It retrieves the necessary data from the billing system database and formats it according to the ICANN's WHOIS format before sending it back to the client.
+- **WDRP**: Sends regular reminders to domain name registrants to update their WHOIS data, ensuring accuracy.
 
-Overall, the WHOIS server is an essential tool for anyone looking to retrieve domain registration information, and by utilizing efficient technology, it can quickly provide this data in compliance with ICANN requirements.
+- **ERRP**: Ensures compliance with ICANN's policies on managing expired domain names.
 
-## RDAP Server
+- **Contact Validation**: Validates domain name registrant's contact details for accuracy and authenticity.
 
-An RDAP (Registration Data Access Protocol) server is a tool that provides access to domain registration data in compliance with ICANN's RDAP requirements. Like WHOIS servers, RDAP servers connect to a billing system database to retrieve domain registration data, including details like the domain name, registrar, registration and expiration dates, and contact information.
+## Installation Instructions
 
-However, unlike WHOIS servers, RDAP servers use a more modern protocol and data format that provides more structured and standardized data. RDAP servers also support more granular access control, enabling users to access only the data they are authorized to view.
+The installation instructions have been moved to a separate file to keep things organized. For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
 
-To retrieve data from the RDAP server, clients send requests using HTTP, and the server responds with a JSON-formatted response. This format provides more structure and uniformity than WHOIS, making it easier for clients to parse the data and incorporate it into their own applications.
+## Support
 
-RDAP servers are also designed to handle a large number of concurrent connections, ensuring that users can access domain registration data quickly and efficiently. They can be integrated with billing systems to automate the retrieval of registration data and ensure that the data provided is always up to date.
+Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If you need support, have questions, or want to contribute your thoughts:
 
-Overall, RDAP servers provide a modern, efficient, and standardized approach to domain registration data access that is compliant with ICANN's requirements.
+- **Email**: Feel free to reach out directly at [help@namingo.org](mailto:help@namingo.org).
+  
+- **GitHub Issues**: For bug reports or feature requests, please use the [Issues](https://github.com/getnamingo/registrar/issues) section of our GitHub repository.
 
-## Escrow
+- **GitHub Discussions**: For general discussions, ideas, or to connect with our community, visit the [Discussion](https://github.com/getnamingo/registrar/discussions) page on our GitHub project.
 
-Registrar Data Escrow is a service that protects domain name registrants in the event of a registrar's failure or termination. The service requires registrars to regularly deposit their customer registration data into an escrow agent, who stores the data securely and ensures its availability in case the registrar is no longer able to provide the service.
+We appreciate your involvement and patience as Namingo continues to grow and adapt.
 
-The data escrow process typically involves the transfer of a copy of the registrar's database to the escrow agent on a regular basis, such as weekly or monthly. This copy contains all customer registration data, including domain names, contact details, and registration and expiry dates.
+## Acknowledgements
 
-In the event of a registrar's failure or termination, the escrow agent releases the registration data to a designated successor registrar or ICANN itself. This ensures that domain name registrants can continue to manage their domains and avoid the loss of their domain names due to the registrar's failure.
+Special thanks to **FOSSBilling team** for their inspirational work on [FOSSBilling](https://fossbilling.org/).
 
-Registrar Data Escrow is an essential service that helps to protect the interests of domain name registrants and ensures the stability of the domain name system. It is required by ICANN for all accredited registrars and must be performed by a trusted third-party escrow agent.
+Additionally, we extend our gratitude to:
+- **ChatGPT** for invaluable assistance with code and text writing.
 
-## TMCH
+## Licensing
 
-Support for Trademark Clearinghouse access: This service provides access to the Trademark Clearinghouse, which helps to protect trademarks in the domain name system. It allows trademark holders to register their marks and receive notifications when domain names containing their marks are registered.
-
-## WDRP
-
-Support for ICANN WHOIS Data Reminder policy: This service ensures that domain name registrants receive regular reminders to review and update their WHOIS data. It helps to ensure that accurate and up-to-date registration information is available to those who need it.
-
-## ERRP
-
-Support for ICANN Expired Domains policy: This service ensures compliance with ICANN's Expired Domains policy, which outlines the procedures for managing domain names that have expired. It helps to ensure that expired domain names are properly managed and made available for re-registration.
-
-## Contact Validaiton
-
-Support for contact validation: This service validates contact information provided by domain name registrants, ensuring that it is accurate and up to date. It helps to reduce the risk of fraud and ensures that communication regarding the domain name is delivered to the correct person or organization.
-
+Namingo is licensed under the MIT License.
