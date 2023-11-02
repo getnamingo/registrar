@@ -5,7 +5,7 @@
  * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
-*/
+ */
 
 date_default_timezone_set('UTC');
 require_once 'config.php';

@@ -1,8 +1,8 @@
 <?php
 /**
- * Indera Registrar System
+ * Namingo Registrar
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */

@@ -5,24 +5,24 @@
  * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
-*/
+ */
+ 
+require_once 'config.php';
 
-// Establish database connection
-$dsn = "mysql:host=localhost;dbname=mydatabase";
-$username = "myusername";
-$password = "mypassword";
-$options = array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
+// Set up database connection
 try {
-    $db = new PDO($dsn, $username, $password, $options);
+    $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
+    error_log('Database connection error: ' . $e->getMessage());
+    exit('Oops! Something went wrong.');
 }
 
 // Define function to update nameservers for expired domain names
-function updateExpiredDomainNameservers($db) {
+function updateExpiredDomainNameservers($pdo) {
     // Get all expired domain names with registrar nameservers
     $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
-    $stmt = $db->prepare($sql);
+    $stmt = $pdo->prepare($sql);
     try {
         $stmt->execute();
         $expired_domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -33,7 +33,7 @@ function updateExpiredDomainNameservers($db) {
 
             // Prepare the SQL query
             $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
-            $stmt = $db->prepare($sql);
+            $stmt = $pdo->prepare($sql);
 
             // Bind the parameters
             $stmt->bindParam(':ns1', $ns1);
@@ -54,4 +54,4 @@ function updateExpiredDomainNameservers($db) {
 }
 
 // Call the function to update expired domain nameservers
-updateExpiredDomainNameservers($db);
+updateExpiredDomainNameservers($pdo);

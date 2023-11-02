@@ -29,4 +29,8 @@ $config = array(
             'port' => 587,  // or 465 for ssl
         ],
     ),
+    'escrow' => array(
+        'full' => '/opt/namingo/escrow/full.csv',
+        'hdl' => '/opt/namingo/escrow/hdl.csv'
+    ),
 );
