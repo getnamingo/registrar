@@ -109,9 +109,53 @@ Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the insta
 
 Ensure you make all contact details/profile mandatory for your users within the FOSSBilling settings or configuration.
 
-## WHOIS
+## 13. Additional Tools
 
-## Contact Validation
+1. Clone the repository to your system:
+
+```bash
+git clone https://github.com/getnamingo/registrar /opt/namingo
+```
+
+## 14. WHOIS
+
+1. Rename the configuration template for WHOIS:
+
+```bash
+mv /opt/namingo/registrar/whois/port43/config.php.dist /opt/namingo/registrar/whois/port43/config.php
+```
+
+2. Edit the newly created `config.php` with the appropriate database details and preferences as required.
+
+3. Start the WHOIS service:
+
+```bash
+php /opt/namingo/registrar/whois/port43/start_whois.php
+```
+
+4. **Note:** Tools located in `/opt/namingo/registrar/whois/web` can be integrated with your registrar website for enhanced functionality.
+
+## 15. RDAP
+
+*Details to be filled in for RDAP setup.*
+
+## 16. Automation
+
+1. Edit `config.php.dist` with necessary details.
+
+2. Download and initiate the escrow RDE client setup:
+
+```bash
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+./escrow-rde-client -i
+```
+
+3. Edit the generated configuration file with the required details.
+
+4. Set up the required tools to run automatically using `cron`. This includes setting up the `escrow-rde-client` to run at your desired intervals.
+
+## 17. Contact Validation
 
 1. Move `validate.php`:
 
