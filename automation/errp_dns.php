@@ -8,6 +8,39 @@
  */
  
 require_once 'config.php';
+require_once 'includes/eppClient.php';
+
+use Pinga\Tembo\eppClient;
+$registrar = "Epp";
+
+function connectEpp(string $registry, $config)
+{
+    try
+    {
+        $epp = new eppClient();
+        $info = [
+        "host" => $config["host"],
+        "port" => $config["port"], "timeout" => 30, "tls" => "1.2", "bind" => false, "bindip" => "1.2.3.4:0", "verify_peer" => false, "verify_peer_name" => false,
+        "verify_host" => false, "cafile" => "", "local_cert" => $config["ssl_cert"], "local_pk" => $config["ssl_key"], "passphrase" => "", "allow_self_signed" => true, ];
+        $epp->connect($info);
+        $login = $epp->login(["clID" => $config["username"], "pw" => $config["password"],
+        "prefix" => "tembo", ]);
+        if (array_key_exists("error", $login))
+        {
+            echo "Login Error: " . $login["error"] . PHP_EOL;
+            exit();
+        }
+        else
+        {
+            echo "Login Result: " . $login["code"] . ": " . $login["msg"][0] . PHP_EOL;
+        }
+        return $epp;
+    }
+    catch(EppException $e)
+    {
+        return "Error : " . $e->getMessage();
+    }
+}
 
 // Set up database connection
 try {
@@ -43,9 +76,25 @@ function updateExpiredDomainNameservers($pdo) {
             // Execute the query
             $stmt->execute();
 
-            // Send EPP update to registry (just a comment here, no real EPP connection yet)
-            $epp_command = "update domain " . $domain['name'] . " nameservers " . implode(' ', $new_nameservers);
-            error_log("Sent EPP command: " . $epp_command);
+            // Send EPP update to registry
+			$epp = connectEpp("generic", $config);
+			$params = array(
+				'domainname' => $domain['sld'].$domain['tld'],
+				'ns1' => $ns1,
+				'ns2' => $ns2
+			);
+			$domainUpdateNS = $epp->domainUpdateNS($params);
+			
+			if (array_key_exists('error', $domainUpdateNS))
+			{
+				echo 'DomainUpdateNS Error: ' . $domainUpdateNS['error'] . PHP_EOL;
+			}
+			else
+			{
+				echo 'ERRP cron completed successfully' . PHP_EOL;
+			}
+			
+			$logout = $epp->logout();
         }
     } catch (PDOException $e) {
         // Log the error
