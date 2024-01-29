@@ -49,6 +49,8 @@ The installation instructions have been moved to a separate file to keep things 
 Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If you need support, have questions, or want to contribute your thoughts:
 
 - **Email**: Feel free to reach out directly at [help@namingo.org](mailto:help@namingo.org).
+
+- **Discord**: Or chat with us on our [Discord](https://discord.gg/Rhy5KT7s) channel.
   
 - **GitHub Issues**: For bug reports or feature requests, please use the [Issues](https://github.com/getnamingo/registrar/issues) section of our GitHub repository.
 
