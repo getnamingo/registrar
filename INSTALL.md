@@ -308,7 +308,7 @@ cd /opt/registry/automation
 mv config.php.dist config.php
 ```
 
-Edit the `config.php` with the appropriate database details and preferences as required.
+Edit the `config.php` with the appropriate preferences as required.
 
 Download and initiate the escrow RDE client setup:
 
@@ -324,13 +324,8 @@ Set up the required tools to run automatically using `cron`. This includes setti
 
 ## 15. Contact Validation:
 
-Move `validate.php`:
-
 ```bash
 mv /opt/registrar/patches/validate.php /var/www/validate.php
 ```
-
-Configure Database Access in validate.php:
-Open the `/var/www/validate.php` file in your preferred text editor. Locate the section for database configuration and update it with your database access details, such as database name, username, password, and host.
 
 The other 2 files in `/opt/registrar/patches` are to be integrated with your workflow.

@@ -6,13 +6,14 @@
  *
  * @license MIT
  */
+ 
+$config = include __DIR__ . '/config.php';
+$c = $config["db"];
 
 // Set up database connection
-$db_host = 'your_db_host';
-$db_name = 'your_db_name';
-$db_user = 'your_db_user';
-$db_pass = 'your_db_password';
-$db = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
+$dsn = $c["type"] . ":host=" . $c["host"] . ";port=" . $c["port"] . ";dbname=" . $c["name"];
+$db = new PDO($dsn, $c["user"], $c["password"]);
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 // Check if token is provided in URL
 if (isset($_GET['token'])) {
