@@ -6,9 +6,8 @@
 apt install -y curl software-properties-common ufw
 add-apt-repository ppa:ondrej/php
 add-apt-repository ppa:ondrej/nginx-mainline
-apt install -y debian-keyring debian-archive-keyring apt-transport-https
 apt update
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-xml python3-certbot-nginx unzip wget whois
+apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-xml python3-certbot-nginx unzip wget whois
 ```
 
 ### Configure PHP:
@@ -47,6 +46,15 @@ After configuring PHP, restart the service to apply changes:
 systemctl restart php8.2-fpm
 ```
 
+### Obtain SSL Certificate with Certbot:
+
+Replace `%%DOMAIN%%` with your actual domain:
+
+```bash
+systemctl stop nginx
+certbot certonly --standalone -d %%DOMAIN%%
+```
+
 ### Configure Nginx:
 
 ```bash
@@ -58,8 +66,8 @@ server {
 
 server {
 	listen 443 ssl http2;
-	ssl_certificate      /path/to/ssl/certicate.crt;
-	ssl_certificate_key  /path/to/ssl/certicate.key;
+	ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
+	ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
 	ssl_stapling on;
 	ssl_stapling_verify on;
 
@@ -136,14 +144,6 @@ ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
 systemctl restart nginx
 ```
 
-### Obtain SSL Certificate with Certbot:
-
-Replace your.domain with your actual domain:
-
-```bash
-certbot --nginx -d your.domain
-```
-
 ## 2. Install and configure MariaDB:
 
 ```bash
@@ -166,7 +166,7 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```
 
 ```bash
-apt-get update
+apt update
 apt install -y mariadb-client mariadb-server php8.2-mysql
 mysql_secure_installation
 ```
@@ -182,27 +182,26 @@ mysql -u root -p
 2. Execute the following queries:
 
 ```bash
-CREATE DATABASE fossbilling;
-CREATE USER 'fossbillinguser'@'localhost' IDENTIFIED BY 'RANDOM_STRONG_PASSWORD';
-GRANT ALL PRIVILEGES ON fossbilling.* TO 'fossbillinguser'@'localhost';
+CREATE DATABASE registrar;
+CREATE USER 'registraruser'@'localhost' IDENTIFIED BY 'RANDOM_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON registrar.* TO 'registraruser'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Replace `RANDOM_STRONG_PASSWORD` with a secure password of your choice.
+Replace `registraruser` with your desired username and `RANDOM_STRONG_PASSWORD` with a secure password of your choice.
 
 [Tune your MariaDB](https://github.com/major/MySQLTuner-perl)
 
 ## 3. Install Adminer:
 
 ```bash
-mkdir /usr/share/adminer
-wget "http://www.adminer.org/latest.php" -O /usr/share/adminer/latest.php
-ln -s /usr/share/adminer/latest.php /usr/share/adminer/adminer.php
+wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 ```
 
 ## 4. Download and Extract FOSSBilling:
 
 ```bash
+cd /tmp
 wget https://fossbilling.org/downloads/stable -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 ```
@@ -212,13 +211,17 @@ unzip fossbilling.zip -d /var/www
 ```bash
 chmod -R 755 /var/www/config.php
 chmod -R 755 /var/www/data/cache
+chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
+chown www-data:www-data /var/www/data/log
 chmod -R 755 /var/www/data/uploads
+chown www-data:www-data /var/www/data/uploads
+chown www-data:www-data /var/www
 ```
 
 ## 6. FOSSBilling Installation:
 
-Proceed with the installation as prompted. If the installer stops without any feedback, navigate to https://YOUR.DOMAIN/admin in your web browser and try to log in.
+Proceed with the installation as prompted on https://%%DOMAIN%%. If the installer stops without any feedback, navigate to https://%%DOMAIN%%/admin in your web browser and try to log in.
 
 ## 7. Installing Theme:
 
