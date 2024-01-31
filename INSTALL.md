@@ -57,6 +57,8 @@ certbot certonly --standalone -d %%DOMAIN%%
 
 ### Configure Nginx:
 
+Replace `%%DOMAIN%%` with your actual domain:
+
 ```bash
 server {
 	listen 80;
@@ -165,6 +167,8 @@ Components: main main/debug
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```
 
+Then execute the following commands:
+
 ```bash
 apt update
 apt install -y mariadb-client mariadb-server php8.2-mysql
@@ -239,15 +243,17 @@ For each registry you support, you will need to install a FOSSBilling EPP-RFC ex
 
 Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
 
+To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
+
 ## 9. Installing FOSSBilling DNS Hosting Extensions:
 
 To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
 
-Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions specific to each registry.
+Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
 
 ## 10. Configure FOSSBilling Settings:
 
-Ensure you make all contact details/profile mandatory for your users within the FOSSBilling settings or configuration.
+Ensure you make all contact details/profile ***mandatory*** for your users within the FOSSBilling settings or configuration.
 
 ## 11. Additional Tools:
 
@@ -277,8 +283,6 @@ systemctl enable whois.service
 
 After that you can manage WHOIS via systemctl as any other service.
 
-Use the example WHOIS/RDAP web client in `/opt/registrar/whois/web` for your registrar website.
-
 ## 13. Setup RDAP:
 
 ```bash
@@ -304,7 +308,8 @@ After that you can manage RDAP via systemctl as any other service.
 ## 14. Setup Automation Scripts:
 
 ```bash
-cd /opt/registry/automation
+cd /opt/registrar/automation
+composer install
 mv config.php.dist config.php
 ```
 
@@ -318,9 +323,15 @@ tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
 ./escrow-rde-client -i
 ```
 
-Edit the generated configuration file with the required details.
+Edit the generated configuration file with the required details. Once ready, enable running the escrow client in `/opt/registrar/automation/escrow.php`.
 
-Set up the required tools to run automatically using `cron`. This includes setting up the `escrow-rde-client` to run at your desired intervals.
+## Running the Automation System
+
+Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
+
+```bash
+* * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
+```
 
 ## 15. Contact Validation:
 
@@ -328,4 +339,14 @@ Set up the required tools to run automatically using `cron`. This includes setti
 mv /opt/registrar/patches/validate.php /var/www/validate.php
 ```
 
-The other 2 files in `/opt/registrar/patches` are to be integrated with your workflow.
+## 16. Further Settings:
+
+1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
+
+2. In your contact page, you will need to list all company details, including registration number and name of CEO.
+
+3. Use the example WHOIS/RDAP web client in `/opt/registrar/whois/web` for your registrar website.
+
+4. The files `/opt/registrar/patches/validation_email.php` and `/opt/registrar/patches/tmch.php` are to be integrated with your workflow.
+
+5. Some manual tune-in is still required in various parts.
