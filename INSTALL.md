@@ -225,17 +225,13 @@ Proceed with the installation as prompted on https://%%DOMAIN%%. If the installe
 
 ## 7. Installing Theme:
 
-1. Clone the tide theme repository:
+Clone the tide theme repository:
 
 ```bash
-git clone https://github.com/getpinga/tide
+git clone https://github.com/getpinga/tide /var/www/themes/tide
 ```
 
-2. Move the cloned theme to the correct directory:
-
-```bash
-mv tide /var/www/themes/
-```
+Activate the Tide theme from the admin panel, `System -> Settings -> Theme`, by clicking on "Set as default".
 
 ## 8. Installing FOSSBilling EPP-RFC Extensions:
 
@@ -255,7 +251,7 @@ Ensure you make all contact details/profile mandatory for your users within the 
 
 ## 11. Additional Tools:
 
-1. Clone the repository to your system:
+Clone the repository to your system:
 
 ```bash
 git clone https://github.com/getnamingo/registrar /opt/registrar
