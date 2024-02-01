@@ -12,8 +12,6 @@ Open source ICANN-accredited domain registrar management system.
 
 While our platform is primarily designed for FOSSBilling, it can be adapted to work with [WHMCS](https://www.whmcs.com/). Using Namingo, businesses can streamline domain management operations, enhance efficiency, and reduce costs.
 
-**📢 Announcement: We're thrilled to report that all the project's features have been implemented. However, the platform isn't ready for production use just yet. As we continue to refine and expand our services, we aim to provide a seamless experience for our users. Your questions or contributions are always welcome. Thank you for your continued patience and support.**
-
 ## Get Involved
 
 We're on a mission to make **Namingo** the best it can be, and we need your expertise! Whether you're adept in development, have a keen eye for design, or simply brim with innovative ideas, your contribution can make a world of difference.
@@ -42,7 +40,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 ## Installation Instructions
 
-The installation instructions have been moved to a separate file to keep things organized. For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
+For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
 
 ## Support
 

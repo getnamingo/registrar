@@ -57,7 +57,9 @@ certbot certonly --standalone -d %%DOMAIN%%
 
 ### Configure Nginx:
 
-Replace `%%DOMAIN%%` with your actual domain:
+**Replace `%%DOMAIN%%` with your actual domain.**
+
+1. Edit and save the provided configuration as `/etc/nginx/sites-available/fossbilling.conf`:
 
 ```bash
 server {
@@ -130,17 +132,49 @@ server {
 }
 ```
 
-1. Edit and save the provided configuration as `/etc/nginx/sites-available/fossbilling.conf`
+2. Edit and save the provided configuration as `/etc/nginx/sites-available/rdap.conf`:
 
-2. Create a symbolic link:
+```bash
+server {
+    listen 80;
+    listen [::]:80;
+    server_name rdap.%%DOMAIN%%;
+
+    location / {
+        proxy_pass http://127.0.0.1:7500;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name rdap.%%DOMAIN%%;
+
+    ssl_certificate /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:7500;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+3. Create symbolic links:
 
 ```bash
 ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
 ```
 
-3. Remove the default configuration if exists.
+4. Remove the default configuration if exists.
 
-4. Restart Nginx:
+5. Restart Nginx:
 
 ```bash
 systemctl restart nginx
@@ -292,8 +326,6 @@ mv config.php.dist config.php
 ```
 
 Edit the `config.php` with the appropriate database details and preferences as required.
-
-Use the provided `nginx_server.conf` to create a `rdap.example.com` Nginx host. Move it to `/etc/nginx/sites-available/rdap.conf`, create a symbolic link with `ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/` and restart Nginx with `systemctl restart nginx`.
 
 Copy `rdap.service` to `/etc/systemd/system/`. Change only User and Group lines to your user and group.
 

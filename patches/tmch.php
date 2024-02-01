@@ -7,27 +7,7 @@
  * @license MIT
  */
 
-$brand = '';
-
-$file = fopen("dnl-latest.csv", "r");
-while (($data = fgetcsv($file)) !== FALSE) {
-    // Check if the first column in the current row is equal to "DNL"
-    if ($data[0] == "DNL") {
-        // Store the header row in a variable
-        $headers = $data;
-    } else {
-        // Check if the first column in the current row is equal to "1675pou"
-        if ($data[0] == $brand) {
-            // Create an associative array using the headers as keys
-            $row = array_combine($headers, $data);
-            // Store the value of the "lookup-key" column in a variable
-            $lookupKey = $row['lookup-key'];
-            break;
-        }
-    }
-}
-
-fclose($file);
+// $lookupKey is obtained from domain claims check
 
 $url = "https://test.tmcnis.org/cnis/".$lookupKey.".xml";
 $username = "";
