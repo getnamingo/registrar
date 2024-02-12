@@ -172,7 +172,11 @@ ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
 ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
 ```
 
-4. Remove the default configuration if exists.
+4. Remove the default configuration if exists:
+
+```bash
+rm /etc/nginx/sites-enabled/default
+```
 
 5. Restart Nginx:
 
@@ -247,7 +251,7 @@ unzip fossbilling.zip -d /var/www
 ## 5. Make Directories Writable:
 
 ```bash
-chmod -R 755 /var/www/config.php
+chmod -R 755 /var/www/config-sample.php
 chmod -R 755 /var/www/data/cache
 chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
@@ -267,6 +271,10 @@ Clone the tide theme repository:
 
 ```bash
 git clone https://github.com/getpinga/tide /var/www/themes/tide
+chmod 755 /var/www/themes/tide/assets
+chmod 755 /var/www/themes/tide/config/settings_data.json
+chown www-data:www-data /var/www/themes/tide/assets
+chown www-data:www-data /var/www/themes/tide/config/settings_data.json
 ```
 
 Activate the Tide theme from the admin panel, `System -> Settings -> Theme`, by clicking on "Set as default".
