@@ -46,15 +46,6 @@ After configuring PHP, restart the service to apply changes:
 systemctl restart php8.2-fpm
 ```
 
-### Obtain SSL Certificate with Certbot:
-
-Replace `%%DOMAIN%%` with your actual domain:
-
-```bash
-systemctl stop nginx
-certbot certonly --standalone -d %%DOMAIN%%
-```
-
 ### Configure Nginx:
 
 **Replace `%%DOMAIN%%` with your actual domain.**
@@ -178,9 +169,19 @@ ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
 rm /etc/nginx/sites-enabled/default
 ```
 
-5. Restart Nginx:
+5. Obtain SSL certificate with Certbot:
+
+Replace `%%DOMAIN%%` with your actual domain:
 
 ```bash
+systemctl stop nginx
+certbot --nginx -d %%DOMAIN%% -d rdap.%%DOMAIN%%
+```
+
+6. Enable and restart Nginx:
+
+```bash
+systemctl enable nginx
 systemctl restart nginx
 ```
 
