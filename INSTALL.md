@@ -55,12 +55,13 @@ systemctl restart php8.2-fpm
 ```bash
 server {
 	listen 80;
-	server_name %%DOMAIN%%
+	server_name %%DOMAIN%%;
 	return 301 https://%%DOMAIN%%/request_uri/;
 }
 
 server {
-	listen 443 ssl http2;
+	listen 443 ssl;
+	http2 on;
 	ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
 	ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
 	ssl_stapling on;
@@ -142,6 +143,7 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
+    http2 on;
     server_name rdap.%%DOMAIN%%;
 
     ssl_certificate /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
@@ -175,8 +177,11 @@ Replace `%%DOMAIN%%` with your actual domain:
 
 ```bash
 systemctl stop nginx
+certbot certonly -d %%DOMAIN%% -d rdap.%%DOMAIN%%
 certbot --nginx -d %%DOMAIN%% -d rdap.%%DOMAIN%%
 ```
+
+Choose reinstall on the last option.
 
 6. Enable and restart Nginx:
 
