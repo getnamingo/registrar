@@ -109,6 +109,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
             
                 // Extract TLD from the domain and prepend a dot
                 $parts = explode('.', $domain);
+                $domainName = $parts[0];
                 $tld = "." . end($parts);
 
                 // Check if the TLD exists in the service_domain table

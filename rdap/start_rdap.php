@@ -148,6 +148,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
     
     // Extract TLD from the domain
     $parts = explode('.', $domain);
+    $domainName = $parts[0];
     $tld = "." . end($parts);
 
     // Check if the TLD exists in the service_domain table
@@ -171,7 +172,8 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
             DATE_FORMAT(`updated_at`, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
             DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate`
             FROM service_domain WHERE sld = :domain AND tld = :tld");
-        $stmt1->bindParam(':domain', $domain, PDO::PARAM_STR);
+        $stmt1->bindParam(':domain', $domainName, PDO::PARAM_STR);
+        $stmt1->bindParam(':tld', $tld, PDO::PARAM_STR);
         $stmt1->execute();
         $domainDetails = $stmt1->fetch(PDO::FETCH_ASSOC);
 
