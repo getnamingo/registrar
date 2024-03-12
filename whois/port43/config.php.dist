@@ -13,5 +13,8 @@ return [
     'registrar_name' => 'Example Registrar LLC',
     'registrar_iana' => '1000',
     'abuse_email' => 'abuse@example.com',
-    'abuse_phone' => '+1.234567890'
+    'abuse_phone' => '+1.234567890',
+    'rately' => false,
+    'limit' => 25,
+    'period' => 60,
 ];
