@@ -449,7 +449,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
             $server->send($fd, "General error");
             $server->close($fd);
         }
-        $response->header('Content-Type', 'application/json');
+        $response->header('Content-Type', 'application/rdap+json');
         $response->status(200);
         $response->end(json_encode($rdapResponse, JSON_UNESCAPED_SLASHES));
     } catch (PDOException $e) {
@@ -529,7 +529,7 @@ function handleHelpQuery($request, $response, $pdo, $c) {
     ];
 
     // Send the RDAP response
-    $response->header('Content-Type', 'application/json');
+    $response->header('Content-Type', 'application/rdap+json');
     $response->status(200);
     $response->end(json_encode($rdapResponse, JSON_UNESCAPED_SLASHES));
 }
