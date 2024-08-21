@@ -16,10 +16,6 @@ While our platform is primarily designed for FOSSBilling, it can be adapted to w
 
 We're on a mission to make **Namingo** the best it can be, and we need your expertise! Whether you're adept in development, have a keen eye for design, or simply brim with innovative ideas, your contribution can make a world of difference.
 
-### Current Status:
-
-- **Contact Validation** and **TMCH** need more work.
-
 ## Features
 
 - **Billing System**: Manages domain registrations, renewals, and payments as an ICANN accredited registrar, while also establishing EPP connections to registries for seamless domain operations.
