@@ -285,25 +285,11 @@ chown www-data:www-data /var/www/themes/tide/config/settings_data.json
 
 Activate the Tide theme from the admin panel, `System -> Settings -> Theme`, by clicking on "Set as default".
 
-## 8. Installing FOSSBilling EPP-RFC Extensions:
-
-For each registry you support, you will need to install a FOSSBilling EPP-RFC extension.
-
-Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
-
-To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
-
-## 9. Installing FOSSBilling DNS Hosting Extensions:
-
-To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
-
-Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
-
-## 10. Configure FOSSBilling Settings:
+## 8. Configure FOSSBilling Settings:
 
 Ensure you make all contact details/profile ***mandatory*** for your users within the FOSSBilling settings or configuration.
 
-## 11. Additional Tools:
+## 9. Additional Tools:
 
 Clone the repository to your system:
 
@@ -311,10 +297,10 @@ Clone the repository to your system:
 git clone https://github.com/getnamingo/registrar /opt/registrar
 ```
 
-## 12. Setup WHOIS:
+## 10. Setup WHOIS:
 
 ```bash
-cd /opt/registrar/whois/port43
+cd /opt/registrar/whois
 composer install
 mv config.php.dist config.php
 ```
@@ -331,7 +317,7 @@ systemctl enable whois.service
 
 After that you can manage WHOIS via systemctl as any other service.
 
-## 13. Setup RDAP:
+## 11. Setup RDAP:
 
 ```bash
 cd /opt/registrar/rdap
@@ -351,7 +337,7 @@ systemctl enable rdap.service
 
 After that you can manage RDAP via systemctl as any other service.
 
-## 14. Setup Automation Scripts:
+## 12. Setup Automation Scripts:
 
 ```bash
 cd /opt/registrar/automation
@@ -379,7 +365,7 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 15. Domain Contact Verification:
+## 13. Domain Contact Verification:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-validation
@@ -388,7 +374,7 @@ mv fossbilling-validation/Validation /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
 
-## 16. TMCH Claims Notice Support:
+## 14. TMCH Claims Notice Support:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-tmch
@@ -399,12 +385,36 @@ mv fossbilling-tmch/Tmch /var/www/modules/
 
 - Still this needs to be integrated with your workflow.
 
-## 17. Further Settings:
+## 15. WHOIS & RDAP Client:
+
+```bash
+git clone https://github.com/getnamingo/fossbilling-whois
+mv fossbilling-whois/Whois /var/www/modules/
+mv fossbilling-whois/check.php /var/www/
+```
+
+- Go to Extensions > Overview in the admin panel and activate "WHOIS & RDAP Client".
+
+- Edit the `/var/www/check.php` file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses.
+
+## 16. Installing FOSSBilling EPP-RFC Extensions:
+
+For each registry you support, you will need to install a FOSSBilling EPP-RFC extension.
+
+Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
+
+To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
+
+## 17. Installing FOSSBilling DNS Hosting Extensions:
+
+To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
+
+Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
+
+## 18. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
 
-3. Use the example WHOIS/RDAP web client in `/opt/registrar/whois/web` for your registrar website.
-
-4. Some manual tune-in is still required in various parts.
+3. Some manual tune-in is still required in various parts.
