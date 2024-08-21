@@ -371,7 +371,7 @@ tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
 
 Edit the generated configuration file with the required details. Once ready, enable running the escrow client in `/opt/registrar/automation/escrow.php`.
 
-## Running the Automation System
+### Running the Automation System
 
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
@@ -379,13 +379,27 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 15. Contact Validation:
+## 15. Domain Contact Verification:
 
 ```bash
-mv /opt/registrar/patches/validate.php /var/www/validate.php
+git clone https://github.com/getnamingo/fossbilling-validation
+mv fossbilling-validation/Validation /var/www/modules/
 ```
 
-## 16. Further Settings:
+- Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
+
+## 16. TMCH Claims Notice Support:
+
+```bash
+git clone https://github.com/getnamingo/fossbilling-tmch
+mv fossbilling-tmch/Tmch /var/www/modules/
+```
+
+- Go to Extensions > Overview in the admin panel and activate "TMCH Claims Notice Support".
+
+- Still this needs to be integrated with your workflow.
+
+## 17. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
@@ -393,6 +407,4 @@ mv /opt/registrar/patches/validate.php /var/www/validate.php
 
 3. Use the example WHOIS/RDAP web client in `/opt/registrar/whois/web` for your registrar website.
 
-4. The files `/opt/registrar/patches/validation_email.php` and `/opt/registrar/patches/tmch.php` are to be integrated with your workflow.
-
-5. Some manual tune-in is still required in various parts.
+4. Some manual tune-in is still required in various parts.
