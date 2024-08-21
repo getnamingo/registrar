@@ -9,10 +9,10 @@
     
 $config = array(
     'db' => array(
-        'host' => getenv('DB_HOST'),
+        'host' => 'localhost',
         'username' => getenv('DB_USERNAME'),
         'password' => getenv('DB_PASSWORD'),
-        'dbname' => getenv('DB_NAME'),
+        'dbname' => 'registrar',
     ),
     'email' => array(
         'from' => 'no-reply@example.com',

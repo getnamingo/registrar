@@ -323,9 +323,8 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
-    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
-    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+    sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
+    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass'/g" config.php
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
@@ -347,6 +346,9 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     git clone https://github.com/getnamingo/fossbilling-whois
     mv fossbilling-whois/Whois /var/www/modules/
     mv fossbilling-whois/check.php /var/www/
+    
+    sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
+    sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
 fi
 
 # Final instructions to the user
@@ -372,12 +374,10 @@ echo "   - Domain Contact Verification"
 echo "   - TMCH Claims Notice Support"
 echo "   - WHOIS & RDAP Client"
 echo
-echo "8. Edit the /var/www/check.php file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses."
+echo "8. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
 echo
-echo "9. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
+echo "9. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
 echo
-echo "10. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-echo
-echo "11. On your contact page, list all company details, including registration number and the name of the CEO."
+echo "10. On your contact page, list all company details, including registration number and the name of the CEO."
 echo
 echo "Please follow these steps carefully to complete your installation and configuration."
