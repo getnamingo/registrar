@@ -253,8 +253,100 @@ else
     exit 1
 fi
 
+if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    # Clone the registrar repository
+    git clone https://github.com/getnamingo/registrar /opt/registrar
+
+    # Setup for WHOIS service
+    cd /opt/registrar/whois
+    composer install
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+
+    # Copy and enable the WHOIS service
+    cp whois.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl start whois.service
+    systemctl enable whois.service
+
+    # Setup for RDAP service
+    cd /opt/registrar/rdap
+    composer install
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+
+    # Copy and enable the RDAP service
+    cp rdap.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl start rdap.service
+    systemctl enable rdap.service
+
+    # Setup for automation
+    cd /opt/registrar/automation
+    composer install
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+
+    # Install Escrow RDE Client
+    cd /opt/registrar/automation
+    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+    tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+    ./escrow-rde-client -i
+
+    # Clone and move FOSSBilling modules
+    cd /opt
+    git clone https://github.com/getnamingo/fossbilling-validation
+    mv fossbilling-validation/Validation /var/www/modules/
+
+    git clone https://github.com/getnamingo/fossbilling-tmch
+    mv fossbilling-tmch/Tmch /var/www/modules/
+
+    git clone https://github.com/getnamingo/fossbilling-whois
+    mv fossbilling-whois/Whois /var/www/modules/
+    mv fossbilling-whois/check.php /var/www/
+fi
+
 # Final instructions to the user
-echo "Installation is complete."
-echo "Please open your browser and visit https://$domain_name/admin to create a new admin account."
+echo "Installation is complete. Please follow these manual steps to finalize your setup:"
 echo
-echo "To activate the Tide theme, go to the admin panel: System -> Settings -> Theme, and click on 'Set as default'."
+echo "1. Open your browser and visit https://$domain_name/admin to create a new admin account."
+echo "2. To activate the Tide theme, go to the admin panel: System -> Settings -> Theme, and click on 'Set as default'."
+echo "3. Edit the following configuration files to match your registrar settings:"
+echo "   - /opt/registrar/whois/config.php"
+echo "   - /opt/registrar/rdap/config.php"
+echo "   - /opt/registrar/automation/config.php"
+echo
+echo "4. Edit the /opt/registrar/automation/config.yaml file with the required details for escrow."
+echo "   Once ready, enable running the escrow client in /opt/registrar/automation/escrow.php."
+echo
+echo "5. Add the following cron job to ensure automation runs smoothly:"
+echo "   * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo
+echo "6. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
+echo
+echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
+echo "   - Domain Contact Verification"
+echo "   - TMCH Claims Notice Support"
+echo "   - WHOIS & RDAP Client"
+echo
+echo "8. Edit the /var/www/check.php file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses."
+echo
+echo "9. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
+echo
+echo "10. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+echo
+echo "11. On your contact page, list all company details, including registration number and the name of the CEO."
+echo
+echo "Please follow these steps carefully to complete your installation and configuration."
