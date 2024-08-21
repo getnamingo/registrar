@@ -24,7 +24,7 @@ apt install -y curl software-properties-common ufw
 add-apt-repository -y ppa:ondrej/php
 add-apt-repository -y ppa:ondrej/nginx-mainline
 apt update
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-xml python3-certbot-nginx unzip wget whois
+apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
 
 # Configure PHP
 sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/cli/php.ini
@@ -141,8 +141,8 @@ server {
     http2 on;
     server_name rdap.$domain_name;
 
-    ssl_certificate /etc/letsencrypt/live/$domain_name/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$domain_name/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/rdap.$domain_name/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rdap.$domain_name/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:7500;
@@ -156,9 +156,29 @@ EOL
     # Create symbolic links for RDAP Nginx configuration
     ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
     
-    # Obtain SSL certificate for RDAP and main domain using the Nginx plugin
-    certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $domain_name -d rdap.$domain_name --redirect
+    # Step 1: Stop Nginx to free up port 80 and 443
+    systemctl stop nginx
+
+    # Step 2: Obtain SSL certificate using Certbot in standalone mode
+    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
+
+    # Step 3: Start Nginx again with the newly obtained certificates
+    systemctl start nginx
+
+    # Step 4: Run Certbot again with the Nginx plugin to set up automatic renewals
+    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
 else
+    # Step 1: Stop Nginx to free up port 80 and 443
+    systemctl stop nginx
+    
+    # Step 2: Obtain SSL certificate using Certbot in standalone mode
+    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+
+    # Step 3: Start Nginx again with the newly obtained certificates
+    systemctl start nginx
+    
     # Obtain SSL certificate for only the main domain using the Nginx plugin
     certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
 fi
@@ -168,7 +188,15 @@ rm /etc/nginx/sites-enabled/default
 
 # Enable and restart Nginx
 systemctl enable nginx
-systemctl start nginx
+systemctl restart nginx
+
+echo "#\!/bin/bash" | tee /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
+echo "systemctl stop nginx" | tee -a /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
+chmod +x /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
+
+echo "#\!/bin/bash" | tee /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
+echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
+chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 
 # Install and configure MariaDB
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
@@ -303,7 +331,10 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     cd /opt/registrar/automation
     wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
     tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+    mv escrow-rde-client-v2.1.1-linux_x86_64 escrow-rde-client
+    rm escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
     ./escrow-rde-client -i
+    mv config-rde-client-example-v2.1.1.yaml config.yaml
 
     # Clone and move FOSSBilling modules
     cd /opt
