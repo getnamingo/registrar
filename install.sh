@@ -354,7 +354,7 @@ echo "Installation is complete. Please follow these manual steps to finalize you
 echo
 echo "1. Open your browser and visit https://$domain_name/admin to create a new admin account."
 echo "2. To activate the Tide theme, go to the admin panel: System -> Settings -> Theme, and click on 'Set as default'."
-echo "3. Edit the following configuration files to match your registrar settings:"
+echo "3. Edit the following configuration files to match your registrar settings and after that restart the services:"
 echo "   - /opt/registrar/whois/config.php"
 echo "   - /opt/registrar/rdap/config.php"
 echo "   - /opt/registrar/automation/config.php"

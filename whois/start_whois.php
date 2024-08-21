@@ -112,8 +112,8 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                 $domainName = $parts[0];
                 $tld = "." . end($parts);
 
-                // Check if the TLD exists in the service_domain table
-                $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM service_domain WHERE tld = :tld");
+                // Check if the TLD exists in the tld table
+                $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
                 $stmtTLD->bindParam(':tld', $tld, PDO::PARAM_STR);
                 $stmtTLD->execute();
                 $tldExists = $stmtTLD->fetchColumn();

@@ -55,13 +55,11 @@ $http->on('request', function ($request, $response) use ($c, $pool, $log, $rateL
     $pdo = $pool->get();
 
     $remoteAddr = $request->server['remote_addr'];
-    if (!isIpWhitelisted($remoteAddr, $pdo)) {
-        if (($c['rately'] == true) && ($rateLimiter->isRateLimited('rdap', $remoteAddr, $c['limit'], $c['period']))) {
-            $log->error('rate limit exceeded for ' . $remoteAddr);
-            $response->header('Content-Type', 'application/json');
-            $response->status(429);
-            $response->end(json_encode(['error' => 'Rate limit exceeded. Please try again later.']));
-        }
+    if (($c['rately'] == true) && ($rateLimiter->isRateLimited('rdap', $remoteAddr, $c['limit'], $c['period']))) {
+        $log->error('rate limit exceeded for ' . $remoteAddr);
+        $response->header('Content-Type', 'application/json');
+        $response->status(429);
+        $response->end(json_encode(['error' => 'Rate limit exceeded. Please try again later.']));
     }
 
     try {
@@ -151,8 +149,8 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
     $domainName = $parts[0];
     $tld = "." . end($parts);
 
-    // Check if the TLD exists in the service_domain table
-    $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM service_domain WHERE tld = :tld");
+    // Check if the TLD exists in the tld table
+    $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
     $stmtTLD->bindParam(':tld', $tld, PDO::PARAM_STR);
     $stmtTLD->execute();
     $tldExists = $stmtTLD->fetchColumn();
