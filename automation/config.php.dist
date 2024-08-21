@@ -2,11 +2,11 @@
 /**
  * Namingo Registrar WDRP
  *
- * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
 */
-
+    
 $config = array(
     'db' => array(
         'host' => getenv('DB_HOST'),
@@ -30,7 +30,18 @@ $config = array(
         ],
     ),
     'escrow' => array(
-        'full' => '/opt/namingo/escrow/full.csv',
-        'hdl' => '/opt/namingo/escrow/hdl.csv'
+        'full' => '/opt/registrar/escrow/full.csv',
+        'hdl' => '/opt/registrar/escrow/hdl.csv'
     ),
+    'host' => 'epp.example.com',
+    'port' => 700,
+    'username' => 'epp_username',
+    'password' => 'epp_password',
+    'ssl_cert' => '/path/to/ssl/cert',
+    'ssl_key' => '/path/to/ssl/key',
+    'passphrase' => 'ssl_key_passphrase', // Or leave empty ''
+    'ssl_cafile' => '/path/to/ssl/cafile', // Or leave empty ''
+    'ns1' => 'ns1.registrar.com',
+    'ns2' => 'ns2.registrar.com',
+    'registrar_url' => 'https://example.com/',
 );

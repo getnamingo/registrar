@@ -2,45 +2,20 @@
 /**
  * Namingo Registrar
  *
- * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
  
 require_once 'config.php';
+require_once 'helpers.php';
 require_once 'includes/eppClient.php';
+require_once 'vendor/autoload.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use Pinga\Tembo\eppClient;
 $registrar = "Epp";
-
-function connectEpp(string $registry, $config)
-{
-    try
-    {
-        $epp = new eppClient();
-        $info = [
-        "host" => $config["host"],
-        "port" => $config["port"], "timeout" => 30, "tls" => "1.3", "bind" => false, "bindip" => "1.2.3.4:0", "verify_peer" => false, "verify_peer_name" => false,
-        "verify_host" => false, "cafile" => "", "local_cert" => $config["ssl_cert"], "local_pk" => $config["ssl_key"], "passphrase" => "", "allow_self_signed" => true, ];
-        $epp->connect($info);
-        $login = $epp->login(["clID" => $config["username"], "pw" => $config["password"],
-        "prefix" => "tembo", ]);
-        if (array_key_exists("error", $login))
-        {
-            echo "Login Error: " . $login["error"] . PHP_EOL;
-            exit();
-        }
-        else
-        {
-            echo "Login Result: " . $login["code"] . ": " . $login["msg"][0] . PHP_EOL;
-        }
-        return $epp;
-    }
-    catch(EppException $e)
-    {
-        return "Error : " . $e->getMessage();
-    }
-}
 
 // Set up database connection
 try {
@@ -69,17 +44,16 @@ foreach ($rows as $row) {
   // Send reminder email
   $to = $registrant_email;
   $subject = 'Contact Information Validation Reminder';
-  $link = "https://validate.example.com/?$token";
+  $link = $config['registrar_url']."validate?token=$token";
   $message = "Dear Registrant,\n\nThis is a reminder to validate your contact information for the domain $domain_name. Please click the following link to validate your information:\n\n$link\n\nIf you have already validated your information, please disregard this message.\n\nSincerely,\nThe Registrar";
-  $headers = "From: noreply@example.com\r\n";
-  mail($to, $subject, $message, $headers);
+  send_email($to, $subject, $message, $config);
 
   // Send EPP command to update nameservers and status
   $epp = connectEpp("generic", $config);
   
   // Nameservers to update
-  $ns1 = 'ns1.registrar.com';
-  $ns2 = 'ns2.registrar.com';
+  $ns1 = $config['ns1'];
+  $ns2 = $config['ns2'];
 
   // Prepare the SQL query
   $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
@@ -95,19 +69,19 @@ foreach ($rows as $row) {
 
   // Send EPP update to registry
   $params = array(
-  	'domainname' => $row['sld'].$row['tld'],
-  	'ns1' => $ns1,
-  	'ns2' => $ns2
+      'domainname' => $row['sld'].$row['tld'],
+      'ns1' => $ns1,
+      'ns2' => $ns2
   );
   $domainUpdateNS = $epp->domainUpdateNS($params);
-			
+            
   if (array_key_exists('error', $domainUpdateNS))
   {
-  	echo 'DomainUpdateNS Error: ' . $domainUpdateNS['error'] . PHP_EOL;
+      echo 'DomainUpdateNS Error: ' . $domainUpdateNS['error'] . PHP_EOL;
   }
   else
   {
-  	echo 'ERRP cron 1 completed successfully' . PHP_EOL;
+      echo 'ERRP cron 1 completed successfully' . PHP_EOL;
   }
   
   $params = array(
@@ -116,7 +90,7 @@ foreach ($rows as $row) {
       'status' => 'clientHold'
   );
   $domainUpdateStatus = $epp->domainUpdateStatus($params);
-	
+    
   if (array_key_exists('error', $domainUpdateStatus))
   {
       echo 'DomainUpdateStatus Error: ' . $domainUpdateStatus['error'] . PHP_EOL;

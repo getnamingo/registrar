@@ -2,12 +2,17 @@
 /**
  * Namingo Registrar
  *
- * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
  
 require_once 'config.php';
+require_once 'helpers.php';
+require_once 'vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Set up database connection
 try {
@@ -32,15 +37,7 @@ function sendRenewalReminderEmail($to_email, $days_until_expiry) {
         $message = "Dear registrant,\n\nYour domain name will expire tomorrow. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     }
 
-    // Send email using your preferred email sending library or function
-    // For example, using the PHPMailer library:
-    // require_once 'vendor/autoload.php';
-    // $mail = new PHPMailer\PHPMailer\PHPMailer();
-    // $mail->setFrom('support@domainregistrar.com');
-    // $mail->addAddress($to_email);
-    // $mail->Subject = $subject;
-    // $mail->Body = $message;
-    // $mail->send();
+    send_email($to_email, $subject, $message, $config);
     error_log("Sent email to $to_email with subject '$subject'");
 }
 
@@ -64,9 +61,9 @@ function sendRenewalReminders($pdo) {
             }
         }
     } catch (PDOException $e) {
-// Log the error
-error_log($e->getMessage());
-}
+    // Log the error
+    error_log($e->getMessage());
+    }
 }
 
 // Call the function to check for expiring domains and send renewal reminder emails

@@ -2,14 +2,15 @@
 /**
  * Namingo Registrar WDRP
  *
- * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
 
 date_default_timezone_set('UTC');
 require_once 'config.php';
-require_once 'vendor/autoload.php';  // Assuming you have installed PHPMailer with composer
+require_once 'helpers.php';
+require_once 'vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
@@ -21,35 +22,6 @@ try {
 } catch (PDOException $e) {
     error_log('Database connection error: ' . $e->getMessage());
     exit('Oops! Something went wrong.');
-}
-
-function send_email($to, $subject, $message, $config) {
-    $mail = new PHPMailer(true);
-
-    try {
-        // SMTP settings
-        $mail->isSMTP();
-        $mail->Host = $config['email']['smtp']['host'];
-        $mail->SMTPAuth = true;
-        $mail->Username = $config['email']['smtp']['username'];
-        $mail->Password = $config['email']['smtp']['password'];
-        $mail->SMTPSecure = $config['email']['smtp']['encryption'];
-        $mail->Port = $config['email']['smtp']['port'];
-
-        // Recipients
-        $mail->setFrom($config['email']['from']);
-        $mail->addAddress($to);
-        $mail->addReplyTo($config['email']['reply-to']);
-
-        // Content
-        $mail->isHTML(true);  // Set email format to HTML if your email content has HTML, else set to false
-        $mail->Subject = $subject;
-        $mail->Body    = $message;
-
-        $mail->send();
-    } catch (PHPMailerException $e) {
-        error_log('Email error: ' . $e->getMessage());
-    }
 }
 
 try {

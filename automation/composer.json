@@ -1,5 +1,6 @@
 {
     "require": {
-        "peppeocchi/php-cron-scheduler": "^4.0"
+        "peppeocchi/php-cron-scheduler": "^4.0",
+        "phpmailer/phpmailer": "^6.9.1"
     }
 }
