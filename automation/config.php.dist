@@ -44,4 +44,8 @@ $config = array(
     'ns1' => 'ns1.registrar.com',
     'ns2' => 'ns2.registrar.com',
     'registrar_url' => 'https://example.com/',
+    // URS Configuration
+    'urs_imap_host' => '{your_imap_server:993/imap/ssl}INBOX',
+    'urs_imap_username' => 'your_username',
+    'urs_imap_password' => 'your_password',
 );

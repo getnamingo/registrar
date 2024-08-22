@@ -24,7 +24,7 @@ apt install -y curl software-properties-common ufw
 add-apt-repository -y ppa:ondrej/php
 add-apt-repository -y ppa:ondrej/nginx-mainline
 apt update
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
+apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
 
 # Configure PHP
 sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/cli/php.ini
