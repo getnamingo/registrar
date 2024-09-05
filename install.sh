@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Check the Linux distribution and version
+if [[ -e /etc/os-release ]]; then
+    . /etc/os-release
+    OS=$NAME
+    VER=$VERSION_ID
+fi
+
 echo "Before continuing, ensure that you have the following domains pointing to this server:"
 echo "1. billing.example.com"
 echo "2. whois.example.com"
@@ -19,40 +26,79 @@ read -sp "Enter the MySQL database password: " db_pass
 echo
 
 # Install necessary packages
-apt update
-apt install -y curl software-properties-common ufw
-add-apt-repository -y ppa:ondrej/php
-add-apt-repository -y ppa:ondrej/nginx-mainline
-apt update
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
+if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
+    PHP_V=8.3
+    apt update
+    apt install -y curl software-properties-common ufw
+    add-apt-repository -y ppa:ondrej/php
+    add-apt-repository -y ppa:ondrej/nginx-mainline
+    apt update
+    apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-soap php8.3-swoole php8.3-xml python3-certbot-nginx unzip wget whois
+    
+    # Configure PHP
+    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.3/cli/php.ini
 
-# Configure PHP
-sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.3/cli/php.ini
+    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.3/cli/php.ini
 
-sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/cli/php.ini
-sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.3/fpm/php.ini
 
-sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.3/fpm/php.ini
+    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.3/fpm/php.ini
 
-sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/fpm/php.ini
-sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/fpm/php.ini
+    # Modify Opcache config
+    echo "opcache.jit=1255" >> /etc/php/8.3/mods-available/opcache.ini
+    echo "opcache.jit_buffer_size=100M" >> /etc/php/8.3/mods-available/opcache.ini
 
-# Modify Opcache config
-echo "opcache.jit=1255" >> /etc/php/8.2/mods-available/opcache.ini
-echo "opcache.jit_buffer_size=100M" >> /etc/php/8.2/mods-available/opcache.ini
+    # Restart PHP service
+    systemctl restart php8.3-fpm
+else
+    PHP_V=8.2
+    apt update
+    apt install -y curl software-properties-common ufw
+    add-apt-repository -y ppa:ondrej/php
+    add-apt-repository -y ppa:ondrej/nginx-mainline
+    apt update
+    apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
+    
+    # Configure PHP
+    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/cli/php.ini
 
-# Restart PHP service
-systemctl restart php8.2-fpm
+    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/cli/php.ini
+    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/cli/php.ini
+
+    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/fpm/php.ini
+
+    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/fpm/php.ini
+    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/fpm/php.ini
+
+    # Modify Opcache config
+    echo "opcache.jit=1255" >> /etc/php/8.2/mods-available/opcache.ini
+    echo "opcache.jit_buffer_size=100M" >> /etc/php/8.2/mods-available/opcache.ini
+
+    # Restart PHP service
+    systemctl restart php8.2-fpm
+fi
 
 # Configure Nginx
 systemctl stop nginx
@@ -104,7 +150,7 @@ server {
 
     location ~ \.php {
         fastcgi_split_path_info ^(.+\.php)(/.*)\$;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/run/php/php$PHP_V-fpm.sock;
         fastcgi_param PATH_INFO \$fastcgi_path_info;
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         fastcgi_intercept_errors on;
@@ -199,20 +245,40 @@ echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_
 chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 
 # Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
+    curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
-cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
-# MariaDB 10.11 repository list - created 2023-12-02 22:16 UTC
-X-Repolib-Name: MariaDB
-Types: deb
-URIs: https://mirrors.chroot.ro/mariadb/repo/10.11/ubuntu
-Suites: jammy
-Components: main main/debug
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+    cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
+    # MariaDB 11.4 repository list - created 2024-07-23 18:24 UTC
+    # https://mariadb.org/download/
+    X-Repolib-Name: MariaDB
+    Types: deb
+    # deb.mariadb.org is a dynamic mirror if your preferred mirror goes offline. See https://mariadb.org/mirrorbits/ for details.
+    # URIs: https://deb.mariadb.org/11.4/ubuntu
+    URIs: https://fastmirror.pp.ua/mariadb/repo/11.4/ubuntu
+    Suites: noble
+    Components: main main/debug
+    Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOL
 
-apt update
-apt install -y mariadb-client mariadb-server php8.2-mysql
+    apt update
+    apt install -y mariadb-client mariadb-server php8.3-mysql
+else
+    curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+
+    cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
+    # MariaDB 10.11 repository list - created 2023-12-02 22:16 UTC
+    X-Repolib-Name: MariaDB
+    Types: deb
+    URIs: https://mirrors.chroot.ro/mariadb/repo/10.11/ubuntu
+    Suites: jammy
+    Components: main main/debug
+    Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+EOL
+
+    apt update
+    apt install -y mariadb-client mariadb-server php8.2-mysql
+fi
 
 # Secure MariaDB installation
 mysql_secure_installation
@@ -355,7 +421,9 @@ fi
 echo "Installation is complete. Please follow these manual steps to finalize your setup:"
 echo
 echo "1. Open your browser and visit https://$domain_name/admin to create a new admin account."
+echo
 echo "2. To activate the Tide theme, go to the admin panel: System -> Settings -> Theme, and click on 'Set as default'."
+echo
 echo "3. Edit the following configuration files to match your registrar settings and after that restart the services:"
 echo "   - /opt/registrar/whois/config.php"
 echo "   - /opt/registrar/rdap/config.php"
@@ -365,7 +433,7 @@ echo "4. Edit the /opt/registrar/automation/config.yaml file with the required d
 echo "   Once ready, enable running the escrow client in /opt/registrar/automation/escrow.php."
 echo
 echo "5. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo "   * * * * * /usr/bin/php$PHP_V /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
 echo
 echo "6. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
 echo

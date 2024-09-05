@@ -36,9 +36,9 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 ## Installation Instructions
 
-To begin, simply copy the command below and paste it into your server terminal. This installation process is optimized for a fresh VPS running Ubuntu 22.04. For detailed guidance, please consult the Installation Manual.
+To begin, simply copy the command below and paste it into your server terminal. This installation process is optimized for a fresh VPS running Ubuntu 22.04/24.04. For detailed guidance, please consult the Installation Manual.
 
-**Minimum requirement:** a VPS with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space. Please use MySQL or MariaDB.
+**Minimum requirement:** a VPS with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
 
 ```bash
 wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
