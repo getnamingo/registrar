@@ -41,7 +41,7 @@ To begin, simply copy the command below and paste it into your server terminal. 
 **Minimum requirement:** a VPS with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space. Please use MySQL or MariaDB.
 
 ```bash
-wget https://namingo.org/registrar/install.sh -O install.sh && chmod +x install.sh && ./install.sh
+wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
 ```
 
 ### Manual Installation
