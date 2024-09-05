@@ -264,7 +264,7 @@ chmod -R 755 /var/www/data/log
 chown www-data:www-data /var/www/data/log
 chmod -R 755 /var/www/data/uploads
 chown www-data:www-data /var/www/data/uploads
-chown www-data:www-data /var/www
+chown -R www-data:www-data /var/www
 ```
 
 ## 6. FOSSBilling Installation:
