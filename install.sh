@@ -248,21 +248,16 @@ chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
-    cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
+    # Add the MariaDB 11.4 repository in the old .list format
+    cat <<EOL > /etc/apt/sources.list.d/mariadb.list
     # MariaDB 11.4 repository list - created 2024-07-23 18:24 UTC
     # https://mariadb.org/download/
-    X-Repolib-Name: MariaDB
-    Types: deb
-    # deb.mariadb.org is a dynamic mirror if your preferred mirror goes offline. See https://mariadb.org/mirrorbits/ for details.
-    # URIs: https://deb.mariadb.org/11.4/ubuntu
-    URIs: https://fastmirror.pp.ua/mariadb/repo/11.4/ubuntu
-    Suites: noble
-    Components: main main/debug
-    Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+    deb [signed-by=/etc/apt/keyrings/mariadb-keyring.pgp] https://fastmirror.pp.ua/mariadb/repo/11.4/ubuntu noble main
 EOL
 
-    apt update
-    apt install -y mariadb-client mariadb-server php8.3-mysql
+    # Update the package list and install MariaDB
+    sudo apt update
+    sudo apt install -y mariadb-client mariadb-server php8.3-mysql
 else
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
