@@ -258,6 +258,24 @@ EOL
     # Update the package list and install MariaDB
     sudo apt update
     sudo apt install -y mariadb-client mariadb-server php8.3-mysql
+    
+    # Secure MariaDB installation
+    mariadb-secure-installation
+
+    # MariaDB configuration
+    mariadb -u root -p <<MYSQL_QUERY
+    CREATE DATABASE registrar;
+    CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
+    GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
+    FLUSH PRIVILEGES;
+MYSQL_QUERY
+
+    # Import SQL files into the database
+    mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
+    mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
+    # Update the 'theme' setting in the 'setting' table
+    mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 else
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
@@ -273,18 +291,25 @@ EOL
 
     apt update
     apt install -y mariadb-client mariadb-server php8.2-mysql
-fi
+    
+    # Secure MariaDB installation
+    mysql_secure_installation
 
-# Secure MariaDB installation
-mysql_secure_installation
-
-# MariaDB configuration
-mysql -u root -p <<MYSQL_QUERY
-CREATE DATABASE registrar;
-CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
-GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
-FLUSH PRIVILEGES;
+    # MariaDB configuration
+    mysql -u root -p <<MYSQL_QUERY
+    CREATE DATABASE registrar;
+    CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
+    GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
+    FLUSH PRIVILEGES;
 MYSQL_QUERY
+
+    # Import SQL files into the database
+    mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
+    mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
+    # Update the 'theme' setting in the 'setting' table
+    mysql -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
+fi
 
 # Install Adminer
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
@@ -307,13 +332,6 @@ chown -R www-data:www-data /var/www
 
 # Rename config file
 mv /var/www/config-sample.php /var/www/config.php
-
-# Import SQL files into the database
-mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
-mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
-
-# Update the 'theme' setting in the 'setting' table
-mysql -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 # Update configuration in config.php
 sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$domain_name/'|" /var/www/config.php
