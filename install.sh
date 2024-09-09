@@ -312,6 +312,9 @@ mv /var/www/config-sample.php /var/www/config.php
 mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
 
+# Update the 'theme' setting in the 'setting' table
+mysql -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
+
 # Update configuration in config.php
 sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$domain_name/'|" /var/www/config.php
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
@@ -417,7 +420,8 @@ echo "Installation is complete. Please follow these manual steps to finalize you
 echo
 echo "1. Open your browser and visit https://$domain_name/admin to create a new admin account."
 echo
-echo "2. To activate the Tide theme, go to the admin panel: System -> Settings -> Theme, and click on 'Set as default'."
+echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
+echo "   Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
 echo
 echo "3. Edit the following configuration files to match your registrar settings and after that restart the services:"
 echo "   - /opt/registrar/whois/config.php"
