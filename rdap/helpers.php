@@ -44,50 +44,26 @@ function setupLogger($logFilePath, $channelName = 'app') {
 function mapContactToVCard($contactDetails, $role, $c) {
     return [
         'objectClassName' => 'entity',
-        'handle' => ['C' . $contactDetails['id'] . '-' . $c['roid']],
+        'handle' => [$contactDetails['registrant_contact_id']],
         'roles' => [$role],
-        'remarks' => [
-            [
-                "description" => [
-                    "This object's data has been partially omitted for privacy.",
-                    "Only the registrar managing the record can view personal contact data."
-                ],
-                "links" => [
-                    [
-                        "href" => "https://namingo.org",
-                        "rel" => "alternate",
-                        "type" => "text/html"
-                    ]
-                ],
-                "title" => "REDACTED FOR PRIVACY",
-                "type" => "Details are withheld due to privacy restrictions."
-            ],
-            [
-                "description" => [
-                    "To obtain contact information for the domain registrant, please refer to the Registrar of Record's RDDS service as indicated in this report."
-                ],
-                "title" => "EMAIL REDACTED FOR PRIVACY",
-                "type" => "Details are withheld due to privacy restrictions."
-            ],
-        ],
         'vcardArray' => [
             "vcard",
             [
                 ['version', new stdClass(), 'text', '4.0'],
-                ["fn", new stdClass(), 'text', $contactDetails['name']],
-                ["org", $contactDetails['org']],
+                ["fn", new stdClass(), 'text', $contactDetails['contact_first_name'].' '.$contactDetails['contact_last_name']],
+                ["org", $contactDetails['contact_company']],
                 ["adr", [
                     "", // Post office box
-                    $contactDetails['street1'], // Extended address
-                    $contactDetails['street2'], // Street address
-                    $contactDetails['city'], // Locality
-                    $contactDetails['sp'], // Region
-                    $contactDetails['pc'], // Postal code
-                    $contactDetails['cc']  // Country name
+                    $contactDetails['contact_address1'], // Extended address
+                    $contactDetails['contact_address2'], // Street address
+                    $contactDetails['contact_city'], // Locality
+                    $contactDetails['contact_state'], // Region
+                    $contactDetails['contact_postcode'], // Postal code
+                    $contactDetails['contact_country']  // Country name
                 ]],
-                ["tel", $contactDetails['voice'], ["type" => "voice"]],
+                ["tel", $contactDetails['contact_phone_cc'].'.'.$contactDetails['contact_phone'], ["type" => "voice"]],
                 ["tel", $contactDetails['fax'], ["type" => "fax"]],
-                ["email", $contactDetails['email']],
+                ["email", $contactDetails['contact_email']],
             ]
         ],
     ];
