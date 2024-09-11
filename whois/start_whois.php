@@ -135,6 +135,18 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                 $stmt->execute();
 
                 if ($f = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $metaQuery = "SELECT * FROM domain_meta WHERE domain_id = :domain_id";
+                    $stmtMeta = $pdo->prepare($metaQuery);
+                    $stmtMeta->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
+                    $stmtMeta->execute();
+                    $domainMeta = $stmtMeta->fetch(PDO::FETCH_ASSOC);
+
+                    $statusQuery = "SELECT status FROM domain_status WHERE domain_id = :domain_id";
+                    $stmtStatus = $pdo->prepare($statusQuery);
+                    $stmtStatus->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
+                    $stmtStatus->execute();
+                    $domainStatuses = $stmtStatus->fetchAll(PDO::FETCH_COLUMN);
+
                     // Check if the domain name is non-ASCII or starts with 'xn--'
                     $isNonAsciiOrPunycode = !mb_check_encoding($domain, 'ASCII') || strpos($domain, 'xn--') === 0;
 
@@ -148,7 +160,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         $res .= "Internationalized Domain Name: " . mb_strtoupper($internationalizedName) . "\n";
                     }
 
-                    $res .= "Registry Domain ID: ".'TODO'
+                    $res .= "Registry Domain ID: " . ($domainMeta['registry_domain_id'] ?? '')
                         ."\nRegistrar WHOIS Server: ".$c['registrar_whois']
                         ."\nRegistrar URL: ".$c['registrar_url']
                         ."\nUpdated Date: ".$f['update']
@@ -158,10 +170,17 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         ."\nRegistrar IANA ID: ".$c['registrar_iana']
                         ."\nRegistrar Abuse Contact Email: ".$c['abuse_email']
                         ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone']
-                        ."\nReseller: ".'TODO'
-                        ."\nReseller URL: ".'TODO';
+                        ."\nReseller: " . ($domainMeta['reseller'] ?? '')
+                        ."\nReseller URL: " . ($domainMeta['reseller_url'] ?? '');
                         
-                    $res .= "\nDomain Status: " . 'TODO' . " https://icann.org/epp#" . 'TODO';
+                    if (!empty($domainStatuses)) {
+                        foreach ($domainStatuses as $status) {
+                            $res .= "\nDomain Status: " . $status . " https://icann.org/epp#" . $status;
+                        }
+                    } else {
+                        // Default to 'ok' if no statuses are available
+                        $res .= "\nDomain Status: ok https://icann.org/epp#ok";
+                    }
 
                     if ($privacy) {
                     $res .= "\nRegistry Registrant ID: REDACTED FOR PRIVACY"
@@ -176,7 +195,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         ."\nRegistrant Phone: REDACTED FOR PRIVACY"
                         ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
                     } else {
-                    $res .= "\nRegistry Registrant ID: ".'TODO'
+                    $res .= "\nRegistry Registrant ID: " . ($domainMeta['registrant_contact_id'] ?? '')
                         ."\nRegistrant Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
                         ."\nRegistrant Organization: ".$f['contact_company']
                         ."\nRegistrant Street: ".$f['contact_address1']
@@ -202,7 +221,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         ."\nAdmin Phone: REDACTED FOR PRIVACY"
                         ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
                     } else {
-                    $res .= "\nRegistry Admin ID: ".'TODO'
+                    $res .= "\nRegistry Admin ID: " . ($domainMeta['admin_contact_id'] ?? '')
                         ."\nAdmin Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
                         ."\nAdmin Organization: ".$f['contact_company']
                         ."\nAdmin Street: ".$f['contact_address1']
@@ -228,7 +247,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         ."\nBilling Phone: REDACTED FOR PRIVACY"
                         ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
                     } else {
-                    $res .= "\nRegistry Billing ID: ".'TODO'
+                    $res .= "\nRegistry Billing ID: " . ($domainMeta['billing_contact_id'] ?? '')
                         ."\nBilling Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
                         ."\nBilling Organization: ".$f['contact_company']
                         ."\nBilling Street: ".$f['contact_address1']
@@ -254,7 +273,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                         ."\nTech Phone: REDACTED FOR PRIVACY"
                         ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
                     } else {
-                    $res .= "\nRegistry Tech ID: ".'TODO'
+                    $res .= "\nRegistry Tech ID: " . ($domainMeta['tech_contact_id'] ?? '')
                         ."\nTech Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
                         ."\nTech Organization: ".$f['contact_company']
                         ."\nTech Street: ".$f['contact_address1']
@@ -272,7 +291,21 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
                     $res .= "\nName Server: ".$f['ns3'];
                     $res .= "\nName Server: ".$f['ns4'];
 
-                    $res .= "\nDNSSEC: unsigned (TODO)";
+                    // Query to check if DNSSEC data exists for the domain
+                    $sqlDnssec = "SELECT COUNT(*) FROM domain_dnssec WHERE domain_id = :domain_id";
+                    $stmtDnssec = $pdo->prepare($sqlDnssec);
+                    $stmtDnssec->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
+                    $stmtDnssec->execute();
+
+                    // Fetch the count
+                    $dnssecExists = $stmtDnssec->fetchColumn();
+
+                    // Append the DNSSEC status
+                    if ($dnssecExists > 0) {
+                        $res .= "\nDNSSEC: signedDelegation";
+                    } else {
+                        $res .= "\nDNSSEC: unsigned";
+                    }
                     $res .= "\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/";
                     $currentDateTime = new DateTime();
                     $currentTimestamp = $currentDateTime->format("Y-m-d\TH:i:s.v\Z");
