@@ -431,6 +431,11 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     
     sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
     sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
+
+    git clone https://github.com/getnamingo/fossbilling-registrar
+    mv fossbilling-registrar/Registrar /var/www/modules/
+
+    mkdir /opt/registrar/escrow
 fi
 
 # Final instructions to the user
@@ -458,6 +463,7 @@ echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activat
 echo "   - Domain Contact Verification"
 echo "   - TMCH Claims Notice Support"
 echo "   - WHOIS & RDAP Client"
+echo "   - ICANN Registrar Accreditation"
 echo
 echo "8. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
 echo
