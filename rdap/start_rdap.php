@@ -86,12 +86,14 @@ $http->on('request', function ($request, $response) use ($c, $pool, $log, $rateL
         $response->status(500);
         $response->header('Content-Type', 'application/json');
         $response->end(json_encode(['Database error:' => $e->getMessage()]));
+        return;
     } catch (Throwable $e) {
         // Catch any other exceptions or errors
         $log->error('Error: ' . $e->getMessage());
         $response->status(500);
         $response->header('Content-Type', 'application/json');
-        $response->end(json_encode(['Error:' => $e->getMessage()]));
+        $response->end(json_encode(['General error:' => $e->getMessage()]));
+        return;
     } finally {
         // Return the connection to the pool
         $pool->put($pdo);
@@ -455,14 +457,14 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
     } catch (PDOException $e) {
         $log->error('DB Connection failed: ' . $e->getMessage());
         $response->header('Content-Type', 'application/json');
-        $response->status(503);
-        $response->end(json_encode(['error' => 'Error connecting to the RDAP database']));
+        $response->status(500);
+        $response->end(json_encode(['Database error:' => $e->getMessage()]));
         return;
     } catch (Throwable $e) {
         $log->error('Error: ' . $e->getMessage());
         $response->header('Content-Type', 'application/json');
-        $response->status(503);
-        $response->end(json_encode(['error' => 'Error connecting to the RDAP database']));
+        $response->status(500);
+        $response->end(json_encode(['General error:' => $e->getMessage()]));
         return;
     }
 }
