@@ -28,6 +28,7 @@ echo
 # Install necessary packages
 if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     PHP_V=8.3
+    DB_COMMAND="mariadb"
     apt update
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
@@ -64,6 +65,7 @@ if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     systemctl restart php8.3-fpm
 else
     PHP_V=8.2
+    DB_COMMAND="mysql"
     apt update
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
@@ -270,12 +272,6 @@ EOL
     FLUSH PRIVILEGES;
 MYSQL_QUERY
 
-    # Import SQL files into the database
-    mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
-    mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
-
-    # Update the 'theme' setting in the 'setting' table
-    mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 else
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
@@ -303,12 +299,6 @@ EOL
     FLUSH PRIVILEGES;
 MYSQL_QUERY
 
-    # Import SQL files into the database
-    mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
-    mysql -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
-
-    # Update the 'theme' setting in the 'setting' table
-    mysql -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 fi
 
 # Install Adminer
@@ -343,6 +333,10 @@ rm -rf /var/www/install
 cron_job="*/5 * * * * php /var/www/cron.php"
 (crontab -l | grep -F "$cron_job") || (crontab -l ; echo "$cron_job") | crontab -
 
+# Import SQL files into the database
+$DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
+$DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
 # Clone the Tide theme repository
 git clone https://github.com/getpinga/tide /var/www/themes/tide
 
@@ -362,6 +356,9 @@ else
     echo "Error: $settings_file not found!"
     exit 1
 fi
+
+# Update the 'theme' setting in the 'setting' table
+$DB_COMMAND -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     # Clone the registrar repository
