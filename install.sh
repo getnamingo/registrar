@@ -328,7 +328,6 @@ sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$domain_name/'|" /var/w
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
 sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/config.php
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /var/www/config.php
-rm -rf /var/www/install
 
 cron_job="*/5 * * * * php /var/www/cron.php"
 (crontab -l | grep -F "$cron_job") || (crontab -l ; echo "$cron_job") | crontab -
@@ -336,6 +335,8 @@ cron_job="*/5 * * * * php /var/www/cron.php"
 # Import SQL files into the database
 $DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 $DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
+rm -rf /var/www/install
 
 # Clone the Tide theme repository
 git clone https://github.com/getpinga/tide /var/www/themes/tide
@@ -407,12 +408,12 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
-    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
-    tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
-    mv escrow-rde-client-v2.1.1-linux_x86_64 escrow-rde-client
-    rm escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
+    tar -xzf escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
+    mv escrow-rde-client-v2.2.0-linux_x86_64 escrow-rde-client
+    rm escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
     ./escrow-rde-client -i
-    mv config-rde-client-example-v2.1.1.yaml config.yaml
+    mv config-rde-client-example-v2.2.0.yaml config.yaml
 
     # Clone and move FOSSBilling modules
     cd /opt
