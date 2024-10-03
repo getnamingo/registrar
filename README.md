@@ -34,19 +34,23 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **Contact Validation**: Validates domain name registrant's contact details for accuracy and authenticity.
 
-## Installation Instructions
+## Documentation
 
-To begin, simply copy the command below and paste it into your server terminal. This installation process is optimized for a fresh VPS running Ubuntu 22.04/24.04. For detailed guidance, please consult the Installation Manual.
+### Installation
 
-**Minimum requirement:** a VPS with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
+**Minimum requirement:** a VPS running Ubuntu 22.04 or 24.04, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
+
+To get started, copy the command below and paste it into your server terminal:
 
 ```bash
 wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
 ```
 
-### Manual Installation
-
 For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
+
+### Update
+
+- v1.0.0/v1.0.1 to v1.0.2 - backup registrar, download and run the [update.sh](update.sh) script.
 
 ## Support
 
