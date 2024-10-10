@@ -350,8 +350,8 @@ Edit the `config.php` with the appropriate preferences as required.
 Download and initiate the escrow RDE client setup:
 
 ```bash
-wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
-tar -xzf escrow-rde-client-v2.1.1-linux_x86_64.tar.gz
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
 ./escrow-rde-client -i
 ```
 
