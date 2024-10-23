@@ -466,7 +466,8 @@ echo
 echo "8. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
 echo
 echo "9. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+echo "   On your contact page, list all company details, including registration number and the name of the CEO."
 echo
-echo "10. On your contact page, list all company details, including registration number and the name of the CEO."
+echo "10. Configure the backup tool following the instructions in the install.md file."
 echo
 echo "Please follow these steps carefully to complete your installation and configuration."

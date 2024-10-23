@@ -1,6 +1,11 @@
 {
     "require": {
         "peppeocchi/php-cron-scheduler": "^4.0",
-        "phpmailer/phpmailer": "^6.9.1"
+        "phpmailer/phpmailer": "^6.9.1",
+        "phpseclib/phpseclib": "^3.0",
+        "phpbu/phpbu": "^6.0",
+        "monolog/monolog": "^3.7",
+        "league/flysystem": "^3.28",
+        "league/flysystem-sftp-v3": "^3.28"
     }
 }

@@ -54,73 +54,73 @@ systemctl restart php8.2-fpm
 
 ```bash
 server {
-	listen 80;
-	server_name %%DOMAIN%%;
-	return 301 https://%%DOMAIN%%/request_uri/;
+    listen 80;
+    server_name %%DOMAIN%%;
+    return 301 https://%%DOMAIN%%/request_uri/;
 }
 
 server {
-	listen 443 ssl;
-	http2 on;
-	ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
-	ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
-	ssl_stapling on;
-	ssl_stapling_verify on;
+    listen 443 ssl;
+    http2 on;
+    ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
+    ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
+    ssl_stapling on;
+    ssl_stapling_verify on;
 
-	set $root_path '%%SOURCE_PATH%%';
-	server_name %%DOMAIN%%;
+    set $root_path '%%SOURCE_PATH%%';
+    server_name %%DOMAIN%%;
 
-	index index.php;
-	root $root_path;
-	try_files $uri $uri/ @rewrite;
-	sendfile off;
-	include /etc/nginx/mime.types;
+    index index.php;
+    root $root_path;
+    try_files $uri $uri/ @rewrite;
+    sendfile off;
+    include /etc/nginx/mime.types;
 
-	# Block access to sensitive files and return 404 to make it indistinguishable from a missing file
-	location ~* .(ini|sh|inc|bak|twig|sql)$ {
-		return 404;
-	}
+    # Block access to sensitive files and return 404 to make it indistinguishable from a missing file
+    location ~* .(ini|sh|inc|bak|twig|sql)$ {
+        return 404;
+    }
 
-	# Block access to hidden files except .well-known
-	location ~ /\.(?!well-known\/) {
-		return 404;
-	}
+    # Block access to hidden files except .well-known
+    location ~ /\.(?!well-known\/) {
+        return 404;
+    }
 
-	# Disable PHP execution in /uploads
-	location ~* /uploads/.*\.php$ {
-		return 404;
-	}
+    # Disable PHP execution in /uploads
+    location ~* /uploads/.*\.php$ {
+        return 404;
+    }
 
-	# Deny access to /data
-	location ~* /data/ {
-		return 404;
-	}
+    # Deny access to /data
+    location ~* /data/ {
+        return 404;
+    }
 
-	location @rewrite {
-		rewrite ^/page/(.*)$ /index.php?_url=/custompages/$1;
-		rewrite ^/(.*)$ /index.php?_url=/$1;
-	}
+    location @rewrite {
+        rewrite ^/page/(.*)$ /index.php?_url=/custompages/$1;
+        rewrite ^/(.*)$ /index.php?_url=/$1;
+    }
 
-	location ~ \.php {
-		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    location ~ \.php {
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
 
-		# fastcgi_pass need to be changed according your server setup:
-		# phpx.x is your server setup
-		# examples: /var/run/phpx.x-fpm.sock, /var/run/php/phpx.x-fpm.sock or /run/php/phpx.x-fpm.sock are all valid options
-		# Or even localhost:port (Default 9000 will work fine)
-		# Please check your server setup
+        # fastcgi_pass need to be changed according your server setup:
+        # phpx.x is your server setup
+        # examples: /var/run/phpx.x-fpm.sock, /var/run/php/phpx.x-fpm.sock or /run/php/phpx.x-fpm.sock are all valid options
+        # Or even localhost:port (Default 9000 will work fine)
+        # Please check your server setup
 
-		fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-			fastcgi_param PATH_INFO       $fastcgi_path_info;
-			fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-			fastcgi_intercept_errors on;
-			include fastcgi_params;
-		}
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+            fastcgi_param PATH_INFO       $fastcgi_path_info;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_intercept_errors on;
+            include fastcgi_params;
+        }
 
-		location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
-			root $root_path;
-			expires off;
-		}
+        location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+            root $root_path;
+            expires off;
+        }
 }
 ```
 
@@ -418,3 +418,9 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
 
 3. Some manual tune-in is still required in various parts.
+
+### Setup Backup
+
+To ensure the safety and availability of your data in Namingo, it's crucial to set up and verify automated backups. Begin by editing the backup.json file in the automation directory, where you'll input your database details. Ensure that the details for the database are accurately entered in two specified locations within the backup.json file.
+
+Additionally, check that the cronjob for PHPBU is correctly scheduled on your server `cron.php`, as this automates the backup process. You can verify this by reviewing your server's cronjob list. These steps are vital to maintain regular, secure backups of your system, safeguarding against data loss and ensuring business continuity.

@@ -1,0 +1,93 @@
+{
+  "verbose": true,
+  "logging": [
+    {
+      "type": "json",
+      "target": "/var/log/backup.log"
+    }
+  ],
+  "backups": [
+    {
+      "name": "Database",
+      "source": {
+        "type": "mysqldump",
+        "options": {
+          "databases": "registrar",
+          "user": "your_username",
+          "password": "your_password"
+        }
+      },
+      "target": {
+        "dirname": "/srv",
+        "filename": "database-%Y%m%d-%H%i.sql",
+        "compress": "bzip2"
+      },
+      "checks": [
+        {
+          "type": "sizemin",
+          "value": "10M"
+        }
+      ],
+      "cleanup": {
+        "type": "Capacity",
+        "options": {
+          "size": "750M"
+        }
+      }
+    },
+    {
+      "name": "Files",
+      "source": {
+        "type": "tar",
+        "options": {
+          "path": "/opt/registrar",
+          "throttle": "5m"
+        }
+      },
+      "target": {
+        "dirname": "/srv",
+        "filename": "files-%Y%m%d-%H%i",
+        "compress": "bzip2"
+      },
+      "checks": [
+        {
+          "type": "sizemin",
+          "value": "10M"
+        }
+      ],
+      "cleanup": {
+        "type": "Capacity",
+        "options": {
+          "size": "750M"
+        }
+      }
+    },
+    {
+      "name": "Files",
+      "source": {
+        "type": "tar",
+        "options": {
+          "path": "/var/www",
+          "throttle": "5m"
+        }
+      },
+      "target": {
+        "dirname": "/srv",
+        "filename": "registrarweb-%Y%m%d-%H%i",
+        "compress": "bzip2"
+      },
+      "checks": [
+        {
+          "type": "sizemin",
+          "value": "10M"
+        }
+      ],
+      "cleanup": {
+        "type": "Capacity",
+        "options": {
+          "size": "750M"
+        }
+      }
+    }
+  ]
+}
