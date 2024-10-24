@@ -50,7 +50,7 @@ systemctl stop whois
 systemctl stop rdap
 
 # Clone the new version of the repository
-echo "Cloning v1.0.2 from the repository..."
+echo "Cloning v1.0.3 from the repository..."
 git clone https://github.com/getnamingo/registrar /opt/registrar103
 
 # Copy files from the new version to the appropriate directories
