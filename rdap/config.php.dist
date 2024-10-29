@@ -9,6 +9,7 @@ return [
     'db_password' => 'your_password',
     'registry_url' => 'https://example.com/rdap-terms',
     'rdap_url' => 'https://rdap.example.com',
+    'privacy' => true,
     'rately' => false,
     'limit' => 1000,
     'period' => 60,

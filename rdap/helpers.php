@@ -42,6 +42,8 @@ function setupLogger($logFilePath, $channelName = 'app') {
 }
 
 function mapContactToVCard($contactDetails, $role, $c) {
+    $redacted = 'REDACTED FOR PRIVACY';
+
     return [
         'objectClassName' => 'entity',
         'handle' => [$contactDetails['registrant_contact_id']],
@@ -50,20 +52,20 @@ function mapContactToVCard($contactDetails, $role, $c) {
             "vcard",
             [
                 ['version', new stdClass(), 'text', '4.0'],
-                ["fn", new stdClass(), 'text', $contactDetails['contact_first_name'].' '.$contactDetails['contact_last_name']],
-                ["org", $contactDetails['contact_company']],
-                ["adr", [
+                ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_first_name'] . ' ' . $contactDetails['contact_last_name']],
+                ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_company']],
+                ["adr", new stdClass(), 'text', [
                     "", // Post office box
-                    $contactDetails['contact_address1'], // Extended address
-                    $contactDetails['contact_address2'], // Street address
-                    $contactDetails['contact_city'], // Locality
-                    $contactDetails['contact_state'], // Region
-                    $contactDetails['contact_postcode'], // Postal code
-                    $contactDetails['contact_country']  // Country name
+                    $c['privacy'] ? $redacted : $contactDetails['contact_address1'], // Extended address
+                    $c['privacy'] ? $redacted : $contactDetails['contact_address2'], // Street address
+                    $c['privacy'] ? $redacted : $contactDetails['contact_city'], // Locality
+                    $c['privacy'] ? $redacted : $contactDetails['contact_state'], // Region
+                    $c['privacy'] ? $redacted : $contactDetails['contact_postcode'], // Postal code
+                    $c['privacy'] ? $redacted : strtoupper($contactDetails['contact_country']) // Country name
                 ]],
-                ["tel", $contactDetails['contact_phone_cc'].'.'.$contactDetails['contact_phone'], ["type" => "voice"]],
-                ["tel", $contactDetails['fax'], ["type" => "fax"]],
-                ["email", $contactDetails['contact_email']],
+                ["tel", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_phone_cc'] . '.' . $contactDetails['contact_phone'], ["type" => "voice"]],
+                ["tel", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['fax'], ["type" => "fax"]],
+                ["email", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_email']]
             ]
         ],
     ];
