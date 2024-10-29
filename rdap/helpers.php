@@ -46,7 +46,7 @@ function mapContactToVCard($contactDetails, $role, $c) {
 
     return [
         'objectClassName' => 'entity',
-        'handle' => [$contactDetails['registrant_contact_id']],
+        'handle' => $contactDetails['registrant_contact_id'],
         'roles' => [$role],
         'vcardArray' => [
             "vcard",
@@ -54,17 +54,17 @@ function mapContactToVCard($contactDetails, $role, $c) {
                 ['version', new stdClass(), 'text', '4.0'],
                 ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_first_name'] . ' ' . $contactDetails['contact_last_name']],
                 ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_company']],
-                ["adr", new stdClass(), 'text', [
-                    "", // Post office box
+                ["adr", ["CC" => strtoupper($contactDetails['contact_country'])], 'text', [
                     $c['privacy'] ? $redacted : $contactDetails['contact_address1'], // Extended address
                     $c['privacy'] ? $redacted : $contactDetails['contact_address2'], // Street address
-                    $c['privacy'] ? $redacted : $contactDetails['contact_city'], // Locality
-                    $c['privacy'] ? $redacted : $contactDetails['contact_state'], // Region
-                    $c['privacy'] ? $redacted : $contactDetails['contact_postcode'], // Postal code
-                    $c['privacy'] ? $redacted : strtoupper($contactDetails['contact_country']) // Country name
+                    $c['privacy'] ? $redacted : $contactDetails['contact_city'],    // Locality
+                    $c['privacy'] ? $redacted : $contactDetails['contact_state'],      // Region
+                    $c['privacy'] ? $redacted : $contactDetails['contact_postcode'],      // Postal code
+                    $c['privacy'] ? $redacted : strtoupper($contactDetails['contact_country']), // Country name
+                    "" // Required empty last element
                 ]],
-                ["tel", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_phone_cc'] . '.' . $contactDetails['contact_phone'], ["type" => "voice"]],
-                ["tel", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['fax'], ["type" => "fax"]],
+                ["tel", ["type" => "voice"], 'text', $c['privacy'] ? $redacted : $contactDetails['contact_phone_cc'] . '.' . $contactDetails['contact_phone']],
+                ["tel", ["type" => "fax"], 'text', $c['privacy'] ? $redacted : $contactDetails['fax']],        
                 ["email", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_email']]
             ]
         ],
