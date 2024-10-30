@@ -50,6 +50,10 @@ For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
 
 ### Update
 
+- v1.0.3 to v1.0.4 - backup registrar, download and run the [update104.sh](update104.sh) script.
+
+- v1.0.2 to v1.0.3 - backup registrar, download and run the [update103.sh](update103.sh) script.
+
 - v1.0.0/v1.0.1 to v1.0.2 - backup registrar, download and run the [update.sh](update.sh) script.
 
 ## Support
