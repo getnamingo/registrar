@@ -407,7 +407,16 @@ mv fossbilling-whois/check.php /var/www/
 
 - Edit the `/var/www/check.php` file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses.
 
-## 16. Installing FOSSBilling EPP-RFC Extensions:
+## 16. Domain Registrant Contact:
+
+```bash
+git clone https://github.com/getnamingo/fossbilling-contact
+mv fossbilling-contact/Contact /var/www/modules/
+```
+
+- Go to Extensions > Overview in the admin panel and activate "Domain Registrant Contact".
+
+## 17. Installing FOSSBilling EPP-RFC Extensions:
 
 For each registry you support, you will need to install a FOSSBilling EPP-RFC extension.
 
@@ -415,13 +424,13 @@ Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the insta
 
 To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
 
-## 17. Installing FOSSBilling DNS Hosting Extensions:
+## 18. Installing FOSSBilling DNS Hosting Extensions:
 
 To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
 
 Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
 
-## 18. Further Settings:
+## 19. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 

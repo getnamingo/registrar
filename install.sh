@@ -436,9 +436,12 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     git clone https://github.com/getnamingo/fossbilling-whois
     mv fossbilling-whois/Whois /var/www/modules/
     mv fossbilling-whois/check.php /var/www/
-    
+
     sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
     sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
+	
+    git clone https://github.com/getnamingo/fossbilling-contact
+    mv fossbilling-contact/Contact /var/www/modules/
 
     git clone https://github.com/getnamingo/fossbilling-registrar
     mv fossbilling-registrar/Registrar /var/www/modules/
@@ -471,6 +474,7 @@ echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activat
 echo "   - Domain Contact Verification"
 echo "   - TMCH Claims Notice Support"
 echo "   - WHOIS & RDAP Client"
+echo "   - Domain Registrant Contact"
 echo "   - ICANN Registrar Accreditation"
 echo
 echo "8. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
