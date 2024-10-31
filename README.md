@@ -10,7 +10,9 @@ Open source ICANN-accredited domain registrar management system.
 
 **Namingo Registrar Platform**, built atop [FOSSBilling](https://fossbilling.org/), transforms the system into a comprehensive and open-source [ICANN](https://icann.org/) accredited registrar management system. It provides a powerful and flexible solution for managing domain names as an ICANN accredited registrar, adhering to the stringent standards set by ICANN.
 
-While our platform is primarily designed for FOSSBilling, it can be adapted to work with [WHMCS](https://www.whmcs.com/). Using Namingo, businesses can streamline domain management operations, enhance efficiency, and reduce costs.
+Using Namingo, businesses can streamline domain management operations, enhance efficiency, and reduce costs.
+
+For our [WHMCS](https://www.whmcs.com/) version, please visit [Namingo Registrar WHMCS](https://github.com/getnamingo/registrar-whmcs).
 
 ## Get Involved
 
@@ -46,7 +48,7 @@ To get started, copy the command below and paste it into your server terminal:
 wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
 ```
 
-For detailed installation steps, please refer to [INSTALL.md](INSTALL.md).
+For detailed installation steps, please refer to [install.md](install.md).
 
 ### Update
 

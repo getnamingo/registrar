@@ -416,11 +416,19 @@ mv fossbilling-contact/Contact /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Registrant Contact".
 
-## 17. Installing FOSSBilling EPP-RFC Extensions:
+## 17. Installing FOSSBilling EPP Extensions:
 
-For each registry you support, you will need to install a FOSSBilling EPP-RFC extension.
+For each registry you support, you will need to install a FOSSBilling EPP extension.
+
+### 17.1. Generic EPP:
 
 Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
+
+### 17.2. VeriSign EPP:
+
+Navigate to https://github.com/getnamingo/fossbilling-epp-verisign and follow the installation instructions.
+
+### 17.3. Executing OT&E Tests:
 
 To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
 
