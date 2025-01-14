@@ -141,6 +141,10 @@ server {
         return 404;
     }
 
+    location ~* ^/data/.*\.(jpg|jpeg|png)$ {
+        allow all;
+    }
+
     location ~* /data/ {
         return 404;
     }
