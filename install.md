@@ -375,7 +375,16 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 13. Domain Contact Verification:
+## 13. ICANN Registrar Module:
+
+```bash
+git clone https://github.com/getnamingo/fossbilling-registrar
+mv fossbilling-registrar/Registrar /var/www/modules/
+```
+
+- Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation".
+
+## 14. Domain Contact Verification:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-validation
@@ -384,7 +393,7 @@ mv fossbilling-validation/Validation /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
 
-## 14. TMCH Claims Notice Support:
+## 15. TMCH Claims Notice Support:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-tmch
@@ -395,7 +404,7 @@ mv fossbilling-tmch/Tmch /var/www/modules/
 
 - Still this needs to be integrated with your workflow.
 
-## 15. WHOIS & RDAP Client:
+## 16. WHOIS & RDAP Client:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-whois
@@ -407,7 +416,7 @@ mv fossbilling-whois/check.php /var/www/
 
 - Edit the `/var/www/check.php` file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses.
 
-## 16. Domain Registrant Contact:
+## 17. Domain Registrant Contact:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-contact
@@ -416,29 +425,29 @@ mv fossbilling-contact/Contact /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Registrant Contact".
 
-## 17. Installing FOSSBilling EPP Extensions:
+## 18. Installing FOSSBilling EPP Extensions:
 
 For each registry you support, you will need to install a FOSSBilling EPP extension.
 
-### 17.1. Generic EPP:
+### 18.1. Generic EPP:
 
 Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
 
-### 17.2. VeriSign EPP:
+### 18.2. VeriSign EPP:
 
 Navigate to https://github.com/getnamingo/fossbilling-epp-verisign and follow the installation instructions.
 
-### 17.3. Executing OT&E Tests:
+### 18.3. Executing OT&E Tests:
 
 To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
 
-## 18. Installing FOSSBilling DNS Hosting Extensions:
+## 19. Installing FOSSBilling DNS Hosting Extensions:
 
 To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
 
 Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
 
-## 19. Further Settings:
+## 20. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
