@@ -30,7 +30,7 @@ opcache.jit=1255
 session.cookie_secure = 1
 session.cookie_httponly = 1
 session.cookie_samesite = "Strict"
-session.cookie_domain = example.com
+session.cookie_domain = .example.com
 ```
 
 In ```/etc/php/8.2/mods-available/opcache.ini``` make one additional change:

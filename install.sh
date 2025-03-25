@@ -7,8 +7,32 @@ if [[ -e /etc/os-release ]]; then
     VER=$VERSION_ID
 fi
 
+# Get the available RAM in MB
+AVAILABLE_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
+PHP_MEMORY_MB=$(( AVAILABLE_RAM_MB / 2 ))
+PHP_MEMORY_LIMIT="${PHP_MEMORY_MB}M"
+
+# Function to ensure a setting is present, uncommented, and correctly set
+set_php_ini_value() {
+    local ini_file=$1
+    local key=$2
+    local value=$3
+
+    # Escape slashes for sed compatibility
+    local escaped_value
+    escaped_value=$(printf '%s\n' "$value" | sed 's/[\/&]/\\&/g')
+
+    if grep -Eq "^\s*[;#]?\s*${key}\s*=" "$ini_file"; then
+        # Update the existing line, uncomment it and set correct value
+        sed -i -E "s|^\s*[;#]?\s*(${key})\s*=.*|\1 = ${escaped_value}|" "$ini_file"
+    else
+        # Add new line if key doesn't exist
+        echo "${key} = ${value}" >> "$ini_file"
+    fi
+}
+
 echo "Before continuing, ensure that you have the following domains pointing to this server:"
-echo "1. billing.example.com"
+echo "1. example.com or panel.example.com"
 echo "2. whois.example.com"
 echo "3. rdap.example.com"
 echo
@@ -19,7 +43,9 @@ if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
     exit 1
 fi
 
-read -p "Enter the domain name where this will be hosted (e.g., example.com): " domain_name
+read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
+cookie_domain=".$domain_name"
+read -p "Enter the domain name where the panel will be hosted (e.g., example.com or panel.example.com): " panel_domain_name
 read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
 read -p "Enter the MySQL database username: " db_user
 read -sp "Enter the MySQL database password: " db_pass
@@ -36,26 +62,33 @@ if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     apt update
     apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-soap php8.3-swoole php8.3-xml python3-certbot-nginx unzip wget whois
     
-    # Configure PHP
-    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.3/cli/php.ini
+    # Update php.ini files
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.validate_timestamps" "0"
+    set_php_ini_value "/etc/php/8.3/cli/php.ini" "expose_php" "0"
 
-    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.3/cli/php.ini
-    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.3/cli/php.ini
-
-    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.3/fpm/php.ini
-
-    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.3/fpm/php.ini
-    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.3/fpm/php.ini
+    # Repeat the same settings for php-fpm
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_domain" "\"$cookie_domain\""
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.validate_timestamps" "0"
+    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
 
     # Modify Opcache config
     echo "opcache.jit=1255" >> /etc/php/8.3/mods-available/opcache.ini
@@ -73,30 +106,33 @@ else
     apt update
     apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml python3-certbot-nginx unzip wget whois
     
-    # Configure PHP
-    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/cli/php.ini
+    # Update php.ini files
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.validate_timestamps" "0"
+    set_php_ini_value "/etc/php/8.2/cli/php.ini" "expose_php" "0"
 
-    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/cli/php.ini
-    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/cli/php.ini
-
-    sed -i "s/^;opcache.enable=.*/opcache.enable=1/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;opcache.enable_cli=.*/opcache.enable_cli=1/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;opcache.jit_buffer_size=.*/opcache.jit_buffer_size=100M/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;opcache.jit=.*/opcache.jit=1255/" /etc/php/8.2/fpm/php.ini
-
-    sed -i "s/^;session.cookie_secure.*/session.cookie_secure=1/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;session.cookie_httponly.*/session.cookie_httponly=1/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;session.cookie_samesite.*/session.cookie_samesite=\"Strict\"/" /etc/php/8.2/fpm/php.ini
-    sed -i "s/^;session.cookie_domain.*/session.cookie_domain=$domain_name/" /etc/php/8.2/fpm/php.ini
-
-    # Modify Opcache config
-    echo "opcache.jit=1255" >> /etc/php/8.2/mods-available/opcache.ini
-    echo "opcache.jit_buffer_size=100M" >> /etc/php/8.2/mods-available/opcache.ini
+    # Repeat the same settings for php-fpm
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_secure" "1"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_httponly" "1"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_domain" "\"$cookie_domain\""
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.validate_timestamps" "0"
+    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "expose_php" "0"
 
     # Restart PHP service
     systemctl restart php8.2-fpm
@@ -108,20 +144,20 @@ nginx_conf_fossbilling="/etc/nginx/sites-available/fossbilling.conf"
 cat <<EOL > $nginx_conf_fossbilling
 server {
     listen 80;
-    server_name $domain_name;
-    return 301 https://$domain_name\$request_uri;
+    server_name $panel_domain_name;
+    return 301 https://$panel_domain_name\$request_uri;
 }
 
 server {
     listen 443 ssl;
     http2 on;
-    ssl_certificate      /etc/letsencrypt/live/$domain_name/fullchain.pem;
-    ssl_certificate_key  /etc/letsencrypt/live/$domain_name/privkey.pem;
+    ssl_certificate      /etc/letsencrypt/live/$panel_domain_name/fullchain.pem;
+    ssl_certificate_key  /etc/letsencrypt/live/$panel_domain_name/privkey.pem;
     ssl_stapling on;
     ssl_stapling_verify on;
 
     set \$root_path '/var/www';
-    server_name $domain_name;
+    server_name $panel_domain_name;
 
     index index.php;
     root \$root_path;
@@ -222,27 +258,27 @@ EOL
     systemctl stop nginx
 
     # Step 2: Obtain SSL certificate using Certbot in standalone mode
-    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
     certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
 
     # Step 3: Start Nginx again with the newly obtained certificates
     systemctl start nginx
 
     # Step 4: Run Certbot again with the Nginx plugin to set up automatic renewals
-    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
     certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
 else
     # Step 1: Stop Nginx to free up port 80 and 443
     systemctl stop nginx
     
     # Step 2: Obtain SSL certificate using Certbot in standalone mode
-    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
 
     # Step 3: Start Nginx again with the newly obtained certificates
     systemctl start nginx
     
     # Obtain SSL certificate for only the main domain using the Nginx plugin
-    certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $domain_name --redirect
+    certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
 fi
 
 ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
@@ -338,7 +374,7 @@ chown -R www-data:www-data /var/www
 mv /var/www/config-sample.php /var/www/config.php
 
 # Update configuration in config.php
-sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$domain_name/'|" /var/www/config.php
+sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$panel_domain_name/'|" /var/www/config.php
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
 sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/config.php
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /var/www/config.php
@@ -443,7 +479,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
     sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
-	
+    
     git clone https://github.com/getnamingo/fossbilling-contact
     mv fossbilling-contact/Contact /var/www/modules/
 
@@ -456,7 +492,7 @@ fi
 # Final instructions to the user
 echo "Installation is complete. Please follow these manual steps to finalize your setup:"
 echo
-echo "1. Open your browser and visit https://$domain_name/admin to create a new admin account."
+echo "1. Open your browser and visit https://$panel_domain_name/admin to create a new admin account."
 echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
 echo "   Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
