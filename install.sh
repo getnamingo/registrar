@@ -300,11 +300,17 @@ chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
-    # Add the MariaDB 11.4 repository in the old .list format
-    cat <<EOL > /etc/apt/sources.list.d/mariadb.list
-    # MariaDB 11.4 repository list - created 2024-07-23 18:24 UTC
-    # https://mariadb.org/download/
-    deb [signed-by=/etc/apt/keyrings/mariadb-keyring.pgp] https://fastmirror.pp.ua/mariadb/repo/11.4/ubuntu noble main
+    # Add the MariaDB 11.4 repository
+cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
+# MariaDB 11 Rolling repository list - created 2025-04-08 06:40 UTC
+# https://mariadb.org/download/
+X-Repolib-Name: MariaDB
+Types: deb
+# URIs: https://deb.mariadb.org/11/ubuntu
+URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
+Suites: noble
+Components: main main/debug
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOL
 
     # Update the package list and install MariaDB
@@ -325,14 +331,16 @@ MYSQL_QUERY
 else
     curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
-    cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
-    # MariaDB 10.11 repository list - created 2023-12-02 22:16 UTC
-    X-Repolib-Name: MariaDB
-    Types: deb
-    URIs: https://mirrors.chroot.ro/mariadb/repo/10.11/ubuntu
-    Suites: jammy
-    Components: main main/debug
-    Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
+# MariaDB 11 Rolling repository list - created 2025-04-08 06:39 UTC
+# https://mariadb.org/download/
+X-Repolib-Name: MariaDB
+Types: deb
+# URIs: https://deb.mariadb.org/11/ubuntu
+URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
+Suites: jammy
+Components: main main/debug
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOL
 
     apt update
