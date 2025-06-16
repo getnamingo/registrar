@@ -19,4 +19,5 @@ return [
     'registrar_iana' => '1000',
     'abuse_email' => 'abuse@example.com',
     'abuse_phone' => '+1.234567890',
+    'minimum_data' => false,
 ];
