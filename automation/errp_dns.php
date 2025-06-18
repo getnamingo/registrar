@@ -2,14 +2,16 @@
 /**
  * Namingo Registrar
  *
- * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
- 
+
 require_once 'config.php';
 require_once 'helpers.php';
-require 'vendor/autoload.php';
+require_once 'vendor/autoload.php';
+
+$backend = $config['escrow']['backend'] ?? 'FOSS';
 
 use Registrar\EppClient\Client;
 $registrar = "Epp";
@@ -26,7 +28,14 @@ try {
 // Define function to update nameservers for expired domain names
 function updateExpiredDomainNameservers($pdo) {
     // Get all expired domain names with registrar nameservers
-    $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
+    if ($backend === 'FOSS') {
+        $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
+    } elseif ($backend === 'WHMCS') {
+        $sql = "SELECT * FROM namingo_domain WHERE NOW() > exdate";
+    } else {
+        echo "Unknown backend: $backend\n";
+        exit(1);
+    }
     $stmt = $pdo->prepare($sql);
     try {
         $stmt->execute();
@@ -37,13 +46,22 @@ function updateExpiredDomainNameservers($pdo) {
             $ns2 = $config['ns2'];
 
             // Prepare the SQL query
-            $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
+            if ($backend === 'FOSS') {
+                $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
+                $domainName = $domain['sld'].$domain['tld'];
+            } elseif ($backend === 'WHMCS') {
+                $sql = "UPDATE namingo_domain SET ns1 = :ns1, ns2 = :ns2, ns3 = NULL, ns4 = NULL, ns5 = NULL WHERE id = :id";
+                $domainName = $domain['name'];
+            } else {
+                echo "Unknown backend: $backend\n";
+                exit(1);
+            }
             $stmt = $pdo->prepare($sql);
 
             // Bind the parameters
             $stmt->bindParam(':ns1', $ns1);
             $stmt->bindParam(':ns2', $ns2);
-            $stmt->bindParam(':id', $domain['id']);
+            $stmt->bindParam(':id', $domain['id'], PDO::PARAM_INT);
 
             // Execute the query
             $stmt->execute();
@@ -51,7 +69,7 @@ function updateExpiredDomainNameservers($pdo) {
             // Send EPP update to registry
             $epp = connectEpp("generic", $config);
             $params = array(
-                'domainname' => $domain['sld'].$domain['tld'],
+                'domainname' => $domainName,
                 'ns1' => $ns1,
                 'ns2' => $ns2
             );

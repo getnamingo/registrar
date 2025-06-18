@@ -2,14 +2,16 @@
 /**
  * Namingo Registrar
  *
- * Written in 2023-2024 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
- 
+
 require_once 'config.php';
 require_once 'helpers.php';
 require_once 'vendor/autoload.php';
+
+$backend = $config['escrow']['backend'] ?? 'FOSS';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
@@ -44,20 +46,43 @@ function sendRenewalReminderEmail($to_email, $days_until_expiry) {
 // Define function to check for expiring domain names and send renewal reminder emails
 function sendRenewalReminders($pdo) {
     // Get all domain names that will expire in the next 30 days
-    $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+    if ($backend === 'FOSS') {
+        $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+    } elseif ($backend === 'WHMCS') {
+        $sql = "SELECT * FROM namingo_domain WHERE NOW() <= exdate AND exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+    } else {
+        echo "Unknown backend: $backend\n";
+        exit(1);
+    }
     $stmt = $pdo->prepare($sql);
     try {
         $stmt->execute();
         $expiring_domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($expiring_domains as $domain) {
             // Calculate days until expiry
-            $expiry_date = new DateTime($domain['expires_at']);
+            if ($backend === 'FOSS') {
+                $domainExpiration = $domain['expires_at'];
+                $domainEmail = $domain['contact_email'];
+            } elseif ($backend === 'WHMCS') {
+                $domainExpiration = $domain['exdate'];
+            } else {
+                echo "Unknown backend: $backend\n";
+                exit(1);
+            }
+            $expiry_date = new DateTime($domainExpiration);
             $now = new DateTime();
             $days_until_expiry = $expiry_date->diff($now)->days;
 
             // Send renewal reminder emails 30 days, 7 days, and 1 day before expiry
             if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1) {
-                sendRenewalReminderEmail($domain['contact_email'], $days_until_expiry);
+                if ($backend === 'WHMCS') {
+                    $sql = "SELECT email FROM namingo_contact WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->bindParam(':id', $domain['registrant'], PDO::PARAM_INT);
+                    $stmt->execute();
+                    $domainEmail = $stmt->fetchColumn();
+                }
+                sendRenewalReminderEmail($domainEmail, $days_until_expiry);
             }
         }
     } catch (PDOException $e) {
