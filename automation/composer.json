@@ -6,6 +6,12 @@
         "phpbu/phpbu": "^6.0",
         "monolog/monolog": "^3.7",
         "league/flysystem": "^3.28",
+        "league/flysystem-local": "^3.28",
         "league/flysystem-sftp-v3": "^3.28"
+    },
+    "autoload": {
+        "psr-4": {
+          "Registrar\\": "src/"
+        }
     }
 }

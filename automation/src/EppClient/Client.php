@@ -2,18 +2,15 @@
 /**
  * Tembo EPP client library
  *
- * Written in 2023 by Taras Kondratyuk (https://getpinga.com)
+ * Written in 2025 by Taras Kondratyuk (https://getpinga.com)
  * Based on xpanel/epp-bundle written in 2019 by Lilian Rudenco (info@xpanel.com)
  *
  * @license MIT
  */
 
-namespace Pinga\Tembo;
+namespace Registrar\EppClient;
 
-use Pinga\Tembo\Exception\EppException;
-use Pinga\Tembo\Exception\EppNotConnectedException;
-
-class eppClient
+class Client
 {
     private $resource;
     private $isLoggedIn;

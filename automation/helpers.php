@@ -14,7 +14,7 @@ function connectEpp(string $registry, $config)
 {
     try
     {
-        $epp = new eppClient();
+        $epp = new Client();
         $info = [
         "host" => $config["host"],
         "port" => $config["port"], "timeout" => 30, "tls" => "1.2", "bind" => false, "bindip" => "1.2.3.4:0", "verify_peer" => false, "verify_peer_name" => false,

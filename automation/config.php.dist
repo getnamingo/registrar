@@ -6,7 +6,7 @@
  *
  * @license MIT
 */
-    
+
 $config = array(
     'db' => array(
         'host' => 'localhost',
@@ -30,8 +30,30 @@ $config = array(
         ],
     ),
     'escrow' => array(
+        'backend' => 'FOSS', // FOSS, WHMCS, or Custom
         'full' => '/opt/registrar/escrow/full.csv',
-        'hdl' => '/opt/registrar/escrow/hdl.csv'
+        'hdl'  => '/opt/registrar/escrow/hdl.csv',
+
+        // Escrow client configuration
+        'ianaID' => 3840,
+        'specification' => 2007,
+        'depositBaseDir' => '/opt/registrar/escrow',
+        'runDir' => '/opt/registrar/escrow/process',
+        'compressAndEncrypt' => false,
+        'uploadFiles' => false,
+        'multi' => false,
+        'useFileSystemCache' => false,
+
+        'gpgPrivateKeyPath' => '/opt/registrar/escrow/YourPrivateKey.asc',
+        'gpgPrivateKeyPass' => 'gpgPrivateKeyPass',
+        'gpgReceiverPubKeyPath' => '/opt/registrar/escrow/ProviderKey.asc',
+
+        'sshHostname' => 'escrow.denic-services.de',
+        'sshPort' => 22,
+        'sshUsername' => 'sshUsername',
+        'sshPrivateKeyPath' => '/opt/registrar/escrow/sshPrivateKey',
+        'sshPrivateKeyPassword' => 'sshPrivateKeyPassword',
+        // 'sshHostPublicKeyPath' => 'examples/keys/denic.hostkey',
     ),
     'host' => 'epp.example.com',
     'port' => 700,

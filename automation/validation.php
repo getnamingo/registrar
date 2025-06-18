@@ -9,12 +9,11 @@
  
 require_once 'config.php';
 require_once 'helpers.php';
-require_once 'includes/eppClient.php';
-require_once 'vendor/autoload.php';
+require 'vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
-use Pinga\Tembo\eppClient;
+use Registrar\EppClient\Client;
 
 // Set up database connection
 try {

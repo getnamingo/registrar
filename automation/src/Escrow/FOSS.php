@@ -1,16 +1,8 @@
 <?php
-/**
- * Namingo Registrar Escrow
- *
- * Written in 2024 by Taras Kondratyuk (https://namingo.org/)
- *
- * @license MIT
-*/
 
-namespace Namingo\Registrar;
+namespace Registrar\Escrow;
 
-class FOSS
-{
+class FOSS implements EscrowInterface {
     private $pdo;
     private $full;
     private $hdl;
@@ -22,8 +14,7 @@ class FOSS
         $this->hdl = $hdl;
     }
 
-    public function generateFull(): void
-    {
+    public function generateFull() {
         // Query the database for the domain data and include domain_id (s.id)
         $stmt = $this->pdo->prepare("SELECT s.id, CONCAT(s.sld, '', s.tld) AS domain, s.ns1, s.ns2, s.ns3, s.ns4, s.expires_at, c.aid, DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate` FROM service_domain s JOIN client c ON s.client_id = c.id");
         $stmt->execute();
@@ -57,8 +48,7 @@ class FOSS
         fclose($file);
     }
 
-    public function generateHDL(): void
-    {
+    public function generateHDL() {
         // Query the database to fetch data from service_domain and join domain_meta to get the registrant_contact_id
         $stmt = $this->pdo->prepare("
             SELECT dm.registrant_contact_id AS handle, 

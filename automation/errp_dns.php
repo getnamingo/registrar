@@ -9,9 +9,9 @@
  
 require_once 'config.php';
 require_once 'helpers.php';
-require_once 'includes/eppClient.php';
+require 'vendor/autoload.php';
 
-use Pinga\Tembo\eppClient;
+use Registrar\EppClient\Client;
 $registrar = "Epp";
 
 // Set up database connection
