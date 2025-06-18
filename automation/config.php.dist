@@ -35,7 +35,7 @@ $config = array(
         'hdl'  => '/opt/registrar/escrow/hdl.csv',
 
         // Escrow client configuration
-        'ianaID' => 3840,
+        'ianaID' => 0000,
         'specification' => 2007,
         'depositBaseDir' => '/opt/registrar/escrow',
         'runDir' => '/opt/registrar/escrow/process',
