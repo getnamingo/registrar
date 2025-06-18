@@ -495,6 +495,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     mv fossbilling-registrar/Registrar /var/www/modules/
 
     mkdir /opt/registrar/escrow
+    mkdir /opt/registrar/escrow/process
 fi
 
 # Final instructions to the user
