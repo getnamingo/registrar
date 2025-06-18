@@ -466,12 +466,12 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
-    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
-    tar -xzf escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
-    mv escrow-rde-client-v2.2.0-linux_x86_64 escrow-rde-client
-    rm escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
+    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+    tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+    mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
+    rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
     ./escrow-rde-client -i
-    mv config-rde-client-example-v2.2.0.yaml config.yaml
+    mv config-rde-client-example-v2.2.1.yaml config.yaml
 
     # Clone and move FOSSBilling modules
     cd /opt

@@ -360,9 +360,12 @@ Edit the `config.php` with the appropriate preferences as required.
 Download and initiate the escrow RDE client setup:
 
 ```bash
-wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
-tar -xzf escrow-rde-client-v2.2.0-linux_x86_64.tar.gz
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
+rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 ./escrow-rde-client -i
+mv config-rde-client-example-v2.2.1.yaml config.yaml
 ```
 
 Edit the generated configuration file with the required details. Once ready, enable running the escrow client in `/opt/registrar/automation/escrow.php`.
