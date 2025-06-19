@@ -52,7 +52,7 @@ function mapContactToVCardFOSS($contactDetails, $role, $c) {
                 ['version', new stdClass(), 'text', '4.0'],
                 ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_first_name'] . ' ' . $contactDetails['contact_last_name']],
                 ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_company']],
-                ["adr", ["CC" => strtoupper($contactDetails['contact_country'])], 'text', [
+                ["adr", ["cc" => strtoupper($contactDetails['contact_country'])], 'text', [
                     $c['privacy'] ? $redacted : $contactDetails['contact_address1'], // Extended address
                     $c['privacy'] ? $redacted : $contactDetails['contact_address2'], // Street address
                     $c['privacy'] ? $redacted : $contactDetails['contact_city'],    // Locality
@@ -82,7 +82,7 @@ function mapContactToVCardWHMCS($contactDetails, $role, $c) {
                 ['version', new stdClass(), 'text', '4.0'],
                 ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['name']],
                 ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['org']],
-                ["adr", ["CC" => strtoupper($contactDetails['cc'])], 'text', [
+                ["adr", ["cc" => strtoupper($contactDetails['cc'])], 'text', [
                     $c['privacy'] ? $redacted : $contactDetails['street1'], // Extended address
                     $c['privacy'] ? $redacted : $contactDetails['street2'], // Street address
                     $c['privacy'] ? $redacted : $contactDetails['city'],    // Locality
