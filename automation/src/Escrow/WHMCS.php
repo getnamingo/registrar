@@ -14,7 +14,7 @@ class WHMCS implements EscrowInterface {
         $this->hdl = $hdl;
     }
 
-    public function generateFull() {
+    public function generateFull(): void {
         // Query to get id, registrant, admin, tech, billing, name, crdate, exdate from namingo_domain
         $sqlDomain = "SELECT d.id, d.registrant, d.admin, d.tech, d.billing, d.name, DATE_FORMAT(d.crdate, '%Y-%m-%dT%H:%i:%sZ') AS crdate, DATE_FORMAT(d.exdate, '%Y-%m-%dT%H:%i:%sZ') AS exdate FROM namingo_domain d";
         $stmtDomain = $this->pdo->prepare($sqlDomain);
@@ -73,7 +73,7 @@ class WHMCS implements EscrowInterface {
         }
     }
 
-    public function generateHDL() {
+    public function generateHDL(): void {
         // Query the database to get data from both tables
         $sql = "
             SELECT identifier, voice AS phone, fax, email, name, street1 AS address, city, sp AS state, pc AS postcode, cc AS country FROM namingo_contact
@@ -113,7 +113,86 @@ class WHMCS implements EscrowInterface {
         // Close the file
         fclose($file);
     }
-    
+
+    public function generateRDE(int $ianaID): void {
+        // Open file for writing
+        $file = fopen($this->full, 'w');
+
+        // ICANN RDE 2024 CSV header
+        $header = [
+            'domainname',
+            'expire',
+            'ianaid',
+            'rt-name',
+            'rt-street',
+            'rt-city',
+            'rt-state',
+            'rt-zip',
+            'rt-country',
+            'rt-phone',
+            'rt-email',
+            'bc-name'
+        ];
+        fputcsv($file, $header);
+
+        // Fetch domains
+        $sql = "SELECT id, registrant, billing, name, exdate FROM namingo_domain";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        foreach ($domains as $domain) {
+            // Fetch contacts (registrant and billing only)
+            $contactIds = array_filter([$domain['registrant'], $domain['billing']]);
+
+            if (empty($contactIds)) {
+                continue;
+            }
+
+            $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
+            $stmtContacts = $this->pdo->prepare("
+                SELECT id, name, street1, city, sp, pc, cc, voice, email
+                FROM namingo_contact
+                WHERE id IN ($placeholders)
+            ");
+            $stmtContacts->execute($contactIds);
+
+            $contacts = [];
+            while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
+                $contacts[$c['id']] = $c;
+            }
+
+            // Build RDE row
+            $registrant = $contacts[$domain['registrant']] ?? [];
+            $billing    = $contacts[$domain['billing']] ?? [];
+
+            $row = [
+                $domain['name']              ?? '',
+                $domain['exdate']            ?? '',
+                $ianaID,
+                $registrant['name']          ?? '',
+                $registrant['street1']       ?? '',
+                $registrant['city']          ?? '',
+                $registrant['sp']            ?? '',
+                $registrant['pc']            ?? '',
+                $registrant['cc']            ?? '',
+                $this->normalizePhone($registrant['voice'] ?? ''),
+                $registrant['email']         ?? '',
+                $billing['name']             ?? ''
+            ];
+
+            fputcsv($file, $row);
+        }
+
+        fclose($file);
+    }
+
+    // Normalize phone numbers to +E.164
+    private function normalizePhone(string $number): string {
+        $number = preg_replace('/[^0-9+]/', '', $number);
+        return '+' . ltrim($number, '+');
+    }
+
     private function writeToCsv(array $domain): void
     {
         // Open the file for appending

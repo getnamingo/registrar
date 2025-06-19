@@ -6,7 +6,7 @@
  *
  * @license MIT
  */
- 
+
 use Registrar\Escrow\EscrowInterface;
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -45,8 +45,17 @@ if (!($escrowGenerator instanceof EscrowInterface)) {
 }
 
 // Generate the escrow deposits
-$escrowGenerator->generateFull();
-$escrowGenerator->generateHDL();
+$spec = $config['escrow']['specification'] ?? null;
+
+if ((int)$spec === 2007) {
+    $escrowGenerator->generateFull();
+    $escrowGenerator->generateHDL();
+} elseif ((int)$spec === 2024) {
+    $escrowGenerator->generateRDE($config['escrow']['ianaID']);
+} else {
+    $log->error("Error: Escrow specification must be 2007 or 2024.");
+    exit(1);
+}
 
 // Submit the escrow deposits
 $configArray = [

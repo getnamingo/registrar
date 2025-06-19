@@ -14,7 +14,7 @@ class FOSS implements EscrowInterface {
         $this->hdl = $hdl;
     }
 
-    public function generateFull() {
+    public function generateFull(): void {
         // Query the database for the domain data and include domain_id (s.id)
         $stmt = $this->pdo->prepare("SELECT s.id, CONCAT(s.sld, '', s.tld) AS domain, s.ns1, s.ns2, s.ns3, s.ns4, s.expires_at, c.aid, DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate` FROM service_domain s JOIN client c ON s.client_id = c.id");
         $stmt->execute();
@@ -48,7 +48,7 @@ class FOSS implements EscrowInterface {
         fclose($file);
     }
 
-    public function generateHDL() {
+    public function generateHDL(): void {
         // Query the database to fetch data from service_domain and join domain_meta to get the registrant_contact_id
         $stmt = $this->pdo->prepare("
             SELECT dm.registrant_contact_id AS handle, 
@@ -90,5 +90,101 @@ class FOSS implements EscrowInterface {
 
         // Close the file
         fclose($file);
+    }
+
+    public function generateRDE(int $ianaID): void {
+        // Open file
+        $file = fopen($this->full, 'w');
+
+        // ICANN RDE 2024 header
+        $header = [
+            'domainname',
+            'expire',
+            'ianaid',
+            'rt-name',
+            'rt-street',
+            'rt-city',
+            'rt-state',
+            'rt-zip',
+            'rt-country',
+            'rt-phone',
+            'rt-email',
+            'bc-name'
+        ];
+        fputcsv($file, $header);
+
+        // Fetch all domains and their contact mapping
+        $stmt = $this->pdo->prepare("
+            SELECT s.id AS domain_id,
+                   CONCAT(s.sld, '', s.tld) AS domainname,
+                   DATE_FORMAT(s.expires_at, '%Y-%m-%dT%H:%i:%sZ') AS expire,
+                   dm.registrant_contact_id,
+                   dm.billing_contact_id
+            FROM service_domain s
+            JOIN domain_meta dm ON s.id = dm.domain_id
+        ");
+        $stmt->execute();
+        $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        foreach ($domains as $domain) {
+            // Fetch registrant and billing contact data
+            $contactIds = array_filter([
+                $domain['registrant_contact_id'] ?? null,
+                $domain['billing_contact_id'] ?? null
+            ]);
+
+            if (empty($contactIds)) {
+                continue;
+            }
+
+            $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
+            $stmtContacts = $this->pdo->prepare("
+                SELECT id,
+                       CONCAT(contact_first_name, ' ', contact_last_name) AS name,
+                       contact_address1 AS street,
+                       contact_city,
+                       contact_state,
+                       contact_postcode AS zip,
+                       contact_country,
+                       CONCAT('+', contact_phone_cc, '.', contact_phone) AS phone,
+                       contact_email AS email
+                FROM client_contact
+                WHERE id IN ($placeholders)
+            ");
+            $stmtContacts->execute($contactIds);
+
+            $contacts = [];
+            while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
+                $contacts[$c['id']] = $c;
+            }
+
+            $registrant = $contacts[$domain['registrant_contact_id']] ?? [];
+            $billing    = $contacts[$domain['billing_contact_id']] ?? [];
+
+            // Compose row for RDE CSV
+            $line = [
+                $domain['domainname']         ?? '',
+                $domain['expire']             ?? '',
+                $ianaID,
+                $registrant['name']           ?? '',
+                $registrant['street']         ?? '',
+                $registrant['contact_city']   ?? '',
+                $registrant['contact_state']  ?? '',
+                $registrant['zip']            ?? '',
+                $registrant['contact_country']?? '',
+                $this->normalizePhone($registrant['phone'] ?? ''),
+                $registrant['email']          ?? '',
+                $billing['name']              ?? ''
+            ];
+
+            fputcsv($file, $line);
+        }
+
+        fclose($file);
+    }
+
+    // Normalize phone to +E.164-like format
+    private function normalizePhone(string $number): string {
+        return '+' . ltrim(preg_replace('/[^0-9+]/', '', $number), '+');
     }
 }

@@ -22,13 +22,15 @@ class Custom implements EscrowInterface {
         $this->hdl = $hdl;
     }
 
-    public function generateFull()
-    {
+    public function generateFull(): void {
         throw new LogicException('generateFull() is not implemented. Please rename this class and implement your own backend logic.');
     }
 
-    public function generateHDL()
-    {
+    public function generateHDL(): void {
         throw new LogicException('generateHDL() is not implemented. Please rename this class and implement your own backend logic.');
+    }
+    
+    public function generateRDE(int $ianaID): void {
+        throw new LogicException('generateRDE() is not implemented. Please rename this class and implement your own backend logic.');
     }
 }
