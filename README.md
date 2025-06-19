@@ -8,11 +8,9 @@ Open source ICANN-accredited domain registrar management system.
 
 ## Introduction
 
-**Namingo Registrar Platform**, built atop [FOSSBilling](https://fossbilling.org/), transforms the system into a comprehensive and open-source [ICANN](https://icann.org/) accredited registrar management system. It provides a powerful and flexible solution for managing domain names as an ICANN accredited registrar, adhering to the stringent standards set by ICANN.
+**Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs.
 
-Using Namingo, businesses can streamline domain management operations, enhance efficiency, and reduce costs.
-
-For our [WHMCS](https://www.whmcs.com/) version, please visit [Namingo Registrar WHMCS](https://github.com/getnamingo/registrar-whmcs).
+**Namingo Registrar** works with either [FOSSBilling](https://fossbilling.org/) or [WHMCS](https://www.whmcs.com/), giving you the flexibility to choose the platform that fits your workflow.
 
 ## Get Involved
 
@@ -48,7 +46,10 @@ To get started, copy the command below and paste it into your server terminal:
 wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
 ```
 
-For detailed installation steps, please refer to [install.md](install.md).
+For detailed installation steps, see:
+
+- [install-fossbilling.md](install-fossbilling.md) – for FOSSBilling setup  
+- [install-whmcs.md](install-whmcs.md) – for WHMCS setup
 
 ### Update
 
@@ -74,7 +75,8 @@ We appreciate your involvement and patience as Namingo continues to grow and ada
 
 ## Acknowledgements
 
-Special thanks to **FOSSBilling team** for their inspirational work on [FOSSBilling](https://fossbilling.org/).
+Special thanks to the **FOSSBilling** and **WHMCS** teams for their work on powerful billing platforms that Namingo builds upon.  
+Their efforts have made it possible to offer flexible registrar solutions for both [FOSSBilling](https://fossbilling.org/) and [WHMCS](https://www.whmcs.com/).
 
 Additionally, we extend our gratitude to:
 - **ChatGPT** for invaluable assistance with code and text writing.
