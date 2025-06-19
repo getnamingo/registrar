@@ -149,8 +149,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    http2 on;
+    listen 443 ssl http2;
     ssl_certificate      /etc/letsencrypt/live/$panel_domain_name/fullchain.pem;
     ssl_certificate_key  /etc/letsencrypt/live/$panel_domain_name/privkey.pem;
     ssl_stapling on;
@@ -229,9 +228,8 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name rdap.$domain_name;
 
     ssl_certificate /etc/letsencrypt/live/rdap.$domain_name/fullchain.pem;
@@ -425,7 +423,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     # Setup for WHOIS service
     cd /opt/registrar/whois
-    composer install
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
@@ -441,7 +439,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     # Setup for RDAP service
     cd /opt/registrar/rdap
-    composer install
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
@@ -457,7 +455,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 
     # Setup for automation
     cd /opt/registrar/automation
-    composer install
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials

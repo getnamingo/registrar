@@ -60,8 +60,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    http2 on;
+    listen 443 ssl http2;
     ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
     ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
     ssl_stapling on;
@@ -146,9 +145,8 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name rdap.%%DOMAIN%%;
 
     ssl_certificate /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;

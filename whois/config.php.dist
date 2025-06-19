@@ -17,4 +17,6 @@ return [
     'rately' => false,
     'limit' => 25,
     'period' => 60,
+    'minimum_data' => false,
+    'backend' => 'foss', // or whmcs
 ];
