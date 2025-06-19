@@ -214,17 +214,7 @@ server {
     listen [::]:80;
     server_name rdap.$domain_name;
 
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-
-        # Add CORS headers
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type";
-    }
+    return 301 https://$host$request_uri;
 }
 
 server {
@@ -245,6 +235,8 @@ server {
         add_header Access-Control-Allow-Origin "*";
         add_header Access-Control-Allow-Methods "GET, OPTIONS";
         add_header Access-Control-Allow-Headers "Content-Type";
+
+		add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 }
 EOL
@@ -504,31 +496,28 @@ echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
 echo "   Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
 echo
-echo "3. Edit the following configuration files to match your registrar settings and after that restart the services:"
+echo "3. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
 echo "   - /opt/registrar/whois/config.php"
 echo "   - /opt/registrar/rdap/config.php"
 echo "   - /opt/registrar/automation/config.php"
 echo
-echo "4. Edit the /opt/registrar/automation/config.yaml file with the required details for escrow."
-echo "   Once ready, enable running the escrow client in /opt/registrar/automation/escrow.php."
-echo
-echo "5. Add the following cron job to ensure automation runs smoothly:"
+echo "4. Add the following cron job to ensure automation runs smoothly:"
 echo "   * * * * * /usr/bin/php$PHP_V /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
 echo
-echo "6. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
+echo "5. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
 echo
-echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
+echo "6. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
 echo "   - Domain Contact Verification"
 echo "   - TMCH Claims Notice Support"
 echo "   - WHOIS & RDAP Client"
 echo "   - Domain Registrant Contact"
 echo "   - ICANN Registrar Accreditation"
 echo
-echo "8. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
+echo "7. Install FOSSBilling extensions for EPP and DNS as outlined in steps 16 and 17 of install.md."
 echo
-echo "9. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
 echo "   On your contact page, list all company details, including registration number and the name of the CEO."
 echo
-echo "10. Configure the backup tool following the instructions in the install.md file."
+echo "9. Configure the backup tool following the instructions in the install.md file."
 echo
 echo "Please follow these steps carefully to complete your installation and configuration."

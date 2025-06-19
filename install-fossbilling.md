@@ -131,17 +131,7 @@ server {
     listen [::]:80;
     server_name rdap.%%DOMAIN%%;
 
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-        # Add CORS headers
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type";
-    }
+    return 301 https://$host$request_uri;
 }
 
 server {
@@ -162,6 +152,8 @@ server {
         add_header Access-Control-Allow-Origin "*";
         add_header Access-Control-Allow-Methods "GET, OPTIONS";
         add_header Access-Control-Allow-Headers "Content-Type";
+
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 }
 ```
@@ -207,13 +199,12 @@ curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_relea
 Place the following in ```/etc/apt/sources.list.d/mariadb.sources```:
 
 ```bash
-# MariaDB 10.11 repository list - created 2023-12-02 22:16 UTC
+# MariaDB 11 Rolling repository list - created 2025-04-08 06:39 UTC
 # https://mariadb.org/download/
 X-Repolib-Name: MariaDB
 Types: deb
-# deb.mariadb.org is a dynamic mirror if your preferred mirror goes offline. See https://mariadb.org/mirrorbits/ for details.
-# URIs: https://deb.mariadb.org/10.11/ubuntu
-URIs: https://mirrors.chroot.ro/mariadb/repo/10.11/ubuntu
+# URIs: https://deb.mariadb.org/11/ubuntu
+URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
 Suites: jammy
 Components: main main/debug
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
@@ -362,11 +353,7 @@ wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-
 tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
 rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
-./escrow-rde-client -i
-mv config-rde-client-example-v2.2.1.yaml config.yaml
 ```
-
-Edit the generated configuration file with the required details. Once ready, enable running the escrow client in `/opt/registrar/automation/escrow.php`.
 
 ### Running the Automation System
 
