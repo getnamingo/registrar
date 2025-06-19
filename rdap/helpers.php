@@ -1,7 +1,5 @@
 <?php
 
-require_once 'vendor/autoload.php';
-
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
@@ -41,7 +39,7 @@ function setupLogger($logFilePath, $channelName = 'app') {
     return $log;
 }
 
-function mapContactToVCard($contactDetails, $role, $c) {
+function mapContactToVCardFOSS($contactDetails, $role, $c) {
     $redacted = 'REDACTED FOR PRIVACY';
 
     return [
@@ -66,6 +64,36 @@ function mapContactToVCard($contactDetails, $role, $c) {
                 ["tel", ["type" => "voice"], 'text', $c['privacy'] ? $redacted : $contactDetails['contact_phone_cc'] . '.' . $contactDetails['contact_phone']],
                 ["tel", ["type" => "fax"], 'text', $c['privacy'] ? $redacted : $contactDetails['fax']],        
                 ["email", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['contact_email']]
+            ]
+        ],
+    ];
+}
+
+function mapContactToVCardWHMCS($contactDetails, $role, $c) {
+    $redacted = 'REDACTED FOR PRIVACY';
+
+    return [
+        'objectClassName' => 'entity',
+        'handle' => $contactDetails['identifier'],
+        'roles' => [$role],
+        'vcardArray' => [
+            "vcard",
+            [
+                ['version', new stdClass(), 'text', '4.0'],
+                ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['name']],
+                ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['org']],
+                ["adr", ["CC" => strtoupper($contactDetails['cc'])], 'text', [
+                    $c['privacy'] ? $redacted : $contactDetails['street1'], // Extended address
+                    $c['privacy'] ? $redacted : $contactDetails['street2'], // Street address
+                    $c['privacy'] ? $redacted : $contactDetails['city'],    // Locality
+                    $c['privacy'] ? $redacted : $contactDetails['sp'],      // Region
+                    $c['privacy'] ? $redacted : $contactDetails['pc'],      // Postal code
+                    $c['privacy'] ? $redacted : strtoupper($contactDetails['cc']), // Country name
+                    "" // Required empty last element
+                ]],
+                ["tel", ["type" => "voice"], 'text', $c['privacy'] ? $redacted : $contactDetails['voice']],
+                ["tel", ["type" => "fax"], 'text', $c['privacy'] ? $redacted : $contactDetails['fax']],
+                ["email", new stdClass(), 'text', $c['privacy'] ? $redacted : $contactDetails['email']],
             ]
         ],
     ];

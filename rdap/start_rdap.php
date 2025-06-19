@@ -4,15 +4,26 @@ if (!extension_loaded('swoole')) {
     die('Swoole extension must be installed');
 }
 
+require_once __DIR__ . '/vendor/autoload.php';
+
 use Swoole\Http\Server;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Namingo\Rately\Rately;
+use Registrar\RDAP\PlatformFactory;
 
 $c = require_once 'config.php';
 require_once 'helpers.php';
 $logFilePath = '/var/log/namingo/rdap.log';
 $log = setupLogger($logFilePath, 'RDAP');
+
+$backend = strtolower($c['backend'] ?? 'foss');
+try {
+    $adapter = PlatformFactory::create($backend);
+} catch (\Throwable $e) {
+    echo "RDAP backend error: " . $e->getMessage() . PHP_EOL;
+    exit(1);
+}
 
 // Initialize the PDO connection pool
 $pool = new Swoole\Database\PDOPool(
@@ -50,7 +61,7 @@ $rateLimiter = new Rately();
 $log->info('server started.');
 
 // Handle incoming HTTP requests
-$http->on('request', function ($request, $response) use ($c, $pool, $log, $rateLimiter) {
+$http->on('request', function ($request, $response) use ($c, $pool, $log, $adapter, $rateLimiter) {
     // Get a PDO connection from the pool
     try {
         $pdo = $pool->get();
@@ -79,7 +90,7 @@ $http->on('request', function ($request, $response) use ($c, $pool, $log, $rateL
         // Handle domain query
         if (preg_match('#^/domain/([^/?]+)#', $requestPath, $matches)) {
             $domainName = $matches[1];
-            handleDomainQuery($request, $response, $pdo, $domainName, $c, $log);
+            handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $adapter);
         }
         // Handle help query
         elseif ($requestPath === '/help') {
@@ -114,7 +125,7 @@ $http->on('request', function ($request, $response) use ($c, $pool, $log, $rateL
 // Start the server
 $http->start();
 
-function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
+function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $adapter) {
     // Extract and validate the domain name from the request
     $domain = urldecode($domainName);
     $domain = trim($domain);
@@ -168,13 +179,8 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
         $tld = "." . end($parts);
     }
 
-    // Check if the TLD exists in the tld table
-    $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
-    $stmtTLD->bindParam(':tld', $tld, PDO::PARAM_STR);
-    $stmtTLD->execute();
-    $tldExists = $stmtTLD->fetchColumn();
-
-    if (!$tldExists) {
+    // Check if the TLD exists
+    if (!$adapter->isValidTLD($pdo, $tld)) {
         $response->header('Content-Type', 'application/rdap+json');
         $response->status(400); // Bad Request
         $response->end(json_encode(['error' => 'Invalid TLD. Please search only allowed TLDs']));
@@ -183,16 +189,8 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
 
     // Perform the RDAP lookup
     try {
-        // Query 1: Get domain details
-        $stmt1 = $pdo->prepare("SELECT *,
-            DATE_FORMAT(`registered_at`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
-            DATE_FORMAT(`updated_at`, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
-            DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate`
-            FROM service_domain WHERE sld = :domain AND tld = :tld");
-        $stmt1->bindParam(':domain', $domainName, PDO::PARAM_STR);
-        $stmt1->bindParam(':tld', $tld, PDO::PARAM_STR);
-        $stmt1->execute();
-        $domainDetails = $stmt1->fetch(PDO::FETCH_ASSOC);
+        // Get domain details
+        $domainDetails = $adapter->getDomainByName($pdo, $domain);
 
         // Check if the domain exists
         if (!$domainDetails) {
@@ -276,48 +274,23 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
             return;
         }
 
-        $metaQuery = "SELECT * FROM domain_meta WHERE domain_id = :domain_id";
-        $stmtMeta = $pdo->prepare($metaQuery);
-        $stmtMeta->bindParam(':domain_id', $domainDetails['id'], PDO::PARAM_INT);
-        $stmtMeta->execute();
-        $domainMeta = $stmtMeta->fetch(PDO::FETCH_ASSOC);
+        $contacts = $adapter->getContacts($pdo, $domainDetails);
 
-        $statusQuery = "SELECT status FROM domain_status WHERE domain_id = :domain_id";
-        $stmtStatus = $pdo->prepare($statusQuery);
-        $stmtStatus->bindParam(':domain_id', $domainDetails['id'], PDO::PARAM_INT);
-        $stmtStatus->execute();
-        $domainStatuses = $stmtStatus->fetchAll(PDO::FETCH_COLUMN);
-        if (empty($domainStatuses)) {
-            $domainStatuses[] = 'active';
-        }
-        
-        // Query to get DNSSEC data from domain_dnssec
-        $dnssecQuery = "SELECT key_tag, algorithm, digest_type, digest FROM domain_dnssec WHERE domain_id = :domain_id";
-        $stmtDnssec = $pdo->prepare($dnssecQuery);
-        $stmtDnssec->bindParam(':domain_id', $domainDetails['id'], PDO::PARAM_INT);
-        $stmtDnssec->execute();
-        $dnssecRecords = $stmtDnssec->fetchAll(PDO::FETCH_ASSOC);
+        $domainStatuses = $adapter->getDomainStatuses($pdo, $domainDetails['id']);
+        $dnssecRecords = $adapter->getDNSSEC($pdo, $domainDetails['id']);
 
-        // Initialize the dsData array for secureDNS
-        $dsDataArray = [];
-        foreach ($dnssecRecords as $record) {
-            $dsDataArray[] = [
-                "keyTag" => $record['key_tag'],
-                "algorithm" => $record['algorithm'],
-                "digest" => $record['digest'],
-                "digestType" => $record['digest_type']
-            ];
-        }
+        $dsData = array_map(fn($r) => [
+            'keyTag'     => $r['key_tag'],
+            'algorithm'  => $r['algorithm'],
+            'digest'     => $r['digest'],
+            'digestType' => $r['digest_type']
+        ], $dnssecRecords);
 
-        // Determine if delegation is signed based on the presence of DNSSEC records
-        $delegationSigned = !empty($dsDataArray);
-
-        // Build the secureDNS array
-        $secureDNS = ["delegationSigned" => $delegationSigned];
-
-        // Include dsData only if there are records
-        if ($delegationSigned) {
-            $secureDNS["dsData"] = $dsDataArray;
+        $secureDNS = [
+            'delegationSigned' => !empty($dsData),
+        ];
+        if (!empty($dsData)) {
+            $secureDNS['dsData'] = $dsData;
         }
 
         // Define the basic events
@@ -336,38 +309,12 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
         if (isset($domainDetails['trdate']) && !empty($domainDetails['trdate'])) {
             $events[] = ['eventAction' => 'transfer', 'eventDate' => (new DateTime($domainDetails['trdate']))->format('Y-m-d\TH:i:s.v\Z')];
         }
-        
-        // Nameservers source
-        $nsSources = [
-            'ns1' => $domainDetails['ns1'],
-            'ns2' => $domainDetails['ns2'],
-            'ns3' => $domainDetails['ns3'],
-            'ns4' => $domainDetails['ns4'],
-        ];
 
-        // Filter out empty nameservers
-        $filteredNsSources = array_filter($nsSources, function ($nsName) {
-            return !empty($nsName);
-        });
-
-        // Build RDAP response for nameservers
-        $nameservers = array_map(function ($nsHandle, $nsName) use ($c) {
-            return [
-                'objectClassName' => 'nameserver',
-                'handle' => $nsHandle,
-                'ldhName' => $nsName,
-                'links' => [
-                    [
-                        'href' => 'http://'.$c['rdap_url'].'/nameserver/' . $nsName,
-                        'rel' => 'self',
-                        'type' => 'application/rdap+json',
-                    ],
-                ],
-            ];
-        }, array_keys($filteredNsSources), $filteredNsSources);
+        if ($adapter instanceof \Registrar\RDAP\FOSS) {
+            $domainDetails['registrant_contact_id'] = $contacts['registrant']['id'] ?? null;
+        }
 
         // Construct the RDAP response in JSON format
-        $domainDetails['registrant_contact_id'] = $domainMeta['registrant_contact_id'];
         $rdapResponse = [
             'rdapConformance' => [
                 'rdap_level_0',
@@ -431,24 +378,14 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
                     ],
                 ],
                 !$c['minimum_data']
-                    ? array_merge(
-                        [
-                            mapContactToVCard($domainDetails, 'registrant', $c)
-                        ],
-                        [
-                            mapContactToVCard($domainDetails, 'administrative', $c)
-                        ],
-                        [
-                            mapContactToVCard($domainDetails, 'billing', $c)
-                        ],
-                        [
-                            mapContactToVCard($domainDetails, 'technical', $c)
-                        ],
+                    ? array_map(
+                        fn($role) => $adapter->mapContactToVCard($contacts[$role] ?? [], $role, $c),
+                        ['registrant', 'administrative', 'billing', 'technical']
                     )
                     : []
             ),
             'events' => $events,
-            'handle' => $domainDetails['id'] . '',
+            'handle' => $adapter->getDomainHandle($domainDetails),
             'ldhName' => $domain,
             'links' => [
                 [
@@ -464,7 +401,30 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log) {
                     'type' => 'application/rdap+json',
                 ]
             ],
-            'nameservers' => $nameservers,
+            'nameservers' => array_map(function ($ns) use ($c) {
+                return [
+                    'objectClassName' => 'nameserver',
+                    'handle' => 'H' . $ns['name'],
+                    'ldhName' => $ns['name'],
+                    'links' => [
+                        [
+                            'href' => $c['rdap_url'] . '/nameserver/' . $ns['name'],
+                            'value' => $c['rdap_url'] . '/nameserver/' . $ns['name'],
+                            'rel' => 'self',
+                            'type' => 'application/rdap+json',
+                        ],
+                    ],
+                    'remarks' => [
+                        [
+                            'title' => 'Incomplete Data',
+                            'type' => 'object truncated due to authorization',
+                            'description' => [
+                                'This record contains only a brief summary. To access the full details, please initiate a specific query targeting this entity.'
+                            ]
+                        ]
+                    ]
+                ];
+            }, $adapter->getNameservers($domainDetails)),
             'status' => $domainStatuses,
             "secureDNS" => $secureDNS,
             "notices" => [
