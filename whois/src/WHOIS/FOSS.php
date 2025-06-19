@@ -129,18 +129,18 @@ class FOSS implements WhoisInterface
                 $res .= "Internationalized Domain Name: " . mb_strtoupper($internationalizedName) . "\n";
             }
 
-        $res .= "Registry Domain ID: " . ($domainMeta['registry_domain_id'] ?? '')
-            ."\nRegistrar WHOIS Server: ".$c['registrar_whois']
-            ."\nRegistrar URL: ".$c['registrar_url']
-            ."\nUpdated Date: ".$f['update']
-            ."\nCreation Date: ".$f['crdate']
-            ."\nRegistrar Registration Expiration Date: ".$f['exdate']
-            ."\nRegistrar: ".$c['registrar_name']
-            ."\nRegistrar IANA ID: ".$c['registrar_iana']
-            ."\nRegistrar Abuse Contact Email: ".$c['abuse_email']
-            ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone']
-            ."\nReseller: " . ($domainMeta['reseller'] ?? '')
-            ."\nReseller URL: " . ($domainMeta['reseller_url'] ?? '');
+            $res .= "Registry Domain ID: " . ($domainMeta['registry_domain_id'] ?? '')
+                ."\nRegistrar WHOIS Server: ".$c['registrar_whois']
+                ."\nRegistrar URL: ".$c['registrar_url']
+                ."\nUpdated Date: ".$f['update']
+                ."\nCreation Date: ".$f['crdate']
+                ."\nRegistrar Registration Expiration Date: ".$f['exdate']
+                ."\nRegistrar: ".$c['registrar_name']
+                ."\nRegistrar IANA ID: ".$c['registrar_iana']
+                ."\nRegistrar Abuse Contact Email: ".$c['abuse_email']
+                ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone']
+                ."\nReseller: " . ($domainMeta['reseller'] ?? '')
+                ."\nReseller URL: " . ($domainMeta['reseller_url'] ?? '');
                         
         if (!empty($domainStatuses)) {
             foreach ($domainStatuses as $status) {
@@ -152,107 +152,107 @@ class FOSS implements WhoisInterface
         }
 
         if ($privacy) {
-        $res .= "\nRegistry Registrant ID: REDACTED FOR PRIVACY"
-            ."\nRegistrant Name: REDACTED FOR PRIVACY"
-            ."\nRegistrant Organization: REDACTED FOR PRIVACY"
-            ."\nRegistrant Street: REDACTED FOR PRIVACY"
-            ."\nRegistrant Street: REDACTED FOR PRIVACY"
-            ."\nRegistrant City: REDACTED FOR PRIVACY"
-            ."\nRegistrant State/Province: REDACTED FOR PRIVACY"
-            ."\nRegistrant Postal Code: REDACTED FOR PRIVACY"
-            ."\nRegistrant Country: REDACTED FOR PRIVACY"
-            ."\nRegistrant Phone: REDACTED FOR PRIVACY"
-            ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+            $res .= "\nRegistry Registrant ID: REDACTED FOR PRIVACY"
+                ."\nRegistrant Name: REDACTED FOR PRIVACY"
+                ."\nRegistrant Organization: REDACTED FOR PRIVACY"
+                ."\nRegistrant Street: REDACTED FOR PRIVACY"
+                ."\nRegistrant Street: REDACTED FOR PRIVACY"
+                ."\nRegistrant City: REDACTED FOR PRIVACY"
+                ."\nRegistrant State/Province: REDACTED FOR PRIVACY"
+                ."\nRegistrant Postal Code: REDACTED FOR PRIVACY"
+                ."\nRegistrant Country: REDACTED FOR PRIVACY"
+                ."\nRegistrant Phone: REDACTED FOR PRIVACY"
+                ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-        $res .= "\nRegistry Registrant ID: " . ($domainMeta['registrant_contact_id'] ?? '')
-            ."\nRegistrant Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-            ."\nRegistrant Organization: ".$f['contact_company']
-            ."\nRegistrant Street: ".$f['contact_address1']
-            ."\nRegistrant Street: ".$f['contact_address2']
-            ."\nRegistrant City: ".$f['contact_city']
-            ."\nRegistrant State/Province: ".$f['contact_state']
-            ."\nRegistrant Postal Code: ".$f['contact_postcode']
-            ."\nRegistrant Country: ".$f['contact_country']
-            ."\nRegistrant Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
-            ."\nRegistrant Email: ".$f['contact_email'];
+            $res .= "\nRegistry Registrant ID: " . ($domainMeta['registrant_contact_id'] ?? '')
+                ."\nRegistrant Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
+                ."\nRegistrant Organization: ".$f['contact_company']
+                ."\nRegistrant Street: ".$f['contact_address1']
+                ."\nRegistrant Street: ".$f['contact_address2']
+                ."\nRegistrant City: ".$f['contact_city']
+                ."\nRegistrant State/Province: ".$f['contact_state']
+                ."\nRegistrant Postal Code: ".$f['contact_postcode']
+                ."\nRegistrant Country: ".$f['contact_country']
+                ."\nRegistrant Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nRegistrant Email: ".$f['contact_email'];
         }
 
         if ($privacy) {
-        $res .= "\nRegistry Admin ID: REDACTED FOR PRIVACY"
-            ."\nAdmin Name: REDACTED FOR PRIVACY"
-            ."\nAdmin Organization: REDACTED FOR PRIVACY"
-            ."\nAdmin Street: REDACTED FOR PRIVACY"
-            ."\nAdmin Street: REDACTED FOR PRIVACY"
-            ."\nAdmin City: REDACTED FOR PRIVACY"
-            ."\nAdmin State/Province: REDACTED FOR PRIVACY"
-            ."\nAdmin Postal Code: REDACTED FOR PRIVACY"
-            ."\nAdmin Country: REDACTED FOR PRIVACY"
-            ."\nAdmin Phone: REDACTED FOR PRIVACY"
-            ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+            $res .= "\nRegistry Admin ID: REDACTED FOR PRIVACY"
+                ."\nAdmin Name: REDACTED FOR PRIVACY"
+                ."\nAdmin Organization: REDACTED FOR PRIVACY"
+                ."\nAdmin Street: REDACTED FOR PRIVACY"
+                ."\nAdmin Street: REDACTED FOR PRIVACY"
+                ."\nAdmin City: REDACTED FOR PRIVACY"
+                ."\nAdmin State/Province: REDACTED FOR PRIVACY"
+                ."\nAdmin Postal Code: REDACTED FOR PRIVACY"
+                ."\nAdmin Country: REDACTED FOR PRIVACY"
+                ."\nAdmin Phone: REDACTED FOR PRIVACY"
+                ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-        $res .= "\nRegistry Admin ID: " . ($domainMeta['admin_contact_id'] ?? '')
-            ."\nAdmin Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-            ."\nAdmin Organization: ".$f['contact_company']
-            ."\nAdmin Street: ".$f['contact_address1']
-            ."\nAdmin Street: ".$f['contact_address2']
-            ."\nAdmin City: ".$f['contact_city']
-            ."\nAdmin State/Province: ".$f['contact_state']
-            ."\nAdmin Postal Code: ".$f['contact_postcode']
-            ."\nAdmin Country: ".$f['contact_country']
-            ."\nAdmin Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
-            ."\nAdmin Email: ".$f['contact_email'];
+            $res .= "\nRegistry Admin ID: " . ($domainMeta['admin_contact_id'] ?? '')
+                ."\nAdmin Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
+                ."\nAdmin Organization: ".$f['contact_company']
+                ."\nAdmin Street: ".$f['contact_address1']
+                ."\nAdmin Street: ".$f['contact_address2']
+                ."\nAdmin City: ".$f['contact_city']
+                ."\nAdmin State/Province: ".$f['contact_state']
+                ."\nAdmin Postal Code: ".$f['contact_postcode']
+                ."\nAdmin Country: ".$f['contact_country']
+                ."\nAdmin Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nAdmin Email: ".$f['contact_email'];
         }
 
         if ($privacy) {
-        $res .= "\nRegistry Billing ID: REDACTED FOR PRIVACY"
-            ."\nBilling Name: REDACTED FOR PRIVACY"
-            ."\nBilling Organization: REDACTED FOR PRIVACY"
-            ."\nBilling Street: REDACTED FOR PRIVACY"
-            ."\nBilling Street: REDACTED FOR PRIVACY"
-            ."\nBilling City: REDACTED FOR PRIVACY"
-            ."\nBilling State/Province: REDACTED FOR PRIVACY"
-            ."\nBilling Postal Code: REDACTED FOR PRIVACY"
-            ."\nBilling Country: REDACTED FOR PRIVACY"
-            ."\nBilling Phone: REDACTED FOR PRIVACY"
-            ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+            $res .= "\nRegistry Billing ID: REDACTED FOR PRIVACY"
+                ."\nBilling Name: REDACTED FOR PRIVACY"
+                ."\nBilling Organization: REDACTED FOR PRIVACY"
+                ."\nBilling Street: REDACTED FOR PRIVACY"
+                ."\nBilling Street: REDACTED FOR PRIVACY"
+                ."\nBilling City: REDACTED FOR PRIVACY"
+                ."\nBilling State/Province: REDACTED FOR PRIVACY"
+                ."\nBilling Postal Code: REDACTED FOR PRIVACY"
+                ."\nBilling Country: REDACTED FOR PRIVACY"
+                ."\nBilling Phone: REDACTED FOR PRIVACY"
+                ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-        $res .= "\nRegistry Billing ID: " . ($domainMeta['billing_contact_id'] ?? '')
-            ."\nBilling Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-            ."\nBilling Organization: ".$f['contact_company']
-            ."\nBilling Street: ".$f['contact_address1']
-            ."\nBilling Street: ".$f['contact_address2']
-            ."\nBilling City: ".$f['contact_city']
-            ."\nBilling State/Province: ".$f['contact_state']
-            ."\nBilling Postal Code: ".$f['contact_postcode']
-            ."\nBilling Country: ".$f['contact_country']
-            ."\nBilling Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
-            ."\nBilling Email: ".$f['contact_email'];
+            $res .= "\nRegistry Billing ID: " . ($domainMeta['billing_contact_id'] ?? '')
+                ."\nBilling Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
+                ."\nBilling Organization: ".$f['contact_company']
+                ."\nBilling Street: ".$f['contact_address1']
+                ."\nBilling Street: ".$f['contact_address2']
+                ."\nBilling City: ".$f['contact_city']
+                ."\nBilling State/Province: ".$f['contact_state']
+                ."\nBilling Postal Code: ".$f['contact_postcode']
+                ."\nBilling Country: ".$f['contact_country']
+                ."\nBilling Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nBilling Email: ".$f['contact_email'];
         }
 
         if ($privacy) {
-        $res .= "\nRegistry Tech ID: REDACTED FOR PRIVACY"
-            ."\nTech Name: REDACTED FOR PRIVACY"
-            ."\nTech Organization: REDACTED FOR PRIVACY"
-            ."\nTech Street: REDACTED FOR PRIVACY"
-            ."\nTech Street: REDACTED FOR PRIVACY"
-            ."\nTech City: REDACTED FOR PRIVACY"
-            ."\nTech State/Province: REDACTED FOR PRIVACY"
-            ."\nTech Postal Code: REDACTED FOR PRIVACY"
-            ."\nTech Country: REDACTED FOR PRIVACY"
-            ."\nTech Phone: REDACTED FOR PRIVACY"
-            ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+            $res .= "\nRegistry Tech ID: REDACTED FOR PRIVACY"
+                ."\nTech Name: REDACTED FOR PRIVACY"
+                ."\nTech Organization: REDACTED FOR PRIVACY"
+                ."\nTech Street: REDACTED FOR PRIVACY"
+                ."\nTech Street: REDACTED FOR PRIVACY"
+                ."\nTech City: REDACTED FOR PRIVACY"
+                ."\nTech State/Province: REDACTED FOR PRIVACY"
+                ."\nTech Postal Code: REDACTED FOR PRIVACY"
+                ."\nTech Country: REDACTED FOR PRIVACY"
+                ."\nTech Phone: REDACTED FOR PRIVACY"
+                ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-        $res .= "\nRegistry Tech ID: " . ($domainMeta['tech_contact_id'] ?? '')
-            ."\nTech Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-            ."\nTech Organization: ".$f['contact_company']
-            ."\nTech Street: ".$f['contact_address1']
-            ."\nTech Street: ".$f['contact_address2']
-            ."\nTech City: ".$f['contact_city']
-            ."\nTech State/Province: ".$f['contact_state']
-            ."\nTech Postal Code: ".$f['contact_postcode']
-            ."\nTech Country: ".$f['contact_country']
-            ."\nTech Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
-            ."\nTech Email: ".$f['contact_email'];
+            $res .= "\nRegistry Tech ID: " . ($domainMeta['tech_contact_id'] ?? '')
+                ."\nTech Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
+                ."\nTech Organization: ".$f['contact_company']
+                ."\nTech Street: ".$f['contact_address1']
+                ."\nTech Street: ".$f['contact_address2']
+                ."\nTech City: ".$f['contact_city']
+                ."\nTech State/Province: ".$f['contact_state']
+                ."\nTech Postal Code: ".$f['contact_postcode']
+                ."\nTech Country: ".$f['contact_country']
+                ."\nTech Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nTech Email: ".$f['contact_email'];
         }
 
         $res .= "\nName Server: ".$f['ns1'];
@@ -303,13 +303,13 @@ class FOSS implements WhoisInterface
         $clientInfo = $server->getClientInfo($fd);
         $remoteAddr = $clientInfo['remote_ip'];
         $log->notice('new request from ' . $remoteAddr . ' | ' . $domain . ' | FOUND');
-    } else {
-        //NOT FOUND or No match for;
-        $server->send($fd, "NOT FOUND");
-        
-        $clientInfo = $server->getClientInfo($fd);
-        $remoteAddr = $clientInfo['remote_ip'];
-        $log->notice('new request from ' . $remoteAddr . ' | ' . $domain . ' | NOT FOUND');
-    }
+        } else {
+            //NOT FOUND or No match for;
+            $server->send($fd, "NOT FOUND");
+            
+            $clientInfo = $server->getClientInfo($fd);
+            $remoteAddr = $clientInfo['remote_ip'];
+            $log->notice('new request from ' . $remoteAddr . ' | ' . $domain . ' | NOT FOUND');
+        }
     }
 }
