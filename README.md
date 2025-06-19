@@ -1,4 +1,4 @@
-# Namingo Registrar Platform
+# Namingo Registrar
 
 Open source ICANN-accredited domain registrar management system.
 
