@@ -53,11 +53,15 @@ For detailed installation steps, see:
 
 ### Update
 
-- v1.0.3 to v1.0.4 - backup registrar, download and run the [update104.sh](update104.sh) script.
+- v1.0.5 to v1.1.0-beta1 - backup registrar, download and run the [update11.sh](update11.sh) script.
 
-- v1.0.2 to v1.0.3 - backup registrar, download and run the [update103.sh](update103.sh) script.
+- v1.0.4 to v1.0.5 - backup registrar, download and run the [update105.sh](docs/update105.sh) script.
 
-- v1.0.0/v1.0.1 to v1.0.2 - backup registrar, download and run the [update.sh](update.sh) script.
+- v1.0.3 to v1.0.4 - backup registrar, download and run the [update104.sh](docs/update104.sh) script.
+
+- v1.0.2 to v1.0.3 - backup registrar, download and run the [update103.sh](docs/update103.sh) script.
+
+- v1.0.0/v1.0.1 to v1.0.2 - backup registrar, download and run the [update102.sh](docs/update102.sh) script.
 
 ## Support
 

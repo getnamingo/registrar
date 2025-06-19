@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Prompt the user for confirmation
-echo "This will update Namingo Registrar from v1.0.5 to v1.0.6."
+echo "This will update Namingo Registrar from v1.0.5 to v1.1.0-beta1."
 echo "Make sure you have a backup of the database, /var/www, and /opt/registrar."
 read -p "Are you sure you want to proceed? (y/n): " confirm
 
@@ -87,8 +87,8 @@ systemctl stop whois
 systemctl stop rdap
 
 # Clone the new version of the repository
-echo "Cloning v1.0.6 from the repository..."
-git clone https://github.com/getnamingo/registrar /opt/registrar106
+echo "Cloning v1.1.0-beta1 from the repository..."
+git clone https://github.com/getnamingo/registrar /opt/registrar11
 
 # Copy files from the new version to the appropriate directories
 echo "Copying files..."
@@ -107,9 +107,9 @@ copy_files() {
 }
 
 # Copy specific directories
-copy_files "/opt/registrar106/automation" "/opt/registrar/automation"
-copy_files "/opt/registrar106/whois" "/opt/registrar/whois"
-copy_files "/opt/registrar106/rdap" "/opt/registrar/rdap"
+copy_files "/opt/registrar11/automation" "/opt/registrar/automation"
+copy_files "/opt/registrar11/whois" "/opt/registrar/whois"
+copy_files "/opt/registrar11/rdap" "/opt/registrar/rdap"
 
 # Run composer update in copied directories (excluding docs)
 echo "Running composer update..."
@@ -201,14 +201,14 @@ systemctl start rdap
 
 # Check if services started successfully
 if [[ $? -eq 0 ]]; then
-    echo "Services started successfully. Deleting /opt/registrar106..."
-    rm -rf /opt/registrar106
+    echo "Services started successfully. Deleting /opt/registrar11..."
+    rm -rf /opt/registrar11
 else
-    echo "There was an issue starting the services. /opt/registrar106 will not be deleted."
+    echo "There was an issue starting the services. /opt/registrar11 will not be deleted."
 fi
 
 # Final instructions to the user
-echo "Upgrade to v1.0.6 is almost complete. Please follow the final step below to finish the process:"
+echo "Upgrade to v1.1.0-beta1 is almost complete. Please follow the final step below to finish the process:"
 echo
 echo "1. Open your browser and log in to the admin panel."
 echo "2. Navigate to System -> Update to apply the changes."
