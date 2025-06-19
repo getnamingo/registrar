@@ -6,11 +6,6 @@ use \PDO;
 
 class WHMCS implements RdapInterface
 {
-    public function getConfig(): array
-    {
-        return require __DIR__ . '/../config.whmcs.php';
-    }
-
     public function isValidTLD(PDOProxy $pdo, string $tld): bool
     {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM tbldomainpricing WHERE extension = :tld");
@@ -31,7 +26,7 @@ class WHMCS implements RdapInterface
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getContacts(PDOProxy $pdo, array $domain): array
+    public function getContacts(PDOProxy $pdo, string $domain, array $domainDetails): array
     {
         return [
             'registrant' => $this->getContact($pdo, $domain['registrant']),

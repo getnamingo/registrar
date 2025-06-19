@@ -134,7 +134,7 @@ class FOSS implements WhoisInterface
                 ."\nRegistrant State/Province: ".$f['contact_state']
                 ."\nRegistrant Postal Code: ".$f['contact_postcode']
                 ."\nRegistrant Country: ".$f['contact_country']
-                ."\nRegistrant Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nRegistrant Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
                 ."\nRegistrant Email: ".$f['contact_email'];
         }
 
@@ -160,7 +160,7 @@ class FOSS implements WhoisInterface
                 ."\nAdmin State/Province: ".$f['contact_state']
                 ."\nAdmin Postal Code: ".$f['contact_postcode']
                 ."\nAdmin Country: ".$f['contact_country']
-                ."\nAdmin Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nAdmin Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
                 ."\nAdmin Email: ".$f['contact_email'];
         }
 
@@ -186,7 +186,7 @@ class FOSS implements WhoisInterface
                 ."\nBilling State/Province: ".$f['contact_state']
                 ."\nBilling Postal Code: ".$f['contact_postcode']
                 ."\nBilling Country: ".$f['contact_country']
-                ."\nBilling Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nBilling Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
                 ."\nBilling Email: ".$f['contact_email'];
         }
 
@@ -212,7 +212,7 @@ class FOSS implements WhoisInterface
                 ."\nTech State/Province: ".$f['contact_state']
                 ."\nTech Postal Code: ".$f['contact_postcode']
                 ."\nTech Country: ".$f['contact_country']
-                ."\nTech Phone: ".$f['contact_phone_cc'].'.'.$f['contact_phone']
+                ."\nTech Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
                 ."\nTech Email: ".$f['contact_email'];
         }
 

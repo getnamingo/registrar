@@ -6,11 +6,6 @@ use \PDO;
 
 class FOSS implements RdapInterface
 {
-    public function getConfig(): array
-    {
-        return require __DIR__ . '/../config.fossbilling.php';
-    }
-
     public function isValidTLD(PDOProxy $pdo, string $tld): bool
     {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
@@ -41,19 +36,36 @@ class FOSS implements RdapInterface
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getContacts(PDOProxy $pdo, array $domain): array
+    public function getContacts(PDOProxy $pdo, string $domain, array $domainDetails): array
     {
         $stmt = $pdo->prepare("SELECT * FROM domain_meta WHERE domain_id = :domain_id");
-        $stmt->bindParam(':domain_id', $domain['id']);
+        $stmt->bindParam(':domain_id', $domainDetails['id']);
         $stmt->execute();
         $meta = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-        return [
-            'registrant' => ['id' => $meta['registrant_contact_id']],
-            'administrative' => ['id' => $meta['admin_contact_id']],
-            'technical' => ['id' => $meta['tech_contact_id']],
-            'billing' => ['id' => $meta['billing_contact_id']],
+        $contactData = [];
+        foreach ($domainDetails as $key => $value) {
+            if (str_starts_with($key, 'contact_')) {
+                $contactData[$key] = $value;
+            }
+        }
+
+        $map = [
+            'registrant' => 'registrant_contact_id',
+            'administrative' => 'admin_contact_id',
+            'technical' => 'tech_contact_id',
+            'billing' => 'billing_contact_id',
         ];
+
+        $contacts = [];
+        foreach ($map as $role => $idKey) {
+            $contacts[$role] = array_merge(
+                ['id' => $meta[$idKey] ?? null],
+                $contactData
+            );
+        }
+
+        return $contacts;
     }
 
     public function getDomainStatuses(PDOProxy $pdo, int $domainId): array

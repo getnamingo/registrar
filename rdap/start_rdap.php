@@ -274,7 +274,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             return;
         }
 
-        $contacts = $adapter->getContacts($pdo, $domainDetails);
+        $contacts = $adapter->getContacts($pdo, $domain, $domainDetails);
 
         $domainStatuses = $adapter->getDomainStatuses($pdo, $domainDetails['id']);
         $dnssecRecords = $adapter->getDNSSEC($pdo, $domainDetails['id']);

@@ -6,11 +6,6 @@ use Swoole\Database\PDOProxy;
 
 interface RdapInterface {
     /**
-     * Returns the full configuration array for the RDAP server.
-     */
-    public function getConfig(): array;
-
-    /**
      * Validates and checks if the TLD is supported.
      */
     public function isValidTLD(PDOProxy $pdo, string $tld): bool;
@@ -24,7 +19,7 @@ interface RdapInterface {
      * Returns contact information (registrant, admin, tech, billing) based on domain details.
      * Keys: 'registrant', 'administrative', 'technical', 'billing'
      */
-    public function getContacts(PDOProxy $pdo, array $domain): array;
+    public function getContacts(PDOProxy $pdo, string $domain, array $domainDetails): array;
 
     /**
      * Returns the list of status values for a domain.
