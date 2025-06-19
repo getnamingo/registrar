@@ -2,7 +2,7 @@
 
 namespace Registrar\WHOIS;
 
-use PDO;
+use Swoole\Database\PDOProxy;
 
 interface WhoisInterface
 {
@@ -12,5 +12,5 @@ interface WhoisInterface
      * @param string $domain The fully qualified domain name (e.g. example.com)
      * @return string WHOIS response
      */
-    public function handleDomainQuery(string $domain, \PDO $pdo, \Swoole\Server $server, int $fd, $log): void;
+    public function handleDomainQuery(string $domain, PDOProxy $pdo, \Swoole\Server $server, int $fd, $log, $c, $privacy): void;
 }

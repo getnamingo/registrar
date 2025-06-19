@@ -1,51 +1,12 @@
 <?php
 namespace Registrar\WHOIS;
 
-use PDO;
+use Swoole\Database\PDOProxy;
+use \PDO;
 
 class WHMCS implements WhoisInterface
 {
-    private PDO $pdo;
-    private array $config;
-    private bool $privacy;
-
-    public function __construct(PDO $pdo, array $config, bool $privacy = true)
-    {
-        $this->pdo = $pdo;
-        $this->config = $config;
-        $this->privacy = $privacy;
-    }
-
-    public function normalizeDomain(string $domain): string
-    {
-        $domain = trim(strtolower($domain));
-        if (strlen($domain) > 68) {
-            throw new \InvalidArgumentException("Domain name too long");
-        }
-
-        if (!mb_detect_encoding($domain, 'ASCII', true)) {
-            $domain = idn_to_ascii($domain, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46);
-            if ($domain === false) {
-                throw new \InvalidArgumentException("Failed to convert domain to ASCII");
-            }
-        }
-
-        if (!preg_match('/^(?:(xn--[a-zA-Z0-9-]{1,63}|[a-zA-Z0-9-]{1,63})\.){1,3}(xn--[a-zA-Z0-9-]{2,63}|[a-zA-Z]{2,63})$/', $domain)) {
-            throw new \InvalidArgumentException("Invalid domain format");
-        }
-
-        return strtoupper($domain);
-    }
-
-    public function supportsTld(string $tld): bool
-    {
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM tbldomainpricing WHERE extension = :tld");
-        $stmt->bindParam(':tld', $tld, PDO::PARAM_STR);
-        $stmt->execute();
-        return (bool) $stmt->fetchColumn();
-    }
-
-    public function handleDomainQuery(string $domain, \PDO $pdo, \Swoole\Server $server, int $fd, $log): void
+    public function handleDomainQuery(string $domain, PDOProxy $pdo, \Swoole\Server $server, int $fd, $log, $c, $privacy): void
     {
         // Handle domain query
         $domain = $queryData;
@@ -307,7 +268,7 @@ class WHMCS implements WhoisInterface
                 $res .= "\nDNSSEC: unsigned";
             }
             $res .= "\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/";
-            $currentDateTime = new DateTime();
+            $currentDateTime = new \DateTime();
             $currentTimestamp = $currentDateTime->format("Y-m-d\TH:i:s.v\Z");
             $res .= "\n>>> Last update of WHOIS database: {$currentTimestamp} <<<";
             $res .= "\n";

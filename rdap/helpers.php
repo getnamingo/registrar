@@ -44,7 +44,7 @@ function mapContactToVCardFOSS($contactDetails, $role, $c) {
 
     return [
         'objectClassName' => 'entity',
-        'handle' => $contactDetails['registrant_contact_id'],
+        'handle' => $contactDetails['id'],
         'roles' => [$role],
         'vcardArray' => [
             "vcard",

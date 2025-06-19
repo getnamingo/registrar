@@ -2,7 +2,7 @@
 
 namespace Registrar\RDAP;
 
-use PDO;
+use Swoole\Database\PDOProxy;
 
 interface RdapInterface {
     /**
@@ -13,23 +13,23 @@ interface RdapInterface {
     /**
      * Validates and checks if the TLD is supported.
      */
-    public function isValidTLD(PDO $pdo, string $tld): bool;
+    public function isValidTLD(PDOProxy $pdo, string $tld): bool;
 
     /**
      * Retrieves domain information by full domain name (e.g., example.tld).
      */
-    public function getDomainByName(PDO $pdo, string $domain): ?array;
+    public function getDomainByName(PDOProxy $pdo, string $domain): ?array;
 
     /**
      * Returns contact information (registrant, admin, tech, billing) based on domain details.
      * Keys: 'registrant', 'administrative', 'technical', 'billing'
      */
-    public function getContacts(PDO $pdo, array $domain): array;
+    public function getContacts(PDOProxy $pdo, array $domain): array;
 
     /**
      * Returns the list of status values for a domain.
      */
-    public function getDomainStatuses(PDO $pdo, int $domainId): array;
+    public function getDomainStatuses(PDOProxy $pdo, int $domainId): array;
 
     /**
      * Returns the list of nameservers as an array of ['name' => ..., 'host_id' => ...]
@@ -39,7 +39,7 @@ interface RdapInterface {
     /**
      * Returns DNSSEC records for a domain, each with keyTag, algorithm, digest, digestType.
      */
-    public function getDNSSEC(PDO $pdo, int $domainId): array;
+    public function getDNSSEC(PDOProxy $pdo, int $domainId): array;
 
     /**
      * Maps a contact record to a vCard entity block for the RDAP response.

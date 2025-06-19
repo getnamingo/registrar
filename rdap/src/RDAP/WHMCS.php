@@ -1,7 +1,8 @@
 <?php
 namespace Registrar\RDAP;
 
-use PDO;
+use Swoole\Database\PDOProxy;
+use \PDO;
 
 class WHMCS implements RdapInterface
 {
@@ -10,7 +11,7 @@ class WHMCS implements RdapInterface
         return require __DIR__ . '/../config.whmcs.php';
     }
 
-    public function isValidTLD(PDO $pdo, string $tld): bool
+    public function isValidTLD(PDOProxy $pdo, string $tld): bool
     {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM tbldomainpricing WHERE extension = :tld");
         $stmt->bindParam(':tld', $tld);
@@ -18,7 +19,7 @@ class WHMCS implements RdapInterface
         return $stmt->fetchColumn() > 0;
     }
 
-    public function getDomainByName(PDO $pdo, string $domain): ?array
+    public function getDomainByName(PDOProxy $pdo, string $domain): ?array
     {
         $stmt = $pdo->prepare("SELECT *,
                 DATE_FORMAT(`crdate`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
@@ -30,7 +31,7 @@ class WHMCS implements RdapInterface
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getContacts(PDO $pdo, array $domain): array
+    public function getContacts(PDOProxy $pdo, array $domain): array
     {
         return [
             'registrant' => $this->getContact($pdo, $domain['registrant']),
@@ -40,7 +41,7 @@ class WHMCS implements RdapInterface
         ];
     }
 
-    private function getContact(PDO $pdo, int $id): array
+    private function getContact(PDOProxy $pdo, int $id): array
     {
         $stmt = $pdo->prepare("SELECT * FROM namingo_contact WHERE id = :id");
         $stmt->bindParam(':id', $id);
@@ -48,7 +49,7 @@ class WHMCS implements RdapInterface
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
 
-    public function getDomainStatuses(PDO $pdo, int $domainId): array
+    public function getDomainStatuses(PDOProxy $pdo, int $domainId): array
     {
         $stmt = $pdo->prepare("SELECT status FROM namingo_domain_status WHERE domain_id = :domain_id");
         $stmt->bindParam(':domain_id', $domainId);
@@ -68,7 +69,7 @@ class WHMCS implements RdapInterface
         return $ns;
     }
 
-    public function getDNSSEC(PDO $pdo, int $domainId): array
+    public function getDNSSEC(PDOProxy $pdo, int $domainId): array
     {
         $stmt = $pdo->prepare("SELECT key_tag, algorithm, digest_type, digest FROM namingo_domain_dnssec WHERE domain_id = :domain_id");
         $stmt->bindParam(':domain_id', $domainId);

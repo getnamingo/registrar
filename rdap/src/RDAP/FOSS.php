@@ -1,7 +1,8 @@
 <?php
 namespace Registrar\RDAP;
 
-use PDO;
+use Swoole\Database\PDOProxy;
+use \PDO;
 
 class FOSS implements RdapInterface
 {
@@ -10,7 +11,7 @@ class FOSS implements RdapInterface
         return require __DIR__ . '/../config.fossbilling.php';
     }
 
-    public function isValidTLD(PDO $pdo, string $tld): bool
+    public function isValidTLD(PDOProxy $pdo, string $tld): bool
     {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
         $stmt->bindParam(':tld', $tld);
@@ -18,11 +19,16 @@ class FOSS implements RdapInterface
         return $stmt->fetchColumn() > 0;
     }
 
-    public function getDomainByName(PDO $pdo, string $domain): ?array
+    public function getDomainByName(PDOProxy $pdo, string $domain): ?array
     {
         $parts = explode('.', $domain);
-        $sld = $parts[0];
-        $tld = "." . implode('.', array_slice($parts, -2));
+
+        if (count($parts) < 2) {
+            throw new \InvalidArgumentException("Invalid domain name: $domain");
+        }
+
+        $sld = $parts[count($parts) - 2];
+        $tld = '.' . $parts[count($parts) - 1];
 
         $stmt = $pdo->prepare("SELECT *,
                 DATE_FORMAT(`registered_at`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
@@ -35,7 +41,7 @@ class FOSS implements RdapInterface
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getContacts(PDO $pdo, array $domain): array
+    public function getContacts(PDOProxy $pdo, array $domain): array
     {
         $stmt = $pdo->prepare("SELECT * FROM domain_meta WHERE domain_id = :domain_id");
         $stmt->bindParam(':domain_id', $domain['id']);
@@ -50,7 +56,7 @@ class FOSS implements RdapInterface
         ];
     }
 
-    public function getDomainStatuses(PDO $pdo, int $domainId): array
+    public function getDomainStatuses(PDOProxy $pdo, int $domainId): array
     {
         $stmt = $pdo->prepare("SELECT status FROM domain_status WHERE domain_id = :domain_id");
         $stmt->bindParam(':domain_id', $domainId);
@@ -70,7 +76,7 @@ class FOSS implements RdapInterface
         return $nameservers;
     }
 
-    public function getDNSSEC(PDO $pdo, int $domainId): array
+    public function getDNSSEC(PDOProxy $pdo, int $domainId): array
     {
         $stmt = $pdo->prepare("SELECT key_tag, algorithm, digest_type, digest FROM domain_dnssec WHERE domain_id = :domain_id");
         $stmt->bindParam(':domain_id', $domainId);

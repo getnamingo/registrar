@@ -66,11 +66,10 @@ $server->on('connect', function ($server, $fd) use ($log) {
 });
 
 // Register a callback to handle incoming requests
-$server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool, $log, $rateLimiter, $adapter) {
+$server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool, $log, $rateLimiter, $adapter, $privacy) {
     // Get a PDO connection from the pool
     $pdo = $pool->get();
     $parsedQuery = parseQuery($data);
-    $queryType = $parsedQuery['type'];
     $queryData = $parsedQuery['data'];
     
     $clientInfo = $server->getClientInfo($fd);
@@ -85,14 +84,7 @@ $server->on('receive', function ($server, $fd, $reactorId, $data) use ($c, $pool
 
     // Handle the WHOIS query
     try {
-        switch ($queryType) {
-            case 'domain':
-                $result = $adapter->handleDomainQuery($queryData, $pdo, $server, $fd, $log);
-            default:
-                // Handle unknown query type
-                $log->error('Error');
-                $server->send($fd, "Error");
-        }
+        $adapter->handleDomainQuery($queryData, $pdo, $server, $fd, $log, $c, $privacy);
     } catch (PDOException $e) {
         // Handle database exceptions
         $log->error('Database error: ' . $e->getMessage());
