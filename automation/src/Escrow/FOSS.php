@@ -62,6 +62,11 @@ class FOSS implements EscrowInterface {
                    CONCAT('+', s.contact_phone_cc, '.', s.contact_phone) AS phone
             FROM service_domain s
             JOIN domain_meta dm ON s.id = dm.domain_id
+            WHERE dm.domain_id = (
+                SELECT MIN(dm2.domain_id)
+                FROM domain_meta dm2
+                WHERE dm2.registrant_contact_id = dm.registrant_contact_id
+            )
         ");
         $stmt->execute();
 
@@ -98,9 +103,9 @@ class FOSS implements EscrowInterface {
 
         // ICANN RDE 2024 header
         $header = [
-            'domainname',
-            'expire',
-            'ianaid',
+            'domain',
+            'expiration-date',
+            'iana',
             'rt-name',
             'rt-street',
             'rt-city',

@@ -76,9 +76,14 @@ class WHMCS implements EscrowInterface {
     public function generateHDL(): void {
         // Query the database to get data from both tables
         $sql = "
-            SELECT identifier, voice AS phone, fax, email, name, street1 AS address, city, sp AS state, pc AS postcode, cc AS country FROM namingo_contact
+            SELECT identifier, voice AS phone, fax, email, name, street1 AS address, city, sp AS state, pc AS postcode, cc AS country
+            FROM namingo_contact c
+            WHERE c.id = (
+                SELECT MIN(c2.id)
+                FROM namingo_contact c2
+                WHERE c2.identifier = c.identifier
+            )
         ";
-        
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
 
@@ -120,9 +125,9 @@ class WHMCS implements EscrowInterface {
 
         // ICANN RDE 2024 CSV header
         $header = [
-            'domainname',
-            'expire',
-            'ianaid',
+            'domain',
+            'expiration-date',
+            'iana',
             'rt-name',
             'rt-street',
             'rt-city',
