@@ -1,4 +1,4 @@
-# Installation Guide on Ubuntu 22.04
+# Namingo Registrar: Installation Guide (FOSSBilling)
 
 ## 1. Install the required packages:
 
@@ -7,10 +7,10 @@ apt install -y curl software-properties-common ufw
 add-apt-repository ppa:ondrej/php
 add-apt-repository ppa:ondrej/nginx-mainline
 apt update
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-xml php8.2-yaml python3-certbot-nginx unzip wget whois
+apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
 ```
 
-### Configure PHP:
+### 1.1. Configure PHP:
 
 Edit the PHP Configuration Files:
 
@@ -19,7 +19,7 @@ nano /etc/php/8.2/cli/php.ini
 nano /etc/php/8.2/fpm/php.ini
 ```
 
-Locate or add these lines in ```php.ini```, also replace ```example.com``` with your registrar domain name:
+Locate or add these lines in ```php.ini```:
 
 ```bash
 opcache.enable=1
@@ -30,7 +30,7 @@ opcache.jit=1255
 session.cookie_secure = 1
 session.cookie_httponly = 1
 session.cookie_samesite = "Strict"
-session.cookie_domain = .example.com
+session.cookie_domain =
 ```
 
 In ```/etc/php/8.2/mods-available/opcache.ini``` make one additional change:
@@ -46,7 +46,7 @@ After configuring PHP, restart the service to apply changes:
 systemctl restart php8.2-fpm
 ```
 
-### Configure Nginx:
+### 1.2. Configure Nginx:
 
 **Replace `%%DOMAIN%%` with your actual domain.**
 
@@ -294,6 +294,8 @@ Clone the repository to your system:
 
 ```bash
 git clone https://github.com/getnamingo/registrar /opt/registrar
+mkdir /var/log/namingo
+mkdir /opt/registrar/escrow
 ```
 
 ## 10. Setup WHOIS:
@@ -355,7 +357,48 @@ mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
 rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 ```
 
-### Running the Automation System
+### 12.1. Submitting the Header Mapping File:
+
+To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit your Header Mapping File to both DENIC (your DEA) and ICANN.
+
+#### Step 1: Upload to DENIC
+
+1. Visit the DENIC escrow portal:  
+   [https://escrow.denic-services.de/icann-header-mapping](https://escrow.denic-services.de/icann-header-mapping)
+
+2. Log in with your credentials.
+
+3. Upload your Header Mapping File in CSV format.  
+   Use the structure below:
+
+    ```csv
+    ICANN RDE Spec,Field Name,Abbreviation
+    8.1.1,domain,domainname
+    8.1.2,expiration-date,expire
+    8.1.3,iana,ianaid
+    8.1.4,rt-name,rt-name
+    8.1.5,rt-street,rt-street
+    8.1.6,rt-city,rt-city
+    8.1.7,rt-state,rt-state
+    8.1.8,rt-zip,rt-zip
+    8.1.9,rt-country,rt-country
+    8.1.10,rt-phone,rt-phone
+    8.1.11,rt-mail,rt-email
+    3.4.1.3,bc-name,bc-name
+    ```
+
+4. Confirm the upload was successful.
+
+#### Step 2: Send to ICANN
+
+Email the same file to ICANN at:  
+📧 **registrar@icann.org**
+
+Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
+
+After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
+
+### 12.2. Running the Automation System:
 
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 

@@ -1,26 +1,59 @@
-# Installation Guide on Ubuntu 24.04
+# Namingo Registrar: Installation Guide (WHMCS)
 
 This guide is for setting up **WHMCS 8.11** with **PHP 8.2** on Ubuntu 24.04.
 
 > **Note:** If you are using **WHMCS 8.10**, please replace all references to **8.2** with **8.1** throughout this guide.  
 > WHMCS 8.10 is optimized for PHP 8.1, while WHMCS 8.11 is compatible with PHP 8.2. Using the recommended PHP version for your WHMCS version ensures better compatibility and performance.
 
-> **Important:** If **WHMCS 8.11** (or **8.10**) is already installed on your server or VPS with root access, you can skip directly to **Section 6**.  
+> **Important:** If **WHMCS 8.11** (or **8.10**) is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
 
 ```bash
-apt update && apt upgrade -y
-apt install -y wget unzip apache2 software-properties-common mariadb-server composer whois certbot python3-certbot-apache
-systemctl enable apache2
-systemctl start apache2
-add-apt-repository ppa:ondrej/php -y
+apt install -y curl software-properties-common ufw
+add-apt-repository ppa:ondrej/php
 apt update
-apt install -y php8.2 php8.2-{curl,gd,mbstring,mysql,xml,zip,imap,bcmath,intl,swoole}
+apt install -y bzip2 certbot composer git net-tools apache2 php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-apache unzip wget whois
 ```
 
-## 2. Install ionCube Loader:
+### 1.1. Configure PHP:
+
+Edit the PHP Configuration Files:
+
+```bash
+nano /etc/php/8.2/cli/php.ini
+nano /etc/php/8.2/fpm/php.ini
+```
+
+Locate or add these lines in ```php.ini```:
+
+```bash
+opcache.enable=1
+opcache.enable_cli=1
+opcache.jit_buffer_size=100M
+opcache.jit=1255
+
+session.cookie_secure = 1
+session.cookie_httponly = 1
+session.cookie_samesite = "Strict"
+session.cookie_domain =
+```
+
+In ```/etc/php/8.2/mods-available/opcache.ini``` make one additional change:
+
+```bash
+opcache.jit=1255
+opcache.jit_buffer_size=100M
+```
+
+After configuring PHP, restart the service to apply changes:
+
+```bash
+systemctl restart php8.2-fpm
+```
+
+## 1.2. Install ionCube Loader:
 
 ```bash
 cd /tmp
@@ -49,51 +82,11 @@ To enable ionCube, add the following line at the top of each php.ini file:
 zend_extension = /usr/lib/php/20210902/ioncube_loader_lin_8.2.so
 ```
 
-```bash
-systemctl restart apache2
-```
-
-## 3. Enable ports on firewall:
+### 1.3. Configure Apache:
 
 ```bash
-ufw enable
-ufw allow 80/tcp
-ufw allow 443/tcp
-```
-
-## 4. Setup MariaDB database:
-
-```bash
-mysql_secure_installation
-mysql -u root -p
-```
-
-Inside the MariaDB shell, run:
-
-```sql
-CREATE DATABASE whmcs_db;
-CREATE USER 'whmcs_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON whmcs_db.* TO 'whmcs_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-## 5. Download and install WHMCS:
-
-Download WHMCS from their official site. After downloading, upload it to your VPS via SFTP or SCP. Place the zip file in `/var/www/html` and extract:
-
-```bash
-cd /var/www/html
-unzip whmcs.zip -d .
-cd whmcs
-mv configuration.sample.php configuration.php
-chown -R www-data:www-data /var/www/html/whmcs
-chmod -R 755 /var/www/html/whmcs
-```
-
-### 5.1. Configure Apache for WHMCS
-
-```bash
+systemctl enable apache2
+systemctl start apache2
 nano /etc/apache2/sites-available/whmcs.conf
 ```
 
@@ -116,110 +109,7 @@ Add the following configuration, edit `ServerAdmin` and `ServerName` at least:
 </VirtualHost>
 ```
 
-```bash
-a2ensite whmcs.conf
-a2enmod rewrite
-systemctl restart apache2
-```
-
-### 5.2. Obtain an SSL certificate
-
-```bash
-certbot --apache -d yourdomain.com
-```
-
-If you have a `www` subdomain, include it like this:
-
-```bash
-certbot --apache -d yourdomain.com -d www.yourdomain.com
-```
-
-### 5.3. Finalize WHMCS Installation
-
-Open your web browser and navigate to http://yourdomain.com/install to run the WHMCS installation wizard. Follow the on-screen instructions to complete the setup.
-
-### 5.4. Secure your WHMCS installation
-
-After completing the installation, remove the `install` directory:
-
-```bash
-rm -rf /var/www/html/whmcs/install
-```
-
-### 5.5. Add the WHMCS cron job
-
-```bash
-crontab -e
-```
-
-Add the following line to schedule the WHMCS cron job:
-
-```bash
-*/5 * * * * /usr/bin/php -q /var/www/html/whmcs/crons/cron.php
-```
-
-## 6. Additional Tools:
-
-Clone the repository to your system:
-
-```bash
-git clone https://github.com/getnamingo/registrar-whmcs /opt/registrar
-mkdir /var/log/namingo
-mkdir /opt/registrar/escrow
-```
-
-## 7. ICANN Registrar Accreditation Module:
-
-```bash
-git clone https://github.com/getnamingo/whmcs-registrar
-mv whmcs-registrar/whmcs_registrar /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/whmcs_registrar
-chmod -R 755 /var/www/html/whmcs/modules/addons/whmcs_registrar
-```
-
-- Go to Settings > Apps & Integrations in the admin panel, search for "ICANN Registrar" and then activate "ICANN Registrar Accreditation".
-
-## 8. Setup WHOIS:
-
-```bash
-cd /opt/registrar/whois
-composer install
-mv config.php.dist config.php
-```
-
-Edit the `config.php` with the appropriate database details and preferences as required.
-
-Copy `whois.service` to `/etc/systemd/system/`. Change only User and Group lines to your user and group.
-
-```bash
-systemctl daemon-reload
-systemctl start whois.service
-systemctl enable whois.service
-```
-
-After that you can manage WHOIS via systemctl as any other service.
-
-## 9. Setup RDAP:
-
-```bash
-cd /opt/registrar/rdap
-composer install
-mv config.php.dist config.php
-```
-
-Edit the `config.php` with the appropriate database details and preferences as required.
-
-Copy `rdap.service` to `/etc/systemd/system/`. Change only User and Group lines to your user and group.
-
-```bash
-systemctl daemon-reload
-systemctl start rdap.service
-systemctl enable rdap.service
-```
-
-After that you can manage RDAP via systemctl as any other service.
-
-### 9.1. Configure Apache for RDAP
+Then configure Apache for RDAP:
 
 ```bash
 nano /etc/apache2/sites-available/rdap.conf
@@ -257,6 +147,7 @@ Add the following configuration, edit `ServerName` at least:
 ```
 
 ```bash
+a2ensite whmcs.conf
 a2ensite rdap.conf
 a2enmod rewrite
 a2enmod proxy
@@ -265,13 +156,175 @@ a2enmod headers
 systemctl restart apache2
 ```
 
-### 9.2. Obtain an SSL certificate
+### 1.4. Enable ports on firewall:
 
 ```bash
+ufw enable
+ufw allow 80/tcp
+ufw allow 443/tcp
+```
+
+## 2. Install and configure MariaDB:
+
+```bash
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+```
+
+Place the following in ```/etc/apt/sources.list.d/mariadb.sources```:
+
+```bash
+# MariaDB 11 Rolling repository list - created 2025-04-08 06:39 UTC
+# https://mariadb.org/download/
+X-Repolib-Name: MariaDB
+Types: deb
+# URIs: https://deb.mariadb.org/11/ubuntu
+URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
+Suites: jammy
+Components: main main/debug
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+Then execute the following commands:
+
+```bash
+apt update
+apt install -y mariadb-client mariadb-server php8.2-mysql
+mysql_secure_installation
+```
+
+### Configuration:
+
+1. Access MariaDB:
+
+```bash
+mysql -u root -p
+```
+
+2. Execute the following queries:
+
+```bash
+CREATE DATABASE registrar;
+CREATE USER 'registraruser'@'localhost' IDENTIFIED BY 'RANDOM_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON registrar.* TO 'registraruser'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Replace `registraruser` with your desired username and `RANDOM_STRONG_PASSWORD` with a secure password of your choice.
+
+[Tune your MariaDB](https://github.com/major/MySQLTuner-perl)
+
+## 3. Install Adminer:
+
+```bash
+wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
+```
+
+## 4. Download and Extract WHMCS:
+
+Download WHMCS from their official site. After downloading, upload it to your VPS via SFTP or SCP. Place the zip file in `/var/www/html` and extract:
+
+```bash
+cd /var/www/html
+unzip whmcs.zip -d .
+cd whmcs
+mv configuration.sample.php configuration.php
+```
+
+### 4.1. Obtain an SSL certificate:
+
+```bash
+certbot --apache -d yourdomain.com
 certbot --apache -d rdap.yourdomain.com
 ```
 
-## 10. Setup Automation Scripts:
+If you have a `www` subdomain, include it like this:
+
+```bash
+certbot --apache -d yourdomain.com -d www.yourdomain.com
+```
+
+## 5. Make Directories Writable:
+
+```bash
+chown -R www-data:www-data /var/www/html/whmcs
+chmod -R 755 /var/www/html/whmcs
+```
+
+## 6. WHMCS Installation:
+
+Open your web browser and navigate to http://yourdomain.com/install to run the WHMCS installation wizard. Follow the on-screen instructions to complete the setup.
+
+## 7. Secure your WHMCS installation:
+
+After completing the installation, remove the `install` directory:
+
+```bash
+rm -rf /var/www/html/whmcs/install
+```
+
+## 8. Add the WHMCS cron job:
+
+```bash
+crontab -e
+```
+
+Add the following line to schedule the WHMCS cron job:
+
+```bash
+*/5 * * * * /usr/bin/php -q /var/www/html/whmcs/crons/cron.php
+```
+
+## 9. Additional Tools:
+
+Clone the repository to your system:
+
+```bash
+git clone https://github.com/getnamingo/registrar /opt/registrar
+mkdir /var/log/namingo
+mkdir /opt/registrar/escrow
+```
+
+## 10. Setup WHOIS:
+
+```bash
+cd /opt/registrar/whois
+composer install
+mv config.php.dist config.php
+```
+
+Edit the `config.php` with the appropriate database details and preferences as required.
+
+Copy `whois.service` to `/etc/systemd/system/`. Change only User and Group lines to your user and group.
+
+```bash
+systemctl daemon-reload
+systemctl start whois.service
+systemctl enable whois.service
+```
+
+After that you can manage WHOIS via systemctl as any other service.
+
+## 11. Setup RDAP:
+
+```bash
+cd /opt/registrar/rdap
+composer install
+mv config.php.dist config.php
+```
+
+Edit the `config.php` with the appropriate database details and preferences as required.
+
+Copy `rdap.service` to `/etc/systemd/system/`. Change only User and Group lines to your user and group.
+
+```bash
+systemctl daemon-reload
+systemctl start rdap.service
+systemctl enable rdap.service
+```
+
+After that you can manage RDAP via systemctl as any other service.
+
+## 12. Setup Automation Scripts:
 
 ```bash
 cd /opt/registrar/automation
@@ -286,12 +339,52 @@ Download and initiate the escrow RDE client setup:
 ```bash
 wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
-./escrow-rde-client -i
+mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
+rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 ```
 
-Edit the generated configuration file with the required details. Once ready, enable running the escrow client in `/opt/registrar/automation/escrow.php`.
+### 12.1. Submitting the Header Mapping File:
 
-### Running the Automation System
+To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit your Header Mapping File to both DENIC (your DEA) and ICANN.
+
+#### Step 1: Upload to DENIC
+
+1. Visit the DENIC escrow portal:  
+   [https://escrow.denic-services.de/icann-header-mapping](https://escrow.denic-services.de/icann-header-mapping)
+
+2. Log in with your credentials.
+
+3. Upload your Header Mapping File in CSV format.  
+   Use the structure below:
+
+    ```csv
+    ICANN RDE Spec,Field Name,Abbreviation
+    8.1.1,domain,domainname
+    8.1.2,expiration-date,expire
+    8.1.3,iana,ianaid
+    8.1.4,rt-name,rt-name
+    8.1.5,rt-street,rt-street
+    8.1.6,rt-city,rt-city
+    8.1.7,rt-state,rt-state
+    8.1.8,rt-zip,rt-zip
+    8.1.9,rt-country,rt-country
+    8.1.10,rt-phone,rt-phone
+    8.1.11,rt-mail,rt-email
+    3.4.1.3,bc-name,bc-name
+    ```
+
+4. Confirm the upload was successful.
+
+#### Step 2: Send to ICANN
+
+Email the same file to ICANN at:  
+📧 **registrar@icann.org**
+
+Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
+
+After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
+
+### 12.2. Running the Automation System:
 
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
@@ -299,7 +392,18 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 11. Domain Contact Verification:
+## 13. ICANN Registrar Module:
+
+```bash
+git clone https://github.com/getnamingo/whmcs-registrar
+mv whmcs-registrar/whmcs_registrar /var/www/html/whmcs/modules/addons
+chown -R www-data:www-data /var/www/html/whmcs/modules/addons/whmcs_registrar
+chmod -R 755 /var/www/html/whmcs/modules/addons/whmcs_registrar
+```
+
+- Go to Settings > Apps & Integrations in the admin panel, search for "ICANN Registrar" and then activate "ICANN Registrar Accreditation".
+
+## 14. Domain Contact Verification:
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-validation
@@ -310,7 +414,7 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/validation
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
 
-## 12. TMCH Claims Notice Support:
+## 15. TMCH Claims Notice Support:
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-tmch
@@ -323,7 +427,7 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/tmch
 
 - Still this needs to be integrated with your workflow.
 
-## 13. WHOIS & RDAP Client:
+## 16. WHOIS & RDAP Client:
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-whois
@@ -336,7 +440,7 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/whois
 
 - Set your WHOIS and RDAP server and contact form URLs in the module settings.
 
-## 14. Domain Registrant Contact:
+## 17. Domain Registrant Contact:
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-contact
@@ -349,11 +453,11 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/contact
 
 - Set your WHMCS API key in the module settings.
 
-## 15. Installing WHMCS EPP-RFC Extensions:
+## 18. Installing WHMCS EPP-RFC Extensions:
 
 For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP extension. Each module can handle one or more TLDs that share the same configuration details.
 
-### 15.1. Generic EPP:
+### 18.1. Generic EPP:
 
 To set up a TLD using the standard EPP protocol, follow these steps:
 
@@ -404,7 +508,7 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/eppr
 ]
 ```
 
-### 15.2. VeriSign EPP:
+### 18.2. VeriSign EPP:
 
 To set up a TLD using the VeriSign EPP platform, follow these steps:
 
@@ -445,11 +549,11 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/verisign
 ]
 ```
 
-### 15.3. Executing OT&E Tests:
+### 18.3. Executing OT&E Tests:
 
 To execute the required OT&E tests by various registries, you can use our Tembo client. You can find it at [https://github.com/getpinga/tembo](https://github.com/getpinga/tembo).
 
-## 16. Further Settings:
+## 19. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
