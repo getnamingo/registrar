@@ -118,7 +118,8 @@ composer_update() {
     dir=$1
     if [[ -d "$dir" ]]; then
         echo "Updating composer in $dir..."
-        cd "$dir" && composer update
+        cd "$dir" || exit
+        COMPOSER_ALLOW_SUPERUSER=1 composer update --no-interaction --quiet
     else
         echo "Directory $dir does not exist. Skipping composer update..."
     fi
@@ -182,7 +183,7 @@ EOF
 apt update
 
 # Install MariaDB and PHP MySQL module
-apt install -y mariadb-client mariadb-server ${PHP_VERSION}-mysql
+apt install -y mariadb-client mariadb-server ${PHP_VERSION}-mysql ${PHP_VERSION}-yaml
 systemctl restart mariadb
 
 echo "MariaDB updated..."
@@ -192,6 +193,13 @@ echo "Restarting PHP FPM service..."
 systemctl restart ${PHP_VERSION}-fpm
 
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
+
+# Update Escrow RDE Client
+cd /opt/registrar/automation
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
+rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 
 # Start services
 echo "Starting services..."

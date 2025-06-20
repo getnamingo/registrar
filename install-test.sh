@@ -31,6 +31,102 @@ set_php_ini_value() {
     fi
 }
 
+install_rdap_and_whois_services() {
+    echo "Installing RDAP & WHOIS services..."
+
+    # Clone the registrar repository
+    git clone https://github.com/getnamingo/registrar /opt/registrar
+
+    # Setup for WHOIS service
+    cd /opt/registrar/whois
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+
+    # Copy and enable the WHOIS service
+    cp whois.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl start whois.service
+    systemctl enable whois.service
+
+    # Setup for RDAP service
+    cd /opt/registrar/rdap
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+
+    # Copy and enable the RDAP service
+    cp rdap.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl start rdap.service
+    systemctl enable rdap.service
+
+    # Setup for automation
+    cd /opt/registrar/automation
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
+    mv config.php.dist config.php
+
+    # Edit config.php with the database credentials
+    sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
+    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass'/g" config.php
+
+    # Install Escrow RDE Client
+    cd /opt/registrar/automation
+    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+    tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+    mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
+    rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
+
+    # Clone and move FOSSBilling modules
+    cd /opt
+    git clone https://github.com/getnamingo/fossbilling-validation
+    mv fossbilling-validation/Validation /var/www/modules/
+
+    git clone https://github.com/getnamingo/fossbilling-tmch
+    mv fossbilling-tmch/Tmch /var/www/modules/
+
+    git clone https://github.com/getnamingo/fossbilling-whois
+    mv fossbilling-whois/Whois /var/www/modules/
+    mv fossbilling-whois/check.php /var/www/
+
+    sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
+    sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
+    
+    git clone https://github.com/getnamingo/fossbilling-contact
+    mv fossbilling-contact/Contact /var/www/modules/
+
+    git clone https://github.com/getnamingo/fossbilling-registrar
+    mv fossbilling-registrar/Registrar /var/www/modules/
+
+    mkdir /opt/registrar/escrow
+    mkdir /opt/registrar/escrow/process
+}
+
+echo "==== Namingo Registrar v1.1.0-beta1 ===="
+echo
+echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
+echo
+echo "Please choose the billing system you plan to use:"
+echo
+echo "  1) FOSSBilling – free & open-source"
+echo "  2) WHMCS       – commercial billing platform"
+echo "  c) Cancel"
+echo
+read -rp "Enter your choice [1/2/c]: " choice
+
+case "$choice" in
+    1)
+        echo "FOSSBilling selected."
+        echo 
+        
 echo "Before continuing, ensure that you have the following domains pointing to this server:"
 echo "1. example.com or panel.example.com"
 echo "2. whois.example.com"
@@ -410,80 +506,7 @@ fi
 $DB_COMMAND -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    # Clone the registrar repository
-    git clone https://github.com/getnamingo/registrar /opt/registrar
-
-    # Setup for WHOIS service
-    cd /opt/registrar/whois
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
-    mv config.php.dist config.php
-
-    # Edit config.php with the database credentials
-    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
-    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
-
-    # Copy and enable the WHOIS service
-    cp whois.service /etc/systemd/system/
-    systemctl daemon-reload
-    systemctl start whois.service
-    systemctl enable whois.service
-
-    # Setup for RDAP service
-    cd /opt/registrar/rdap
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
-    mv config.php.dist config.php
-
-    # Edit config.php with the database credentials
-    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
-    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
-
-    # Copy and enable the RDAP service
-    cp rdap.service /etc/systemd/system/
-    systemctl daemon-reload
-    systemctl start rdap.service
-    systemctl enable rdap.service
-
-    # Setup for automation
-    cd /opt/registrar/automation
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
-    mv config.php.dist config.php
-
-    # Edit config.php with the database credentials
-    sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
-    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass'/g" config.php
-
-    # Install Escrow RDE Client
-    cd /opt/registrar/automation
-    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
-    tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
-    mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
-    rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
-
-    # Clone and move FOSSBilling modules
-    cd /opt
-    git clone https://github.com/getnamingo/fossbilling-validation
-    mv fossbilling-validation/Validation /var/www/modules/
-
-    git clone https://github.com/getnamingo/fossbilling-tmch
-    mv fossbilling-tmch/Tmch /var/www/modules/
-
-    git clone https://github.com/getnamingo/fossbilling-whois
-    mv fossbilling-whois/Whois /var/www/modules/
-    mv fossbilling-whois/check.php /var/www/
-
-    sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
-    sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
-    
-    git clone https://github.com/getnamingo/fossbilling-contact
-    mv fossbilling-contact/Contact /var/www/modules/
-
-    git clone https://github.com/getnamingo/fossbilling-registrar
-    mv fossbilling-registrar/Registrar /var/www/modules/
-
-    mkdir /opt/registrar/escrow
-    mkdir /opt/registrar/escrow/process
+    install_rdap_and_whois_services
 fi
 
 # Final instructions to the user
@@ -519,3 +542,56 @@ echo
 echo "9. Configure the escrow and backup tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
 echo
 echo "Please follow these steps carefully to complete your installation and configuration."
+        ;;
+    2)
+        echo "WHMCS selected."
+        echo "Is this a new server where WHMCS should be installed?"
+        echo "1) Yes, install WHMCS"
+        echo "2) No, WHMCS is already installed"
+        echo "c) Cancel"
+        read -rp "Select an option [1/2/c]: " whmcs_choice
+
+        case "$whmcs_choice" in
+            1)
+                echo "-> [Your WHMCS fresh install logic here]"
+                ;;
+            2)
+                read -rp "Enter full path to the existing WHMCS installation: " whmcs_path
+                if [[ -d "$whmcs_path" && -f "$whmcs_path/configuration.php" ]]; then
+                    echo "Valid WHMCS installation found at $whmcs_path"
+                    echo
+                    read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
+
+                    config_file="$whmcs_path/configuration.php"
+
+                    db_user=$(grep "^\$db_username" "$config_file" | sed -E "s/^\$db_username\s*=\s*\"(.*)\";/\1/")
+                    db_pass=$(grep "^\$db_password" "$config_file" | sed -E "s/^\$db_password\s*=\s*\"(.*)\";/\1/")
+                    db_name=$(grep "^\$db_name" "$config_file" | sed -E "s/^\$db_name\s*=\s*\"(.*)\";/\1/")
+
+                    if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+                        install_rdap_and_whois_services
+                    fi
+                else
+                    echo "Error: Invalid WHMCS path or configuration.php not found."
+                    exit 1
+                fi
+                ;;
+            c|C)
+                echo "Installation cancelled."
+                exit 0
+                ;;
+            *)
+                echo "Invalid option. Exiting."
+                exit 1
+                ;;
+        esac
+        ;;
+    c|C)
+        echo "Installation cancelled."
+        exit 0
+        ;;
+    *)
+        echo "Invalid selection. Exiting."
+        exit 1
+        ;;
+esac
