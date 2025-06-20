@@ -53,7 +53,7 @@ After configuring PHP, restart the service to apply changes:
 systemctl restart php8.2-fpm
 ```
 
-## 1.2. Install ionCube Loader:
+### 1.2. Install ionCube Loader:
 
 ```bash
 cd /tmp
