@@ -172,7 +172,7 @@ class WHMCS implements EscrowInterface {
             $billing    = $contacts[$domain['billing']] ?? [];
 
             $row = [
-                $domain['name']              ?? '',
+                idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'],
                 $domain['exdate']            ?? '',
                 $ianaID,
                 $registrant['name']          ?? '',
@@ -204,7 +204,7 @@ class WHMCS implements EscrowInterface {
         $file = fopen($this->full, 'a');
 
         // Extract the necessary data from the domain array
-        $domainName = $domain['name'];
+        $domainName = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
         $status = $domain['status'];
         $registrationDate = $domain['crdate'];
         $expiryDate = $domain['exdate'];

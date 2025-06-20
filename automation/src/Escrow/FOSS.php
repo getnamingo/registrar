@@ -39,8 +39,10 @@ class FOSS implements EscrowInterface {
             $techContactId = $meta['tech_contact_id'] ?? '';
             $billingContactId = $meta['billing_contact_id'] ?? '';
 
+            $domainAscii = idn_to_ascii($row['domain'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+
             // Write the row data to the CSV
-            $line = "\"{$row['domain']}\",\"{$row['ns1']}\",\"{$row['ns2']}\",\"{$row['ns3']}\",\"{$row['ns4']}\",\"{$row['exdate']}\",\"{$registrantContactId}\",\"{$techContactId}\",\"{$adminContactId}\",\"{$billingContactId}\",\"\",\"\",\"\",\"\"";
+            $line = "\"{$domainAscii}\",\"{$row['ns1']}\",\"{$row['ns2']}\",\"{$row['ns3']}\",\"{$row['ns4']}\",\"{$row['exdate']}\",\"{$registrantContactId}\",\"{$techContactId}\",\"{$adminContactId}\",\"{$billingContactId}\",\"\",\"\",\"\",\"\"";
             fwrite($file, "$line\n");
         }
 
@@ -168,7 +170,7 @@ class FOSS implements EscrowInterface {
 
             // Compose row for RDE CSV
             $line = [
-                $domain['domainname']         ?? '',
+                idn_to_ascii($domain['domainname'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['domainname'],
                 $domain['expire']             ?? '',
                 $ianaID,
                 $registrant['name']           ?? '',
