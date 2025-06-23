@@ -924,6 +924,14 @@ echo "Please follow these steps carefully to complete your installation and conf
                 if [[ -d "$whmcs_path" && -f "$whmcs_path/configuration.php" ]]; then
                     echo "Valid WHMCS installation found at $whmcs_path"
                     echo
+                    echo "Before proceeding, please make sure to back up your entire WHMCS directory and database."
+                    echo "This will help prevent any data loss in case something goes wrong during the installation."
+                    echo
+                    read -p "Do you want to continue with the installation? (Y/N): " confirm_continue
+                    if [[ ! "$confirm_continue" =~ ^[Yy]$ ]]; then
+                        echo "Installation aborted."
+                        exit 1
+                    fi
                     read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
 
                     config_file="$whmcs_path/configuration.php"
