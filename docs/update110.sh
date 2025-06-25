@@ -16,15 +16,19 @@ add_config_lines() {
 replace_escrow_block() {
     file="/opt/registrar/automation/config.php"
 
-    # Backup first
+    # Backup original
     cp "$file" "$file.bak"
 
+    # Use awk to process line-by-line
     awk '
-    BEGIN {in_escrow=0}
-    /'\''escrow'\''[[:space:]]*=>[[:space:]]*array\s*\(/ {print "    '\''escrow'\'' => array("; in_escrow=1; skip=1; next}
-    in_escrow && /^\s*\)/ {in_escrow=0; next}
-    !in_escrow || !skip {print}
-    END {
+    BEGIN {in_escrow = 0}
+    /^\s*'\''escrow'\''[[:space:]]*=>[[:space:]]*array\s*\(/ {
+        print "    '\''escrow'\'' => array(";
+        in_escrow = 1;
+        next;
+    }
+    in_escrow && /^\s*\),/ {
+        in_escrow = 0;
         print "        '\''backend'\'' => '\''FOSS'\'', // FOSS, WHMCS, or Custom"
         print "        '\''full'\'' => '\''/opt/registrar/escrow/full.csv'\''"
         print "        '\''hdl'\''  => '\''/opt/registrar/escrow/hdl.csv'\''"
@@ -44,10 +48,14 @@ replace_escrow_block() {
         print "        '\''sshUsername'\'' => '\''sshUsername'\''"
         print "        '\''sshPrivateKeyPath'\'' => '\''/opt/registrar/escrow/sshPrivateKey'\''"
         print "        '\''sshPrivateKeyPassword'\'' => '\''sshPrivateKeyPassword'\''"
-        print "    ),"
-    }' "$file.bak" > "$file"
+        print "    ),";
+        next;
+    }
+    in_escrow { next }
+    { print }
+    ' "$file.bak" > "$file"
 
-    echo "$file escrow block replaced"
+    echo "Escrow block replaced in $file"
 }
 
 # Prompt the user for confirmation
@@ -289,7 +297,14 @@ else
 fi
 
 # Final instructions to the user
-echo "Upgrade to v1.1.0 is complete."
-echo "Please review all configuration files and logs for any issues."
-echo "If you notice anything unusual, contact the Namingo team for assistance."
+echo
+echo "=== Upgrade to v1.1.0 Complete ==="
+echo "Please review the updated installation manual for any new settings or changes."
+echo "Make sure to edit the following configuration files to match your environment:"
+echo "  - /opt/registrar/whois/config.php"
+echo "  - /opt/registrar/automation/config.php"
+echo "  - /opt/registrar/rdap/config.php"
+echo
+echo "Check logs for any warnings or errors during the upgrade."
+echo "If you encounter issues or unexpected behavior, please contact the Namingo team for support."
 echo
