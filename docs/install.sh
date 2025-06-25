@@ -35,7 +35,7 @@ install_rdap_and_whois_services() {
     echo "Installing RDAP & WHOIS services..."
 
     # Clone the registrar repository
-    git clone https://github.com/getnamingo/registrar /opt/registrar
+    git clone --branch v1.1.0 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 
     # Setup for WHOIS service
     cd /opt/registrar/whois
@@ -108,6 +108,7 @@ install_rdap_and_whois_services() {
 
     mkdir /opt/registrar/escrow
     mkdir /opt/registrar/escrow/process
+	mkdir /var/log/namingo
 }
 
 echo "==== Namingo Registrar v1.1.0 ===="

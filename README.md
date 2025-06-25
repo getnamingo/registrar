@@ -48,8 +48,8 @@ wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.
 
 For detailed installation steps, see:
 
-- [install-fossbilling.md](install-fossbilling.md) – for FOSSBilling setup  
-- [install-whmcs.md](install-whmcs.md) – for WHMCS setup
+- [install-fossbilling.md](docs/install-fossbilling.md) – for FOSSBilling setup  
+- [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 
 ### Update
 
