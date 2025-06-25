@@ -1,7 +1,57 @@
 #!/bin/bash
 
+# 1 & 2: Add lines to whois/config.php and rdap/config.php if not already present
+add_config_lines() {
+    file="$1"
+
+    grep -q "'minimum_data'" "$file" && echo "$file already updated" && return
+    grep -q "'backend'" "$file" && echo "$file already updated" && return
+
+    # Insert before the last closing bracket
+    sed -i "/'period' *=>/a \ \ \ \ 'minimum_data' => false,\n\ \ \ \ 'backend' => 'foss'," "$file"
+    echo "$file updated"
+}
+
+# 3: Replace 'escrow' block in automation/config.php
+replace_escrow_block() {
+    file="/opt/registrar/automation/config.php"
+
+    # Backup first
+    cp "$file" "$file.bak"
+
+    awk '
+    BEGIN {in_escrow=0}
+    /'\''escrow'\''[[:space:]]*=>[[:space:]]*array\s*\(/ {print "    '\''escrow'\'' => array("; in_escrow=1; skip=1; next}
+    in_escrow && /^\s*\)/ {in_escrow=0; next}
+    !in_escrow || !skip {print}
+    END {
+        print "        '\''backend'\'' => '\''FOSS'\'', // FOSS, WHMCS, or Custom"
+        print "        '\''full'\'' => '\''/opt/registrar/escrow/full.csv'\''"
+        print "        '\''hdl'\''  => '\''/opt/registrar/escrow/hdl.csv'\''"
+        print "        '\''ianaID'\'' => 0000,"
+        print "        '\''specification'\'' => 2007,"
+        print "        '\''depositBaseDir'\'' => '\''/opt/registrar/escrow'\''"
+        print "        '\''runDir'\'' => '\''/opt/registrar/escrow/process'\''"
+        print "        '\''compressAndEncrypt'\'' => false,"
+        print "        '\''uploadFiles'\'' => false,"
+        print "        '\''multi'\'' => false,"
+        print "        '\''useFileSystemCache'\'' => false,"
+        print "        '\''gpgPrivateKeyPath'\'' => '\''/opt/registrar/escrow/YourPrivateKey.asc'\''"
+        print "        '\''gpgPrivateKeyPass'\'' => '\''gpgPrivateKeyPass'\''"
+        print "        '\''gpgReceiverPubKeyPath'\'' => '\''/opt/registrar/escrow/ProviderKey.asc'\''"
+        print "        '\''sshHostname'\'' => '\''escrow.denic-services.de'\''"
+        print "        '\''sshPort'\'' => 22,"
+        print "        '\''sshUsername'\'' => '\''sshUsername'\''"
+        print "        '\''sshPrivateKeyPath'\'' => '\''/opt/registrar/escrow/sshPrivateKey'\''"
+        print "        '\''sshPrivateKeyPassword'\'' => '\''sshPrivateKeyPassword'\''"
+        print "    ),"
+    }' "$file.bak" > "$file"
+
+    echo "$file escrow block replaced"
+}
+
 # Prompt the user for confirmation
-echo "This will update Namingo Registrar from v1.0.5 to v1.1.0-beta1."
+echo "This will update Namingo Registrar from v1.0.5 to v1.1.0"
 echo "Make sure you have a backup of the database, /var/www, and /opt/registrar."
 read -p "Are you sure you want to proceed? (y/n): " confirm
 
@@ -82,13 +132,21 @@ done
 
 # Stop services
 echo "Stopping services..."
-systemctl stop nginx
+if systemctl is-active --quiet nginx; then
+    echo "Stopping nginx..."
+    systemctl stop nginx
+elif systemctl is-active --quiet apache2; then
+    echo "Stopping apache2..."
+    systemctl stop apache2
+else
+    echo "Neither nginx nor apache2 is running."
+fi
 systemctl stop whois
 systemctl stop rdap
 
 # Clone the new version of the repository
-echo "Cloning v1.1.0-beta1 from the repository..."
-git clone https://github.com/getnamingo/registrar /opt/registrar11
+echo "Cloning v1.1.0 from the repository..."
+git clone https://github.com/getnamingo/registrar /opt/registrar110
 
 # Copy files from the new version to the appropriate directories
 echo "Copying files..."
@@ -107,9 +165,9 @@ copy_files() {
 }
 
 # Copy specific directories
-copy_files "/opt/registrar11/automation" "/opt/registrar/automation"
-copy_files "/opt/registrar11/whois" "/opt/registrar/whois"
-copy_files "/opt/registrar11/rdap" "/opt/registrar/rdap"
+copy_files "/opt/registrar110/automation" "/opt/registrar/automation"
+copy_files "/opt/registrar110/whois" "/opt/registrar/whois"
+copy_files "/opt/registrar110/rdap" "/opt/registrar/rdap"
 
 # Run composer update in copied directories (excluding docs)
 echo "Running composer update..."
@@ -201,23 +259,37 @@ tar -xzf escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 mv escrow-rde-client-v2.2.1-linux_x86_64 escrow-rde-client
 rm escrow-rde-client-v2.2.1-linux_x86_64.tar.gz
 
+# Run for whois and rdap
+add_config_lines "/opt/registrar/whois/config.php"
+add_config_lines "/opt/registrar/rdap/config.php"
+
+# Run for automation
+replace_escrow_block
+
 # Start services
 echo "Starting services..."
-systemctl start nginx
+if systemctl is-active --quiet nginx || systemctl is-enabled --quiet nginx; then
+    echo "Starting nginx..."
+    systemctl start nginx
+elif systemctl is-active --quiet apache2 || systemctl is-enabled --quiet apache2; then
+    echo "Starting apache2..."
+    systemctl start apache2
+else
+    echo "Neither nginx nor apache2 is active or enabled."
+fi
 systemctl start whois
 systemctl start rdap
 
 # Check if services started successfully
 if [[ $? -eq 0 ]]; then
-    echo "Services started successfully. Deleting /opt/registrar11..."
-    rm -rf /opt/registrar11
+    echo "Services started successfully. Deleting /opt/registrar110..."
+    rm -rf /opt/registrar110
 else
-    echo "There was an issue starting the services. /opt/registrar11 will not be deleted."
+    echo "There was an issue starting the services. /opt/registrar110 will not be deleted."
 fi
 
 # Final instructions to the user
-echo "Upgrade to v1.1.0-beta1 is almost complete. Please follow the final step below to finish the process:"
-echo
-echo "1. Open your browser and log in to the admin panel."
-echo "2. Navigate to System -> Update to apply the changes."
+echo "Upgrade to v1.1.0 is complete."
+echo "Please review all configuration files and logs for any issues."
+echo "If you notice anything unusual, contact the Namingo team for assistance."
 echo

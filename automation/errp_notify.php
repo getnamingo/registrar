@@ -13,6 +13,10 @@ require_once 'vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/errp_notify.log';
+$log = setupLogger($logFilePath, 'ERRP_NOTIFY');
+$log->info('job started.');
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
@@ -21,12 +25,12 @@ try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('Database connection error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 // Define function to send renewal reminder emails
-function sendRenewalReminderEmail($to_email, $days_until_expiry) {
+function sendRenewalReminderEmail($to_email, $days_until_expiry, $config, $log) {
     // Send email with appropriate subject and message based on days until expiry
     if ($days_until_expiry == 30) {
         $subject = "Renewal Reminder: Your domain name will expire in 30 days";
@@ -40,18 +44,18 @@ function sendRenewalReminderEmail($to_email, $days_until_expiry) {
     }
 
     send_email($to_email, $subject, $message, $config);
-    error_log("Sent email to $to_email with subject '$subject'");
+    $log->info("Sent email to $to_email with subject '$subject'");
 }
 
 // Define function to check for expiring domain names and send renewal reminder emails
-function sendRenewalReminders($pdo) {
+function sendRenewalReminders($pdo, $backend, $log, $config) {
     // Get all domain names that will expire in the next 30 days
     if ($backend === 'FOSS') {
         $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     } elseif ($backend === 'WHMCS') {
         $sql = "SELECT * FROM namingo_domain WHERE NOW() <= exdate AND exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     } else {
-        echo "Unknown backend: $backend\n";
+        $log->error("Unknown backend: $backend");
         exit(1);
     }
     $stmt = $pdo->prepare($sql);
@@ -66,7 +70,7 @@ function sendRenewalReminders($pdo) {
             } elseif ($backend === 'WHMCS') {
                 $domainExpiration = $domain['exdate'];
             } else {
-                echo "Unknown backend: $backend\n";
+                $log->error("Unknown backend: $backend");
                 exit(1);
             }
             $expiry_date = new DateTime($domainExpiration);
@@ -82,14 +86,21 @@ function sendRenewalReminders($pdo) {
                     $stmt->execute();
                     $domainEmail = $stmt->fetchColumn();
                 }
-                sendRenewalReminderEmail($domainEmail, $days_until_expiry);
+                sendRenewalReminderEmail($domainEmail, $days_until_expiry, $config, $log);
             }
         }
+        $log->info('ERRP Notify job completed.');
     } catch (PDOException $e) {
-    // Log the error
-    error_log($e->getMessage());
+        $log->error('Database error: ' . $e->getMessage());
+        exit(1);
+    } catch (Exception $e) {
+        $log->error('Error: ' . $e->getMessage());
+        exit(1);
+    } catch (Throwable $e) {
+        $log->error('Error: ' . $e->getMessage());
+        exit(1);
     }
 }
 
 // Call the function to check for expiring domains and send renewal reminder emails
-sendRenewalReminders($pdo);
+sendRenewalReminders($pdo, $backend, $log, $config);

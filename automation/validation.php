@@ -13,6 +13,10 @@ require_once 'vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/validation.log';
+$log = setupLogger($logFilePath, 'Validation');
+$log->info('job started.');
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use Registrar\EppClient\Client;
@@ -22,8 +26,8 @@ try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('Database connection error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 // Get all domains that have not been validated and were registered more than 15 days ago
@@ -49,7 +53,7 @@ if ($backend === 'FOSS') {
         AND c.validation = 0
     ");
 } else {
-    echo "Unknown backend: $backend\n";
+    $log->error("Unknown backend: $backend");
     exit(1);
 }
 $stmt->bindParam(':registered_at', $registration_date);
@@ -57,106 +61,99 @@ $stmt->execute();
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Loop through domains and send reminder email and EPP command to update nameservers
+$epp = connectEpp("generic", $config);
+
 foreach ($rows as $row) {
-  if ($backend === 'FOSS') {
-      $validationRow = $row['custom_2'];
-  } elseif ($backend === 'WHMCS') {
-      $validationRow = $row['validation'];
-  } else {
-      echo "Unknown backend: $backend\n";
-      exit(1);
-  }
-  if ($validationRow == 0) {
-      if ($backend === 'FOSS') {
-          $domain_name = $row['sld'].$row['tld'];
-          $registrant_email = $row['contact_email'];
-          $token = $row['token'];
-          $link = $config['registrar_url']."validate?token=$token";
-      } elseif ($backend === 'WHMCS') {
-          $domain_name = $row['name'];
-          $registrant_email = $row['email'];
-          $token = $row['validation_log'];
-          $link = $config['registrar_url']."index.php?m=validation&token=".$token;
-      } else {
-          echo "Unknown backend: $backend\n";
-          exit(1);
-      }
+    if ($backend === 'FOSS') {
+        $validationRow = $row['custom_2'];
+    } elseif ($backend === 'WHMCS') {
+        $validationRow = $row['validation'];
+    } else {
+        $log->error("Unknown backend: $backend");
+        exit(1);
+    }
+    if ($validationRow == 0) {
+        if ($backend === 'FOSS') {
+            $domain_name = $row['sld'].$row['tld'];
+            $registrant_email = $row['contact_email'];
+            $token = $row['token'];
+            $link = $config['registrar_url']."validate?token=$token";
+        } elseif ($backend === 'WHMCS') {
+            $domain_name = $row['name'];
+            $registrant_email = $row['email'];
+            $token = $row['validation_log'];
+            $link = $config['registrar_url']."index.php?m=validation&token=".$token;
+        } else {
+            $log->error("Unknown backend: $backend");
+            exit(1);
+        }
 
-      // Send reminder email
-      $to = $registrant_email;
-      $subject = 'Contact Information Validation Reminder';
-      $message = "Dear Registrant,\n\nThis is a reminder to validate your contact information for the domain $domain_name. Please click the following link to validate your information:\n\n$link\n\nIf you have already validated your information, please disregard this message.\n\nSincerely,\nThe Registrar";
-      send_email($to, $subject, $message, $config);
+        // Send reminder email
+        $to = $registrant_email;
+        $subject = 'Contact Information Validation Reminder';
+        $message = "Dear Registrant,\n\nThis is a reminder to validate your contact information for the domain $domain_name. Please click the following link to validate your information:\n\n$link\n\nIf you have already validated your information, please disregard this message.\n\nSincerely,\nThe Registrar";
+        send_email($to, $subject, $message, $config);
+  
+        // Nameservers to update
+        $ns1 = $config['ns1'];
+        $ns2 = $config['ns2'];
 
-      // Send EPP command to update nameservers and status
-      $epp = connectEpp("generic", $config);
-      
-      // Nameservers to update
-      $ns1 = $config['ns1'];
-      $ns2 = $config['ns2'];
+        // Prepare the SQL query
+        $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':ns1', $ns1);
+        $stmt->bindParam(':ns2', $ns2);
+        $stmt->bindParam(':id', $row['id']);
+        $stmt->execute();
 
-      // Prepare the SQL query
-      $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
-      $stmt = $pdo->prepare($sql);
+        // Send EPP update to registry
+        $params = array(
+            'domainname' => $domain_name,
+            'ns1' => $ns1,
+            'ns2' => $ns2
+        );
+        $domainUpdateNS = $epp->domainUpdateNS($params);
 
-      // Bind the parameters
-      $stmt->bindParam(':ns1', $ns1);
-      $stmt->bindParam(':ns2', $ns2);
-      $stmt->bindParam(':id', $row['id']);
+        if (array_key_exists('error', $domainUpdateNS))
+        {
+            $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+        }
+        else
+        {
+            $log->info('Validation cron 1 completed successfully.');
+        }
 
-      // Execute the query
-      $stmt->execute();
+        $params = array(
+            'domainname' => $domain_name,
+            'command' => 'add',
+            'status' => 'clientHold'
+        );
+        $domainUpdateStatus = $epp->domainUpdateStatus($params);
 
-      // Send EPP update to registry
-      $params = array(
-          'domainname' => $domain_name,
-          'ns1' => $ns1,
-          'ns2' => $ns2
-      );
-      $domainUpdateNS = $epp->domainUpdateNS($params);
-                
-      if (array_key_exists('error', $domainUpdateNS))
-      {
-          echo 'DomainUpdateNS Error: ' . $domainUpdateNS['error'] . PHP_EOL;
-      }
-      else
-      {
-          echo 'ERRP cron 1 completed successfully' . PHP_EOL;
-      }
-      
-      $params = array(
-          'domainname' => $domain_name,
-          'command' => 'add',
-          'status' => 'clientHold'
-      );
-      $domainUpdateStatus = $epp->domainUpdateStatus($params);
-        
-      if (array_key_exists('error', $domainUpdateStatus))
-      {
-          echo 'DomainUpdateStatus Error: ' . $domainUpdateStatus['error'] . PHP_EOL;
-      }
-      else
-      {
-          echo 'ERRP cron 2 completed successfully' . PHP_EOL;
-      }
-      
-      $logout = $epp->logout();
-      
-      // Update database with validation reminder sent date and EPP result
-      if ($backend === 'FOSS') {
-          $stmt = $pdo->prepare("UPDATE service_domain SET validation_reminder_sent_date = NOW(), epp_result = :epp_result WHERE sld = :sld AND tld = :tld");
-          $stmt->bindParam(':epp_result', $epp_result);
-          $stmt->bindParam(':sld', $row['sld']);
-          $stmt->bindParam(':tld', $row['tld']);
-          $stmt->execute();
-      } elseif ($backend === 'WHMCS') {
-          $stmt = $pdo->prepare("UPDATE namingo_contact SET validation_stamp = NOW() WHERE id = :cid");
-          $stmt->bindParam(':cid', $row['cid']);
-          $stmt->execute();
-      } else {
-          echo "Unknown backend: $backend\n";
-          exit(1);
-      }
+        if (array_key_exists('error', $domainUpdateStatus))
+        {
+            $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+        }
+        else
+        {
+            $log->info('Validation cron 2 completed successfully.');
+        }
 
-  }
+        // Update database with validation reminder sent date and EPP result
+        if ($backend === 'FOSS') {
+            $stmt = $pdo->prepare("UPDATE service_domain SET validation_reminder_sent_date = NOW(), epp_result = :epp_result WHERE sld = :sld AND tld = :tld");
+            $stmt->bindParam(':epp_result', $domainUpdateStatus);
+            $stmt->bindParam(':sld', $row['sld']);
+            $stmt->bindParam(':tld', $row['tld']);
+            $stmt->execute();
+        } elseif ($backend === 'WHMCS') {
+            $stmt = $pdo->prepare("UPDATE namingo_contact SET validation_stamp = NOW() WHERE id = :cid");
+            $stmt->bindParam(':cid', $row['cid']);
+            $stmt->execute();
+        } else {
+            $log->error("Unknown backend: $backend");
+            exit(1);
+        }
+    }
 }
+$logout = $epp->logout();

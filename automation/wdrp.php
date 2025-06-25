@@ -17,13 +17,17 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/wdrp.log';
+$log = setupLogger($logFilePath, 'WDRP');
+$log->info('job started.');
+
 // Database connection
 try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('Database connection error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 try {
@@ -33,7 +37,7 @@ try {
     } elseif ($backend === 'WHMCS') {
         $query = "SELECT registrant, name, exdate FROM namingo_domain WHERE exdate BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
     } else {
-        echo "Unknown backend: $backend\n";
+        $log->error("Unknown backend: $backend");
         exit(1);
     }
 
@@ -57,14 +61,16 @@ try {
                 $to = $stmt->fetchColumn();
                 $message = sprintf($config['email']['message'], $domain['name'], $domain['exdate']);
             } else {
-                echo "Unknown backend: $backend\n";
+                $log->error("Unknown backend: $backend");
                 exit(1);
             }
 
             send_email($to, $subject, $message, $config);
         }
     }
+
+    $log->info('WDRP job completed.');
 } catch (PDOException $e) {
-    error_log('Database error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database error: ' . $e->getMessage());
+    exit(1);
 }

@@ -13,6 +13,10 @@ require_once 'vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/errp_dns.log';
+$log = setupLogger($logFilePath, 'ERRP_DNS');
+$log->info('job started.');
+
 use Registrar\EppClient\Client;
 $registrar = "Epp";
 
@@ -21,19 +25,19 @@ try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('Database connection error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 // Define function to update nameservers for expired domain names
-function updateExpiredDomainNameservers($pdo) {
+function updateExpiredDomainNameservers($pdo, $log, $backend) {
     // Get all expired domain names with registrar nameservers
     if ($backend === 'FOSS') {
         $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
     } elseif ($backend === 'WHMCS') {
         $sql = "SELECT * FROM namingo_domain WHERE NOW() > exdate";
     } else {
-        echo "Unknown backend: $backend\n";
+        $log->error("Unknown backend: $backend");
         exit(1);
     }
     $stmt = $pdo->prepare($sql);
@@ -53,7 +57,7 @@ function updateExpiredDomainNameservers($pdo) {
                 $sql = "UPDATE namingo_domain SET ns1 = :ns1, ns2 = :ns2, ns3 = NULL, ns4 = NULL, ns5 = NULL WHERE id = :id";
                 $domainName = $domain['name'];
             } else {
-                echo "Unknown backend: $backend\n";
+                $log->error("Unknown backend: $backend");
                 exit(1);
             }
             $stmt = $pdo->prepare($sql);
@@ -77,20 +81,26 @@ function updateExpiredDomainNameservers($pdo) {
             
             if (array_key_exists('error', $domainUpdateNS))
             {
-                echo 'DomainUpdateNS Error: ' . $domainUpdateNS['error'] . PHP_EOL;
+                $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
             }
             else
             {
-                echo 'ERRP cron completed successfully' . PHP_EOL;
+                $log->info('ERRP job completed.');
             }
-            
+
             $logout = $epp->logout();
         }
     } catch (PDOException $e) {
-        // Log the error
-        error_log($e->getMessage());
+        $log->error('Database error: ' . $e->getMessage());
+        exit(1);
+    } catch (Exception $e) {
+        $log->error('Error: ' . $e->getMessage());
+        exit(1);
+    } catch (Throwable $e) {
+        $log->error('Error: ' . $e->getMessage());
+        exit(1);
     }
 }
 
 // Call the function to update expired domain nameservers
-updateExpiredDomainNameservers($pdo);
+updateExpiredDomainNameservers($pdo, $log, $backend);

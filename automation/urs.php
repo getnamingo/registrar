@@ -13,19 +13,25 @@ require_once 'vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/urs.log';
+$log = setupLogger($logFilePath, 'URS');
+$log->info('job started.');
+
 // Connect to the database
 try {
     $dbh = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('DB Connection failed: ' . $e->getMessage());
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 // Connect to mailbox
 try {
     $inbox = imap_open($config['urs_imap_host'], $config['urs_imap_username'], $config['urs_imap_password']);
     if (!$inbox) {
-        throw new Exception('Cannot connect to mailbox: ' . imap_last_error());
+        $log->error('Cannot connect to mailbox: ' . imap_last_error());
+        exit(1);
     }
     // Search for emails from the two URS providers
     $emailsFromProviderA = imap_search($inbox, 'FROM "urs@adrforum.com" UNSEEN');
@@ -33,7 +39,11 @@ try {
     $emailsFromProviderC = imap_search($inbox, 'FROM "urs@mfsd.it" UNSEEN');
 
     // Combine the arrays of email IDs
-    $allEmails = array_merge($emailsFromProviderA, $emailsFromProviderB, $emailsFromProviderC);
+    $allEmails = array_merge(
+        $emailsFromProviderA ?: [],
+        $emailsFromProviderB ?: [],
+        $emailsFromProviderC ?: []
+    );
 
     foreach ($allEmails as $emailId) {
         $header = imap_headerinfo($inbox, $emailId);
@@ -61,12 +71,12 @@ try {
         } elseif ($backend === 'WHMCS') {
             $stmt = $db->prepare("SELECT * FROM namingo_contact WHERE validation = 0");
         } else {
-            echo "Unknown backend: $backend\n";
+            $log->error("Unknown backend: $backend");
             exit(1);
         }
 
         if (!$domain) {
-            error_log("No domain found in email body for email ID $emailId");
+            $log->info("No domain found in email body for email ID $emailId");
             continue;
         }
 
@@ -96,8 +106,11 @@ try {
                 // Insert into the support_ticket_message table using the last inserted ID
                 $stmt = $dbh->prepare("INSERT INTO support_ticket_message (support_ticket_id, client_id, admin_id, content, attachment, ip, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$supportTicketId, null, 1, 'New URS case for ' . $domainName . ' submitted by ' . $provider . ' on ' . $date . '. Please act accordingly', null, $clientIp, $currentDateTime, $currentDateTime]);
+
+                $ticketId = $dbh->lastInsertId();
+                $log->info("Created support ticket ID $ticketId for domain $domainName.");
             } else {
-                error_log('Domain ' . $domain . ' does not exists in registry');
+                $log->error('Domain ' . $domain . ' does not exists in registry');
             }
         } elseif ($backend === 'WHMCS') {
             $stmt = $dbh->prepare("SELECT id, userid FROM tbldomains WHERE domain = ?");
@@ -155,25 +168,36 @@ try {
 
                 // Log insertion and retrieve last inserted ticket ID
                 $ticketId = $dbh->lastInsertId();
-                error_log("Created support ticket ID $ticketId for domain $domain.");
+                $log->info("Created support ticket ID $ticketId for domain $domain.");
             } else {
-                error_log('Domain ' . $domain . ' does not exists in registry');
+                $log->error('Domain ' . $domain . ' does not exists in registry');
             }
         } else {
-            echo "Unknown backend: $backend\n";
+            $log->error("Unknown backend: $backend");
             exit(1);
         }
     }
 
+    $log->info('URS job completed.');
     imap_close($inbox);
 } catch (Exception $e) {
-    error_log('IMAP connection error: ' . $e->getMessage());
+    $log->error('Error: ' . $e->getMessage());
+    exit(1);
 } catch (Throwable $e) {
-    error_log('Error: ' . $e->getMessage());
+    $log->error('Error: ' . $e->getMessage());
+    exit(1);
 }
 
 function extractDomainNameFromEmail($emailBody) {
-    // This is just a basic example
-    preg_match("/domain: (.*?) /i", $emailBody, $matches);
-    return $matches[1] ?? '';
+    // URS-style: "Domain Name: example.com"
+    if (preg_match('/Domain(?:\s+Name)?\s*:\s*([a-z0-9.-]+\.[a-z]{2,})/i', $emailBody, $matches)) {
+        return strtolower(trim($matches[1]));
+    }
+
+    // Fallback: find first domain-looking string
+    if (preg_match('/\b([a-z0-9.-]+\.[a-z]{2,})\b/i', $emailBody, $matches)) {
+        return strtolower(trim($matches[1]));
+    }
+
+    return '';
 }

@@ -53,7 +53,7 @@ For detailed installation steps, see:
 
 ### Update
 
-- v1.0.5 to v1.1.0-beta1 - backup registrar, download and run the [update11.sh](update11.sh) script.
+- v1.0.5 to v1.1.0 - backup registrar, download and run the [update110.sh](update110.sh) script.
 
 - v1.0.4 to v1.0.5 - backup registrar, download and run the [update105.sh](docs/update105.sh) script.
 

@@ -13,6 +13,10 @@ require_once 'vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
+$logFilePath = '/var/log/namingo/validation_email.log';
+$log = setupLogger($logFilePath, 'Validation_Email');
+$log->info('job started.');
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
@@ -21,8 +25,8 @@ try {
     $db = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    error_log('Database connection error: ' . $e->getMessage());
-    exit('Oops! Something went wrong.');
+    $log->error('Database connection error: ' . $e->getMessage());
+    exit(1);
 }
 
 // Retrieve all contacts that are not yet validated
@@ -31,15 +35,15 @@ if ($backend === 'FOSS') {
 } elseif ($backend === 'WHMCS') {
     $stmt = $db->prepare("SELECT * FROM namingo_contact WHERE validation = 0");
 } else {
-    echo "Unknown backend: $backend\n";
+    $log->error("Unknown backend: $backend");
     exit(1);
 }
 $stmt->execute();
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     // Generate unique link ID
-    $token = uniqid();
-    $contact_id = $row['id']; // Assuming 'id' is the column name for contact ID
+    $token = bin2hex(random_bytes(16));
+    $contact_id = $row['id'];
 
     // Update database with link ID
     if ($backend === 'FOSS') {
@@ -49,7 +53,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $stmt = $db->prepare("UPDATE namingo_contact SET validation_log = :token WHERE id = :id");
         $link = $config['registrar_url']."index.php?m=validation&token=".$token;
     } else {
-        echo "Unknown backend: $backend\n";
+        $log->error("Unknown backend: $backend");
         exit(1);
     }
     $stmt->bindParam(':token', $token);
@@ -61,4 +65,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $subject = 'Namingo Registrar Validation Link';
     $message = "Please click the following link to validate your contact information:\n\n$link";
     send_email($to, $subject, $message, $config);
+    
+    $log->info("Validation token set and email sent for contact ID $contact_id");
 }
+
+$log->info('Job completed successfully.');

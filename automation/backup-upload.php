@@ -14,7 +14,7 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use League\Flysystem\AdapterInterface;
 
-$logFilePath = '/var/log/backup_upload.log';
+$logFilePath = '/var/log/namingo/backup_upload.log';
 $log = setupLogger($logFilePath, 'Backup_Upload');
 $log->info('job started.');
 
