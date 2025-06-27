@@ -85,6 +85,14 @@ Their efforts have made it possible to offer flexible registrar solutions for bo
 Additionally, we extend our gratitude to:
 - **ChatGPT** for invaluable assistance with code and text writing.
 
+## 💖 Support This Project
+
+If you find Namingo Registry useful, consider donating:
+
+- [Donate via Stripe](https://donate.stripe.com/7sI2aI4jV3Offn28ww)
+- BTC: `bc1q9jhxjlnzv0x4wzxfp8xzc6w289ewggtds54uqa`
+- ETH: `0x330c1b148368EE4B8756B176f1766d52132f0Ea8`
+
 ## Licensing
 
-Namingo is licensed under the MIT License.
+Namingo Registrar is licensed under the MIT License.
