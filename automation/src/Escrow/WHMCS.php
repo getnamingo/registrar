@@ -148,28 +148,62 @@ class WHMCS implements EscrowInterface {
 
         foreach ($domains as $domain) {
             // Fetch contacts (registrant and billing only)
+            $contacts = [];
+
+            // Prefer namingo_contact if IDs exist
             $contactIds = array_filter([$domain['registrant'], $domain['billing']]);
 
-            if (empty($contactIds)) {
-                continue;
+            if (!empty($contactIds)) {
+                $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
+                $stmtContacts = $this->pdo->prepare("
+                    SELECT id, name, street1, city, sp, pc, cc, voice, email
+                    FROM namingo_contact
+                    WHERE id IN ($placeholders)
+                ");
+                $stmtContacts->execute($contactIds);
+
+                while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
+                    $contacts[$c['id']] = $c;
+                }
             }
 
-            $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
-            $stmtContacts = $this->pdo->prepare("
-                SELECT id, name, street1, city, sp, pc, cc, voice, email
-                FROM namingo_contact
-                WHERE id IN ($placeholders)
-            ");
-            $stmtContacts->execute($contactIds);
-
-            $contacts = [];
-            while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
-                $contacts[$c['id']] = $c;
+            // If registrant still not found, fallback to WHMCS
+            if (empty($contacts[$domain['registrant']])) {
+                $stmt = $this->pdo->prepare("
+                    SELECT CONCAT(TRIM(tc.firstname), ' ', TRIM(tc.lastname)) AS name, tc.address1 AS street1, tc.city, tc.state AS sp,
+                           tc.postcode AS pc, tc.country AS cc, tc.phonenumber AS voice, tc.email
+                    FROM tbldomains td
+                    JOIN tblclients tc ON tc.id = td.userid
+                    WHERE td.domain = ?
+                    ORDER BY td.id DESC LIMIT 1
+                ");
+                $stmt->execute([$domain['name']]);
+                $fallbackRegistrant = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($fallbackRegistrant) {
+                    $contacts[$domain['registrant']] = $fallbackRegistrant;
+                }
             }
 
             // Build RDE row
             $registrant = $contacts[$domain['registrant']] ?? [];
             $billing    = $contacts[$domain['billing']] ?? [];
+
+            if (empty($billing) && !empty($registrant)) {
+                $billing = $registrant;
+            }
+
+            // Clean up registrant fields
+            $registrant['name']     = $this->cleanText($registrant['name']     ?? '');
+            $registrant['street1']  = $this->cleanText($registrant['street1']  ?? '');
+            $registrant['city']     = $this->cleanText($registrant['city']     ?? '');
+            $registrant['sp']       = $this->cleanText($registrant['sp']       ?? '');
+            $registrant['pc']       = $this->cleanText($registrant['pc']       ?? '');
+            $registrant['cc']       = $this->cleanText($registrant['cc']       ?? '');
+            $registrant['email']    = $this->cleanText($registrant['email']    ?? '');
+            $registrant['voice']    = $this->cleanText($registrant['voice']    ?? '');
+
+            // Clean up billing fields
+            $billing['name']        = $this->cleanText($billing['name']        ?? '');
 
             $row = [
                 idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'],
@@ -228,5 +262,19 @@ class WHMCS implements EscrowInterface {
 
         // Close the file
         fclose($file);
+    }
+
+    private function cleanText(string $text): string {
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (class_exists('Transliterator')) {
+            $text = transliterator_transliterate('Any-Latin; Latin-ASCII', $text);
+        } else {
+            $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        }
+
+        $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
+
+        return trim(preg_replace('/\s+/', ' ', $text));
     }
 }
