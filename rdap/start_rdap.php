@@ -54,7 +54,7 @@ $http->set([
     'heartbeat_idle_time' => 600,  // 10 minutes
     'package_max_length' => 2 * 1024 * 1024,  // 2MB
     'reload_async' => true,
-    'http_compression' => true
+    'http_compression' => false
 ]);
 
 $rateLimiter = new Rately();
@@ -274,7 +274,11 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             return;
         }
 
-        $contacts = $adapter->getContacts($pdo, $domain, $domainDetails);
+        $contacts = [];
+
+        if (!$c['minimum_data']) {
+            $contacts = $adapter->getContacts($pdo, $domain, $domainDetails);
+        }
 
         $domainStatuses = $adapter->getDomainStatuses($pdo, $domainDetails['id']);
         $dnssecRecords = $adapter->getDNSSEC($pdo, $domainDetails['id']);
@@ -404,7 +408,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             'nameservers' => array_map(function ($ns) use ($c) {
                 return [
                     'objectClassName' => 'nameserver',
-                    'handle' => 'H' . $ns['name'],
                     'ldhName' => $ns['name'],
                     'links' => [
                         [

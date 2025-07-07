@@ -29,10 +29,10 @@ class WHMCS implements RdapInterface
     public function getContacts(PDOProxy $pdo, string $domain, array $domainDetails): array
     {
         return [
-            'registrant' => $this->getContact($pdo, $domain['registrant']),
-            'administrative' => $this->getContact($pdo, $domain['admin']),
-            'technical' => $this->getContact($pdo, $domain['tech']),
-            'billing' => $this->getContact($pdo, $domain['billing']),
+            'registrant' => $this->getContact($pdo, $domainDetails['registrant']),
+            'administrative' => $this->getContact($pdo, $domainDetails['admin']),
+            'technical' => $this->getContact($pdo, $domainDetails['tech']),
+            'billing' => $this->getContact($pdo, $domainDetails['billing']),
         ];
     }
 

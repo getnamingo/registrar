@@ -108,7 +108,7 @@ install_rdap_and_whois_services() {
 
     mkdir /opt/registrar/escrow
     mkdir /opt/registrar/escrow/process
-	mkdir /var/log/namingo
+    mkdir /var/log/namingo
 }
 
 echo "==== Namingo Registrar v1.1.0 ===="
@@ -333,6 +333,20 @@ server {
         add_header Access-Control-Allow-Headers "Content-Type";
 
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+        # Enable Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_min_length 512;
+        gzip_types
+            application/json
+            application/rdap+json
+            text/plain
+            text/css
+            application/javascript
+            application/xml;
     }
 }
 EOL
@@ -951,7 +965,7 @@ echo "Please follow these steps carefully to complete your installation and conf
                     fi
                     read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
 
-					read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
+                    read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
 
                     config_file="$whmcs_path/configuration.php"
 
@@ -961,8 +975,8 @@ echo "Please follow these steps carefully to complete your installation and conf
 
                     if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
                         install_rdap_and_whois_services
-			
-if systemctl is-active --quiet apache2; then			
+            
+if systemctl is-active --quiet apache2; then            
 echo "== Creating RDAP VirtualHost config =="
 
 cat > "$rdap_conf" <<EOF

@@ -154,6 +154,20 @@ server {
         add_header Access-Control-Allow-Headers "Content-Type";
 
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        
+        # Enable Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_min_length 512;
+        gzip_types
+            application/json
+            application/rdap+json
+            text/plain
+            text/css
+            application/javascript
+            application/xml;
     }
 }
 ```
