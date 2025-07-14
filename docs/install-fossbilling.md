@@ -397,7 +397,7 @@ To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit 
     8.1.8,rt-zip,rt-zip
     8.1.9,rt-country,rt-country
     8.1.10,rt-phone,rt-phone
-    8.1.11,rt-mail,rt-email
+    8.1.11,rt-email,rt-mail
     3.4.1.3,bc-name,bc-name
     ```
 

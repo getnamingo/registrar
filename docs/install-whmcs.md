@@ -369,7 +369,7 @@ To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit 
     8.1.8,rt-zip,rt-zip
     8.1.9,rt-country,rt-country
     8.1.10,rt-phone,rt-phone
-    8.1.11,rt-mail,rt-email
+    8.1.11,rt-email,rt-mail
     3.4.1.3,bc-name,bc-name
     ```
 
@@ -457,46 +457,35 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/contact
 
 For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP extension. Each module can handle one or more TLDs that share the same configuration details.
 
-### 18.1. Generic EPP:
+### 18.1. Setting Up a TLD with the Standard EPP Protocol:
 
-To set up a TLD using the standard EPP protocol, follow these steps:
+To configure a TLD using the Namingo WHMCS EPP module, follow these steps:
 
-```bash
-git clone https://github.com/getnamingo/registrar-whmcs-epp-rfc
-mv registrar-whmcs-epp-rfc /var/www/html/whmcs/modules/registrars/eppr
-```
+1. Generate a Customized Module. Use the [module customizer](https://namingo.org/whmcs-module/) to generate the appropriate EPP module for your target registry.
 
-After this, place the `key.pem` and `cert.pem` files specific to the registry in the eppr directory. You can do this with:
+2. Download the generated .zip file and extract its contents to the following path `/var/www/html/whmcs/modules/registrars/NAME`, **replacing NAME** with the module name.
 
-```bash
-cp /path/to/key.pem /var/www/html/whmcs/modules/registrars/eppr/
-cp /path/to/cert.pem /var/www/html/whmcs/modules/registrars/eppr/
-```
-
-Set the correct permissions:
+3. Copy the registry-specific `key.pem` and `cert.pem` files into the same **NAME** directory:
 
 ```bash
-chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/eppr
-chmod -R 755 /var/www/html/whmcs/modules/registrars/eppr
+cp /path/to/key.pem /var/www/html/whmcs/modules/registrars/NAME/
+cp /path/to/cert.pem /var/www/html/whmcs/modules/registrars/NAME/
 ```
 
-- Rename the `eppr` directory to match your registry's name, for example, `namingo`.
+4. Set the correct permissions. Ensure the files and directory have the proper ownership and access rights:
 
-- Change all references from `eppr` to your registry's name:
+```bash
+chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/NAME
+chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
+```
 
-  - Rename `eppr.php` to `namingo.php`.
-  
-  - Replace all `eppr_` prefixes with `namingo_` in the PHP file.
-  
-  - In `whmcs.json`, replace `eppr` with `namingo` and adjust the "EPP Registry (ICANN Registrar Edition)" description to your registry name, such as "Namingo EPP".
+5. Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP" and then activate "Namingo EPP".
 
-- Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP" and then activate "Namingo EPP".
+6. Configure from Configuration -> System Settings -> Domain Registrars.
 
-- Configure from Configuration -> System Settings -> Domain Registrars.
+7. Add a new TLD using Configuration -> System Settings -> Domain Pricing.
 
-- Add a new TLD using Configuration -> System Settings -> Domain Pricing.
-
-- Create a `whois.json` file in `/var/www/html/whmcs/resources/domains` and add the following:
+8. Create a `whois.json` file in `/var/www/html/whmcs/resources/domains` and add the following:
 
 ```bash
 [
