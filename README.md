@@ -43,7 +43,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 To get started, copy the command below and paste it into your server terminal:
 
 ```bash
-wget https://namingo.org/registrar-install.sh -O install.sh && chmod +x install.sh && ./install.sh
+bash <(wget -qO- https://namingo.org/registrar-install.sh)
 ```
 
 For detailed installation steps, see:
@@ -52,6 +52,8 @@ For detailed installation steps, see:
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 
 ### Update
+
+- v1.1.0 to v1.1.1 - backup registrar, download and run the [update111.sh](docs/update111.sh) script.
 
 - v1.0.5 to v1.1.0 - backup registrar, download and run the [update110.sh](docs/update110.sh) script.
 

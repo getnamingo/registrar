@@ -279,7 +279,7 @@ Add the following line to schedule the WHMCS cron job:
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.1.0 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.1.1 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
@@ -549,3 +549,30 @@ To execute the required OT&E tests by various registries, you can use our Tembo 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
 
 3. Some manual tune-in is still required in various parts.
+
+### ICANN MoSAPI Integration
+
+This script connects to [MoSAPI](https://mosapi.icann.org) to monitor registrar state and domain abuse reports (METRICA) using your ICANN-assigned credentials.
+
+#### What It Does
+
+- Logs in using your MoSAPI username/password
+- Fetches current registrar state (`monitoring/state`)
+- Retrieves the latest Domain METRICA abuse statistics (`metrica/domainList/latest`)
+- Caches data for 5 minutes to reduce API calls
+
+#### Output Includes
+
+- Registrar status and tested services (e.g. RDAP)
+- Any active incidents or threshold alerts
+- Threat types (e.g. phishing, malware) with domain counts
+
+#### Requirements
+
+- PHP 8.2+
+- `apcu` extension enabled for CLI
+- ICANN MoSAPI access credentials
+
+#### Usage
+
+Configure and then run `/opt/registrar/tests/icann_mosapi_monitor.php`.
