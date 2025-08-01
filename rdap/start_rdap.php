@@ -167,16 +167,23 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         $response->end(json_encode(['error' => 'Domain name invalid format']));
         return;
     }
-    
-    // Extract TLD from the domain
-    $parts = explode('.', $domain);
-    $domainName = $parts[0];
 
-    // Handle multi-segment TLDs (e.g., co.uk, ngo.us, etc.)
-    if (count($parts) > 2) {
-        $tld = "." . $parts[count($parts) - 2] . "." . $parts[count($parts) - 1];
+    // Extract TLD from the domain and prepend a dot
+    $parts = explode('.', $domain);
+    $partsCount = count($parts);
+
+    if ($partsCount >= 2) {
+        // Get TLD: last 2 parts if 3+, last 1 part if 2
+        $tldParts = $partsCount >= 3 ? array_slice($parts, -2) : array_slice($parts, -1);
+        $tld = '.' . implode('.', $tldParts);
+            
+        // Get the domain name (SLD) right before the TLD
+        $domainName = $parts[$partsCount - count($tldParts) - 1];
     } else {
-        $tld = "." . end($parts);
+        $response->header('Content-Type', 'application/rdap+json');
+        $response->status(400); // Bad Request
+        $response->end(json_encode(['error' => 'Invalid domain']));
+        return;
     }
 
     // Check if the TLD exists

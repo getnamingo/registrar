@@ -20,5 +20,5 @@ return [
     'abuse_email' => 'abuse@example.com',
     'abuse_phone' => '+1.234567890',
     'minimum_data' => false,
-    'backend' => 'foss', // or whmcs
+    'backend' => 'foss', // Available options: 'foss' (default), 'whmcs', 'loom'
 ];

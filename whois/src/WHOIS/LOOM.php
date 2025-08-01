@@ -4,7 +4,7 @@ namespace Registrar\WHOIS;
 use Swoole\Database\PDOProxy;
 use \PDO;
 
-class FOSS implements WhoisInterface
+class LOOM implements WhoisInterface
 {
     public function handleDomainQuery(string $domain, PDOProxy $pdo, \Swoole\Server $server, int $fd, $log, $c, $privacy): void
     {
@@ -35,7 +35,7 @@ class FOSS implements WhoisInterface
             $server->close($fd);
             return;
         }
-
+        
         // Extract TLD from the domain and prepend a dot
         $parts = explode('.', $domain);
         $partsCount = count($parts);
@@ -44,17 +44,14 @@ class FOSS implements WhoisInterface
             // Get TLD: last 2 parts if 3+, last 1 part if 2
             $tldParts = $partsCount >= 3 ? array_slice($parts, -2) : array_slice($parts, -1);
             $tld = '.' . implode('.', $tldParts);
-
-            // Get domain name (SLD): part just before the TLD
-            $domainName = $parts[$partsCount - count($tldParts) - 1];
         } else {
             $server->send($fd, "Invalid domain");
             $server->close($fd);
             return;
         }
 
-        // Check if the TLD exists in the tld table
-        $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM tld WHERE tld = :tld");
+        // Check if the TLD exists in the providers table
+        $stmtTLD = $pdo->prepare("SELECT COUNT(*) FROM providers WHERE tld = :tld");
         $stmtTLD->bindParam(':tld', $tld, PDO::PARAM_STR);
         $stmtTLD->execute();
         $tldExists = $stmtTLD->fetchColumn();
@@ -69,24 +66,29 @@ class FOSS implements WhoisInterface
             DATE_FORMAT(`registered_at`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
             DATE_FORMAT(`updated_at`, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
             DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate`
-            FROM service_domain WHERE sld = :domain AND tld = :tld";
+            FROM services WHERE service_name = :domain AND service_type = 'domain'";
         $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':domain', $domainName, PDO::PARAM_STR);
-        $stmt->bindParam(':tld', $tld, PDO::PARAM_STR);
+        $stmt->bindParam(':domain', $domain, PDO::PARAM_STR);
         $stmt->execute();
 
         if ($f = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $metaQuery = "SELECT * FROM domain_meta WHERE domain_id = :domain_id";
-            $stmtMeta = $pdo->prepare($metaQuery);
-            $stmtMeta->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
-            $stmtMeta->execute();
-            $domainMeta = $stmtMeta->fetch(PDO::FETCH_ASSOC);
+            $query = "SELECT config FROM services WHERE service_name = :domain AND service_type = 'domain'";
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam(':domain', $domain, PDO::PARAM_STR);
+            $stmt->execute();
 
-            $statusQuery = "SELECT status FROM domain_status WHERE domain_id = :domain_id";
-            $stmtStatus = $pdo->prepare($statusQuery);
-            $stmtStatus->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
-            $stmtStatus->execute();
-            $domainStatuses = $stmtStatus->fetchAll(PDO::FETCH_COLUMN);
+            $configJson = $stmt->fetchColumn();
+            $config = json_decode($configJson, true);
+
+            $domainStatuses = $config['status'] ?? [];
+            $registryDomainId = $config['registry_domain_id'] ?? '';
+            $reseller = $config['reseller'] ?? '';
+            $reseller_url = $config['reseller_url'] ?? '';
+
+            $registrantRegistryId = $config['contacts']['registrant']['registry_id'] ?? '';
+            $adminRegistryId = $config['contacts']['admin']['registry_id'] ?? '';
+            $billingRegistryId = $config['contacts']['billing']['registry_id'] ?? '';
+            $techRegistryId = $config['contacts']['registrant']['registry_id'] ?? '';
 
             // Check if the domain name is non-ASCII or starts with 'xn--'
             $isNonAsciiOrPunycode = !mb_check_encoding($domain, 'ASCII') || strpos($domain, 'xn--') === 0;
@@ -101,7 +103,7 @@ class FOSS implements WhoisInterface
                 $res .= "Internationalized Domain Name: " . mb_strtoupper($internationalizedName) . "\n";
             }
 
-            $res .= "Registry Domain ID: " . ($domainMeta['registry_domain_id'] ?? '')
+            $res .= "Registry Domain ID: " . ($registryDomainId)
                 ."\nRegistrar WHOIS Server: ".$c['registrar_whois']
                 ."\nRegistrar URL: ".$c['registrar_url']
                 ."\nUpdated Date: ".$f['update']
@@ -111,8 +113,8 @@ class FOSS implements WhoisInterface
                 ."\nRegistrar IANA ID: ".$c['registrar_iana']
                 ."\nRegistrar Abuse Contact Email: ".$c['abuse_email']
                 ."\nRegistrar Abuse Contact Phone: ".$c['abuse_phone']
-                ."\nReseller: " . ($domainMeta['reseller'] ?? '')
-                ."\nReseller URL: " . ($domainMeta['reseller_url'] ?? '');
+                ."\nReseller: " . ($reseller ?? '')
+                ."\nReseller URL: " . ($reseller_url ?? '');
                         
         if (!empty($domainStatuses)) {
             foreach ($domainStatuses as $status) {
@@ -136,17 +138,17 @@ class FOSS implements WhoisInterface
                 ."\nRegistrant Phone: REDACTED FOR PRIVACY"
                 ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-            $res .= "\nRegistry Registrant ID: " . ($domainMeta['registrant_contact_id'] ?? '')
-                ."\nRegistrant Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-                ."\nRegistrant Organization: ".$f['contact_company']
-                ."\nRegistrant Street: ".$f['contact_address1']
-                ."\nRegistrant Street: ".$f['contact_address2']
-                ."\nRegistrant City: ".$f['contact_city']
-                ."\nRegistrant State/Province: ".$f['contact_state']
-                ."\nRegistrant Postal Code: ".$f['contact_postcode']
-                ."\nRegistrant Country: ".$f['contact_country']
-                ."\nRegistrant Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
-                ."\nRegistrant Email: ".$f['contact_email'];
+            $res .= "\nRegistry Registrant ID: " . ($registrantRegistryId ?? '')
+                ."\nRegistrant Name: ".$config['contacts']['registrant']['name']
+                ."\nRegistrant Organization: ".$config['contacts']['registrant']['org']
+                ."\nRegistrant Street: ".$config['contacts']['registrant']['street1']
+                ."\nRegistrant Street: ".$config['contacts']['registrant']['street2']
+                ."\nRegistrant City: ".$config['contacts']['registrant']['city']
+                ."\nRegistrant State/Province: ".$config['contacts']['registrant']['sp']
+                ."\nRegistrant Postal Code: ".$config['contacts']['registrant']['pc']
+                ."\nRegistrant Country: ".$config['contacts']['registrant']['cc']
+                ."\nRegistrant Phone: +".$config['contacts']['registrant']['voice']
+                ."\nRegistrant Email: ".$config['contacts']['registrant']['email'];
         }
 
         if ($privacy) {
@@ -162,17 +164,17 @@ class FOSS implements WhoisInterface
                 ."\nAdmin Phone: REDACTED FOR PRIVACY"
                 ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-            $res .= "\nRegistry Admin ID: " . ($domainMeta['admin_contact_id'] ?? '')
-                ."\nAdmin Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-                ."\nAdmin Organization: ".$f['contact_company']
-                ."\nAdmin Street: ".$f['contact_address1']
-                ."\nAdmin Street: ".$f['contact_address2']
-                ."\nAdmin City: ".$f['contact_city']
-                ."\nAdmin State/Province: ".$f['contact_state']
-                ."\nAdmin Postal Code: ".$f['contact_postcode']
-                ."\nAdmin Country: ".$f['contact_country']
-                ."\nAdmin Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
-                ."\nAdmin Email: ".$f['contact_email'];
+            $res .= "\nRegistry Admin ID: " . ($adminRegistryId ?? '')
+                ."\nAdmin Name: ".$config['contacts']['admin']['name']
+                ."\nAdmin Organization: ".$config['contacts']['admin']['org']
+                ."\nAdmin Street: ".$config['contacts']['admin']['street1']
+                ."\nAdmin Street: ".$config['contacts']['admin']['street2']
+                ."\nAdmin City: ".$config['contacts']['admin']['city']
+                ."\nAdmin State/Province: ".$config['contacts']['admin']['sp']
+                ."\nAdmin Postal Code: ".$config['contacts']['admin']['pc']
+                ."\nAdmin Country: ".$config['contacts']['admin']['cc']
+                ."\nAdmin Phone: +".$config['contacts']['admin']['voice']
+                ."\nAdmin Email: ".$config['contacts']['admin']['email'];
         }
 
         if ($privacy) {
@@ -188,17 +190,17 @@ class FOSS implements WhoisInterface
                 ."\nBilling Phone: REDACTED FOR PRIVACY"
                 ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-            $res .= "\nRegistry Billing ID: " . ($domainMeta['billing_contact_id'] ?? '')
-                ."\nBilling Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-                ."\nBilling Organization: ".$f['contact_company']
-                ."\nBilling Street: ".$f['contact_address1']
-                ."\nBilling Street: ".$f['contact_address2']
-                ."\nBilling City: ".$f['contact_city']
-                ."\nBilling State/Province: ".$f['contact_state']
-                ."\nBilling Postal Code: ".$f['contact_postcode']
-                ."\nBilling Country: ".$f['contact_country']
-                ."\nBilling Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
-                ."\nBilling Email: ".$f['contact_email'];
+            $res .= "\nRegistry Billing ID: " . ($billingRegistryId ?? '')
+                ."\nBilling Name: ".$config['contacts']['billing']['name']
+                ."\nBilling Organization: ".$config['contacts']['billing']['org']
+                ."\nBilling Street: ".$config['contacts']['billing']['street1']
+                ."\nBilling Street: ".$config['contacts']['billing']['street2']
+                ."\nBilling City: ".$config['contacts']['billing']['city']
+                ."\nBilling State/Province: ".$config['contacts']['billing']['sp']
+                ."\nBilling Postal Code: ".$config['contacts']['billing']['pc']
+                ."\nBilling Country: ".$config['contacts']['billing']['cc']
+                ."\nBilling Phone: +".$config['contacts']['billing']['voice']
+                ."\nBilling Email: ".$config['contacts']['billing']['email'];
         }
 
         if ($privacy) {
@@ -214,32 +216,27 @@ class FOSS implements WhoisInterface
                 ."\nTech Phone: REDACTED FOR PRIVACY"
                 ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
         } else {
-            $res .= "\nRegistry Tech ID: " . ($domainMeta['tech_contact_id'] ?? '')
-                ."\nTech Name: ".$f['contact_first_name'].' '.$f['contact_last_name']
-                ."\nTech Organization: ".$f['contact_company']
-                ."\nTech Street: ".$f['contact_address1']
-                ."\nTech Street: ".$f['contact_address2']
-                ."\nTech City: ".$f['contact_city']
-                ."\nTech State/Province: ".$f['contact_state']
-                ."\nTech Postal Code: ".$f['contact_postcode']
-                ."\nTech Country: ".$f['contact_country']
-                ."\nTech Phone: +".$f['contact_phone_cc'].'.'.$f['contact_phone']
-                ."\nTech Email: ".$f['contact_email'];
+            $res .= "\nRegistry Tech ID: " . ($techRegistryId ?? '')
+                ."\nTech Name: ".$config['contacts']['tech']['name']
+                ."\nTech Organization: ".$config['contacts']['tech']['org']
+                ."\nTech Street: ".$config['contacts']['tech']['street1']
+                ."\nTech Street: ".$config['contacts']['tech']['street2']
+                ."\nTech City: ".$config['contacts']['tech']['city']
+                ."\nTech State/Province: ".$config['contacts']['tech']['sp']
+                ."\nTech Postal Code: ".$config['contacts']['tech']['pc']
+                ."\nTech Country: ".$config['contacts']['tech']['cc']
+                ."\nTech Phone: +".$config['contacts']['tech']['voice']
+                ."\nTech Email: ".$config['contacts']['tech']['email'];
         }
 
-        $res .= "\nName Server: ".$f['ns1'];
-        $res .= "\nName Server: ".$f['ns2'];
-        $res .= "\nName Server: ".$f['ns3'];
-        $res .= "\nName Server: ".$f['ns4'];
+        $nameservers = $config['nameservers'] ?? [];
+        foreach ($nameservers as $ns) {
+            $res .= "\nName Server: " . $ns;
+        }
 
-        // Query to check if DNSSEC data exists for the domain
-        $sqlDnssec = "SELECT COUNT(*) FROM domain_dnssec WHERE domain_id = :domain_id";
-        $stmtDnssec = $pdo->prepare($sqlDnssec);
-        $stmtDnssec->bindParam(':domain_id', $f['id'], PDO::PARAM_INT);
-        $stmtDnssec->execute();
-
-        // Fetch the count
-        $dnssecExists = $stmtDnssec->fetchColumn();
+        // Check if DNSSEC data exists for the domain
+        $dsRecords = $config['dnssec']['ds_records'] ?? [];
+        $dnssecExists = count($dsRecords) > 0;
 
         // Append the DNSSEC status
         if ($dnssecExists > 0) {

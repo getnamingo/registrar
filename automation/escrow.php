@@ -2,7 +2,7 @@
 /**
  * Namingo Registrar Escrow
  *
- * Written in 2023 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */

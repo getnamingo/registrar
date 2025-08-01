@@ -34,6 +34,17 @@ if ($backend === 'FOSS') {
     $stmt = $db->prepare("SELECT * FROM client WHERE custom_2 = 0");
 } elseif ($backend === 'WHMCS') {
     $stmt = $db->prepare("SELECT * FROM namingo_contact WHERE validation = 0");
+} elseif ($backend === 'LOOM') {
+    $stmt = $db->prepare("
+        SELECT 
+            uc.id AS id,
+            uc.user_id,
+            u.*,
+            uc.*
+        FROM users u
+        LEFT JOIN users_contact uc ON uc.user_id = u.id AND uc.type = 'owner'
+        WHERE u.validation = 0
+    ");
 } else {
     $log->error("Unknown backend: $backend");
     exit(1);
@@ -43,14 +54,19 @@ $stmt->execute();
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     // Generate unique link ID
     $token = bin2hex(random_bytes(16));
-    $contact_id = $row['id'];
 
     // Update database with link ID
     if ($backend === 'FOSS') {
+        $contact_id = $row['id'];
         $stmt = $db->prepare("UPDATE client SET custom_1 = :token WHERE id = :id");
         $link = $config['registrar_url']."validate?token=$token";
     } elseif ($backend === 'WHMCS') {
+        $contact_id = $row['id'];
         $stmt = $db->prepare("UPDATE namingo_contact SET validation_log = :token WHERE id = :id");
+        $link = $config['registrar_url']."index.php?m=validation&token=".$token;
+    } elseif ($backend === 'LOOM') {
+        $contact_id    = $row['user_id'];
+        $stmt = $db->prepare("UPDATE users SET validation_log = :token WHERE id = :id");
         $link = $config['registrar_url']."index.php?m=validation&token=".$token;
     } else {
         $log->error("Unknown backend: $backend");

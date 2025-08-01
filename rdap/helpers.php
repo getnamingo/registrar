@@ -98,3 +98,33 @@ function mapContactToVCardWHMCS($contactDetails, $role, $c) {
         ],
     ];
 }
+
+function mapContactToVCardLOOM($contactDetails, $role, $c) {
+    $redacted = 'REDACTED FOR PRIVACY';
+
+    return [
+        'objectClassName' => 'entity',
+        'handle' => $contactDetails['registry_id'] ?? '',
+        'roles' => [$role],
+        'vcardArray' => [
+            "vcard",
+            [
+                ['version', new stdClass(), 'text', '4.0'],
+                ["fn", new stdClass(), 'text', $c['privacy'] ? $redacted : ($contactDetails['name'] ?? '')],
+                ["org", new stdClass(), 'text', $c['privacy'] ? $redacted : ($contactDetails['org'] ?? '')],
+                ["adr", ["cc" => strtoupper($contactDetails['cc'] ?? '')], 'text', [
+                    $c['privacy'] ? $redacted : ($contactDetails['street1'] ?? ''),
+                    $c['privacy'] ? $redacted : ($contactDetails['street2'] ?? ''),
+                    $c['privacy'] ? $redacted : ($contactDetails['city'] ?? ''),
+                    $c['privacy'] ? $redacted : ($contactDetails['sp'] ?? ''),
+                    $c['privacy'] ? $redacted : ($contactDetails['pc'] ?? ''),
+                    $c['privacy'] ? $redacted : strtoupper($contactDetails['cc'] ?? ''),
+                    ""
+                ]],
+                ["tel", ["type" => "voice"], 'text', $c['privacy'] ? $redacted : ($contactDetails['phone'] ?? '')], // <- changed from voice
+                ["tel", ["type" => "fax"], 'text', $c['privacy'] ? $redacted : ($contactDetails['fax'] ?? '')],
+                ["email", new stdClass(), 'text', $c['privacy'] ? $redacted : ($contactDetails['email'] ?? '')],
+            ]
+        ],
+    ];
+}

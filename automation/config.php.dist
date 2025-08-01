@@ -30,7 +30,7 @@ $config = array(
         ],
     ),
     'escrow' => array(
-        'backend' => 'FOSS', // FOSS, WHMCS, or Custom
+        'backend' => 'FOSS', // Available options: 'FOSS' (default), 'WHMCS', 'LOOM', 'Custom'
         'full' => '/opt/registrar/escrow/full.csv',
         'hdl'  => '/opt/registrar/escrow/hdl.csv',
 
