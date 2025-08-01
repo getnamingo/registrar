@@ -168,6 +168,29 @@ class FOSS implements EscrowInterface {
             $registrant = $contacts[$domain['registrant_contact_id']] ?? [];
             $billing    = $contacts[$domain['billing_contact_id']] ?? [];
 
+            // Fallback: if registrant is missing or empty, try service_domain
+            if (empty($registrant)) {
+                $stmtFallback = $this->pdo->prepare("
+                    SELECT
+                        CONCAT(contact_first_name, ' ', contact_last_name) AS name,
+                        contact_address1 AS street,
+                        contact_city,
+                        contact_state,
+                        contact_postcode AS zip,
+                        contact_country,
+                        CONCAT('+', contact_phone_cc, '.', contact_phone) AS phone,
+                        contact_email AS email
+                    FROM service_domain
+                    WHERE id = ?
+                ");
+                $stmtFallback->execute([$domain['id']]);
+                $registrant = $stmtFallback->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+                if (empty($billing)) {
+                    $billing['name'] = $registrant['name'] ?? '';
+                }
+            }
+
             // Compose row for RDE CSV
             $line = [
                 idn_to_ascii($domain['domainname'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['domainname'],
