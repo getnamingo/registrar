@@ -181,14 +181,14 @@ class FOSS implements EscrowInterface {
                     FROM service_domain
                     WHERE id = ?
                 ");
-                $stmtFallback->execute([$domain['id']]);
+                $stmtFallback->execute([$domain['domain_id']]);
                 $registrant = $stmtFallback->fetch(\PDO::FETCH_ASSOC) ?: [];
 
                 if (empty($billing)) {
                     $billing['name'] = $registrant['name'] ?? '';
                 }
             }
-            
+
             // Clean up registrant fields
             $registrant['name']     = $this->cleanText($registrant['name']     ?? '');
             $registrant['street']  = $this->cleanText($registrant['street']  ?? '');
@@ -196,8 +196,6 @@ class FOSS implements EscrowInterface {
             $registrant['contact_state']       = $this->cleanText($registrant['contact_state']       ?? '');
             $registrant['zip']       = $this->cleanText($registrant['zip']       ?? '');
             $registrant['contact_country']       = $this->cleanText($registrant['contact_country']       ?? '');
-            $registrant['email']    = $this->cleanText($registrant['email']    ?? '');
-            $registrant['phone']    = $this->cleanText($registrant['phone']    ?? '');
 
             // Compose row for RDE CSV
             $line = [
@@ -210,7 +208,7 @@ class FOSS implements EscrowInterface {
                 $registrant['contact_state']  ?? '',
                 $registrant['zip']            ?? '',
                 $registrant['contact_country']?? '',
-                $this->normalizePhone($registrant['phone'] ?? ''),
+                $registrant['phone']          ?? '',
                 $registrant['email']          ?? '',
                 $billing['name']              ?? ''
             ];
@@ -221,11 +219,6 @@ class FOSS implements EscrowInterface {
         fclose($file);
     }
 
-    // Normalize phone to +E.164-like format
-    private function normalizePhone(string $number): string {
-        return '+' . ltrim(preg_replace('/[^0-9+]/', '', $number), '+');
-    }
-    
     private function cleanText(string $text): string {
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
