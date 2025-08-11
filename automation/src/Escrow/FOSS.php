@@ -140,29 +140,27 @@ class FOSS implements EscrowInterface {
                 $domain['billing_contact_id'] ?? null
             ]);
 
-            if (empty($contactIds)) {
-                continue;
-            }
-
-            $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
-            $stmtContacts = $this->pdo->prepare("
-                SELECT id,
-                       CONCAT(contact_first_name, ' ', contact_last_name) AS name,
-                       contact_address1 AS street,
-                       contact_city,
-                       contact_state,
-                       contact_postcode AS zip,
-                       contact_country,
-                       CONCAT('+', contact_phone_cc, '.', contact_phone) AS phone,
-                       contact_email AS email
-                FROM client_contact
-                WHERE id IN ($placeholders)
-            ");
-            $stmtContacts->execute($contactIds);
-
             $contacts = [];
-            while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
-                $contacts[$c['id']] = $c;
+            if (!empty($contactIds)) {
+                $placeholders = implode(',', array_fill(0, count($contactIds), '?'));
+                $stmtContacts = $this->pdo->prepare("
+                    SELECT id,
+                           CONCAT(first_name, ' ', last_name) AS name,
+                           address_1 AS street,
+                           city as contact_city,
+                           state as contact_state,
+                           contact_postcode AS zip,
+                           country as contact_country,
+                           CONCAT('+', contact_phone_cc, '.', contact_phone) AS phone,
+                           contact_email AS email
+                    FROM client
+                    WHERE aid IN ($placeholders)
+                ");
+                $stmtContacts->execute($contactIds);
+
+                while ($c = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
+                    $contacts[$c['id']] = $c;
+                }
             }
 
             $registrant = $contacts[$domain['registrant_contact_id']] ?? [];
@@ -190,6 +188,16 @@ class FOSS implements EscrowInterface {
                     $billing['name'] = $registrant['name'] ?? '';
                 }
             }
+            
+            // Clean up registrant fields
+            $registrant['name']     = $this->cleanText($registrant['name']     ?? '');
+            $registrant['street']  = $this->cleanText($registrant['street']  ?? '');
+            $registrant['contact_city']     = $this->cleanText($registrant['contact_city']     ?? '');
+            $registrant['contact_state']       = $this->cleanText($registrant['contact_state']       ?? '');
+            $registrant['zip']       = $this->cleanText($registrant['zip']       ?? '');
+            $registrant['contact_country']       = $this->cleanText($registrant['contact_country']       ?? '');
+            $registrant['email']    = $this->cleanText($registrant['email']    ?? '');
+            $registrant['phone']    = $this->cleanText($registrant['phone']    ?? '');
 
             // Compose row for RDE CSV
             $line = [
@@ -216,5 +224,19 @@ class FOSS implements EscrowInterface {
     // Normalize phone to +E.164-like format
     private function normalizePhone(string $number): string {
         return '+' . ltrim(preg_replace('/[^0-9+]/', '', $number), '+');
+    }
+    
+    private function cleanText(string $text): string {
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (class_exists('Transliterator')) {
+            $text = transliterator_transliterate('Any-Latin; Latin-ASCII', $text);
+        } else {
+            $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        }
+
+        $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
+
+        return trim(preg_replace('/\s+/', ' ', $text));
     }
 }
