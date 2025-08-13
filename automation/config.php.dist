@@ -36,7 +36,7 @@ $config = array(
 
         // Escrow client configuration
         'ianaID' => 0000,
-        'specification' => 2007,
+        'specification' => 2024,
         'depositBaseDir' => '/opt/registrar/escrow',
         'runDir' => '/opt/registrar/escrow/process',
         'compressAndEncrypt' => false,
