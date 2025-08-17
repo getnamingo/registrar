@@ -86,11 +86,11 @@ $configArray = [
 $yaml = yaml_emit($configArray);
 
 // Save to temp file in current directory
-$tempFile = './config-' . uniqid('', true) . '.yaml';
+$tempFile = __DIR__ . '/config-' . uniqid('', true) . '.yaml';
 file_put_contents($tempFile, $yaml);
 
 // Execute the command
-exec("./escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
+exec(__DIR__ . "/escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
 
 // Delete temp file
 unlink($tempFile);
