@@ -337,10 +337,10 @@ Edit the `config.php` with the appropriate preferences as required.
 Download and initiate the escrow RDE client setup:
 
 ```bash
-wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.3-linux_x86_64.tar.gz
-tar -xzf escrow-rde-client-v2.2.3-linux_x86_64.tar.gz
-mv escrow-rde-client-v2.2.3-linux_x86_64 escrow-rde-client
-rm escrow-rde-client-v2.2.3-linux_x86_64.tar.gz
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.2.4-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.2.4-linux_x86_64.tar.gz
+mv escrow-rde-client-v2.2.4-linux_x86_64 escrow-rde-client
+rm escrow-rde-client-v2.2.4-linux_x86_64.tar.gz
 ```
 
 ### 12.1. Submitting the Header Mapping File:
