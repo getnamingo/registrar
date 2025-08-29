@@ -1,4 +1,4 @@
-# Namingo Registrar: Installation Guide (Argora Loom)
+# Namingo Registrar: Installation Guide (Loom)
 
 ## 1. Install the required packages:
 
@@ -212,7 +212,7 @@ php bin/create-admin-user.php
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.1.1 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.1.2 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
@@ -322,18 +322,16 @@ After submitting to both DENIC and ICANN, you can proceed with regular data escr
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
 ```bash
-* * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
+* * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
 ## 12. TODO and Further Settings:
 
 1. Some specific modules are still missing. They are mentioned in issue #29, also WHMCS/foss modules need to be redone for Loom.
 
-2. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
+2. In `/var/www/loom/resources/views`, update all six Twig files to match your company. When done, rename each file from `<name>.twig` to `<name>.custom.twig` (e.g., `index.twig` → `index.custom.twig`).
 
-3. In your contact page, you will need to list all company details, including registration number and name of CEO.
-
-4. Some manual tune-in is still required in various parts.
+3. Some manual tune-in is still required in various parts.
 
 ### ICANN MoSAPI Integration
 
@@ -354,7 +352,7 @@ This script connects to [MoSAPI](https://mosapi.icann.org) to monitor registrar 
 
 #### Requirements
 
-- PHP 8.2+
+- PHP 8.3+
 - `apcu` extension enabled for CLI
 - ICANN MoSAPI access credentials
 

@@ -484,7 +484,7 @@ Navigate to https://github.com/getnamingo/fossbilling-epp-verisign and follow th
 
 ### 18.3. Executing OT&E Tests:
 
-To execute the required OT&E tests by various registries, you can use our Tembo client at https://github.com/getpinga/tembo
+To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
 ## 19. Installing FOSSBilling DNS Hosting Extensions:
 

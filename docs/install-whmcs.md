@@ -457,8 +457,6 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/contact
 
 For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP extension. Each module can handle one or more TLDs that share the same configuration details.
 
-### 18.1. Setting Up a TLD with the Standard EPP Protocol:
-
 To configure a TLD using the Namingo WHMCS EPP module, follow these steps:
 
 1. Generate a Customized Module. Use the [module customizer](https://namingo.org/whmcs-module/) to generate the appropriate EPP module for your target registry.
@@ -479,7 +477,7 @@ chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/NAME
 chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 ```
 
-5. Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP" and then activate "Namingo EPP".
+5. Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP NAME" and then activate "Namingo EPP NAME".
 
 6. Configure from Configuration -> System Settings -> Domain Registrars.
 
@@ -492,55 +490,14 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
     {
         "extensions": ".yourtld",
         "uri": "socket://your.whois.url",
-        "available": "NOT FOUND"
+        "available": "NOT FOUND" // or No match for for Verisign
     }
 ]
 ```
 
-### 18.2. VeriSign EPP:
+### Executing OT&E Tests:
 
-To set up a TLD using the VeriSign EPP platform, follow these steps:
-
-```bash
-git clone https://github.com/getnamingo/registrar-whmcs-epp-verisign
-mv registrar-whmcs-epp-verisign /var/www/html/whmcs/modules/registrars/verisign
-```
-
-After this, place the `key.pem` and `cert.pem` files specific to the registry in the verisign directory. You can do this with:
-
-```bash
-cp /path/to/key.pem /var/www/html/whmcs/modules/registrars/verisign/
-cp /path/to/cert.pem /var/www/html/whmcs/modules/registrars/verisign/
-```
-
-Set the correct permissions:
-
-```bash
-chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/verisign
-chmod -R 755 /var/www/html/whmcs/modules/registrars/verisign
-```
-
-- Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP (VeriSign)" and then activate "Namingo EPP (VeriSign)".
-
-- Configure from Configuration -> System Settings -> Domain Registrars.
-
-- Add a new TLD using Configuration -> System Settings -> Domain Pricing.
-
-- Create a `whois.json` file in `/var/www/html/whmcs/resources/domains` and add the following:
-
-```bash
-[
-    {
-        "extensions": ".yourtld",
-        "uri": "socket://your.whois.url",
-        "available": "No match for"
-    }
-]
-```
-
-### 18.3. Executing OT&E Tests:
-
-To execute the required OT&E tests by various registries, you can use our Tembo client. You can find it at [https://github.com/getpinga/tembo](https://github.com/getpinga/tembo).
+To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
 ## 19. Further Settings:
 
