@@ -70,7 +70,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     } elseif ($backend === 'LOOM') {
         $contact_id = (int)$row['user_id'];
         $stmt = $db->prepare("UPDATE users SET validation_log = :token WHERE id = :id");
-        $link = rtrim($config['registrar_url'], '/')."/index.php?m=validation&token=".$token;
+        $link = rtrim($config['registrar_url'], '/')."/validation/".$token;
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);

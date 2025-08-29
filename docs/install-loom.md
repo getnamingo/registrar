@@ -327,7 +327,7 @@ Once you have successfully configured all automation scripts, you are ready to i
 
 ## 12. TODO and Further Settings:
 
-1. In `/var/www/loom/resources/views`, update all six Twig files to match your company. When done, rename each file from `<name>.twig` to `<name>.custom.twig` (e.g., `index.twig` → `index.custom.twig`).
+1. In `/var/www/loom/resources/views`, update all seven Twig files to match your company. When done, rename each file from `<name>.twig` to `<name>.custom.twig` (e.g., `index.twig` → `index.custom.twig`).
 
 2. Please note that some manual tune-in is still required in various parts.
 
