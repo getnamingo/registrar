@@ -7,9 +7,12 @@
  * @license MIT
  */
 
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'vendor/autoload.php';
+declare(strict_types=1);
+date_default_timezone_set('UTC');
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
@@ -52,6 +55,26 @@ if ($backend === 'FOSS') {
         WHERE d.crdate < :registered_at
         AND c.validation = 0
     ");
+} elseif ($backend === 'LOOM') {
+    $stmt = $pdo->prepare("
+        SELECT
+            s.id           AS id,
+            s.service_name AS service_name,
+            s.config       AS config,
+            s.created_at   AS created_at,
+            u.id           AS user_id,
+            u.validation   AS validation,
+            u.validation_log AS validation_log,
+            COALESCE(uc.email, u.email) AS email
+        FROM services s
+        JOIN users u ON u.id = s.user_id
+        LEFT JOIN users_contact uc
+          ON uc.user_id = u.id AND uc.type = 'owner'
+        WHERE s.type = 'domain'
+          AND s.status = 'active'
+          AND s.created_at < :registered_at
+          AND u.validation = 0
+    ");
 } else {
     $log->error("Unknown backend: $backend");
     exit(1);
@@ -68,6 +91,8 @@ foreach ($rows as $row) {
         $validationRow = $row['custom_2'];
     } elseif ($backend === 'WHMCS') {
         $validationRow = $row['validation'];
+    } elseif ($backend === 'LOOM') {
+        $validationRow = (int)$row['validation'];
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);
@@ -83,6 +108,11 @@ foreach ($rows as $row) {
             $registrant_email = $row['email'];
             $token = $row['validation_log'];
             $link = $config['registrar_url']."index.php?m=validation&token=".$token;
+        } elseif ($backend === 'LOOM') {
+            $domain_name      = $row['service_name'];
+            $registrant_email = $row['email'];
+            $token            = $row['validation_log'];
+            $link             = rtrim($config['registrar_url'], '/')."/index.php?m=validation&token=".$token;
         } else {
             $log->error("Unknown backend: $backend");
             exit(1);
@@ -149,6 +179,10 @@ foreach ($rows as $row) {
         } elseif ($backend === 'WHMCS') {
             $stmt = $pdo->prepare("UPDATE namingo_contact SET validation_stamp = NOW() WHERE id = :cid");
             $stmt->bindParam(':cid', $row['cid']);
+            $stmt->execute();
+        } elseif ($backend === 'LOOM') {
+            $stmt = $pdo->prepare("UPDATE users SET validation_stamp = NOW() WHERE id = :uid");
+            $stmt->bindParam(':uid', $row['user_id'], PDO::PARAM_INT);
             $stmt->execute();
         } else {
             $log->error("Unknown backend: $backend");

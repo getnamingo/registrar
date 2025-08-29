@@ -7,9 +7,12 @@
  * @license MIT
  */
 
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'vendor/autoload.php';
+declare(strict_types=1);
+date_default_timezone_set('UTC');
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
@@ -36,6 +39,10 @@ function updateExpiredDomainNameservers($pdo, $log, $backend) {
         $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
     } elseif ($backend === 'WHMCS') {
         $sql = "SELECT * FROM namingo_domain WHERE NOW() > exdate";
+    } elseif ($backend === 'LOOM') {
+        $sql = "SELECT * FROM services
+                WHERE type = 'domain'
+                  AND NOW() > expires_at";
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);
@@ -56,6 +63,15 @@ function updateExpiredDomainNameservers($pdo, $log, $backend) {
             } elseif ($backend === 'WHMCS') {
                 $sql = "UPDATE namingo_domain SET ns1 = :ns1, ns2 = :ns2, ns3 = NULL, ns4 = NULL, ns5 = NULL WHERE id = :id";
                 $domainName = $domain['name'];
+            } elseif ($backend === 'LOOM') {
+                $sql = "UPDATE services 
+                        SET config = JSON_SET(
+                            config,
+                            '$.nameservers[0]', :ns1,
+                            '$.nameservers[1]', :ns2
+                        )
+                        WHERE id = :id AND type = 'domain'";
+                $domainName = $domain['service_name'];
             } else {
                 $log->error("Unknown backend: $backend");
                 exit(1);

@@ -7,9 +7,12 @@
  * @license MIT
  */
 
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'vendor/autoload.php';
+declare(strict_types=1);
+date_default_timezone_set('UTC');
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
@@ -63,18 +66,6 @@ try {
         $body = imap_fetchbody($inbox, $emailId, 1);
         $domain = extractDomainNameFromEmail($body);
 
-        if ($backend === 'FOSS') {
-            // Extract TLD from the domain and prepend a dot
-            $parts = explode('.', $domain);
-            $domainName = $parts[0];
-            $tld = "." . end($parts);
-        } elseif ($backend === 'WHMCS') {
-            $stmt = $db->prepare("SELECT * FROM namingo_contact WHERE validation = 0");
-        } else {
-            $log->error("Unknown backend: $backend");
-            exit(1);
-        }
-
         if (!$domain) {
             $log->info("No domain found in email body for email ID $emailId");
             continue;
@@ -82,6 +73,9 @@ try {
 
         // Insert into the database
         if ($backend === 'FOSS') {
+            $parts = explode('.', $domain);
+            $domainName = $parts[0];
+
             $stmt = $dbh->prepare("SELECT sld, tld, client_id FROM service_domain WHERE sld = ?");
             $stmt->execute([$domainName]);
             $domainResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -171,6 +165,30 @@ try {
                 $log->info("Created support ticket ID $ticketId for domain $domain.");
             } else {
                 $log->error('Domain ' . $domain . ' does not exists in registry');
+            }
+        } elseif ($backend === 'LOOM') {
+            $stmt = $dbh->prepare("SELECT user_id FROM services WHERE service_name = ? AND type = 'domain' AND status = 'active' LIMIT 1");
+            $stmt->execute([$domain]);
+            $svc = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($svc && !empty($svc['user_id'])) {
+                $userId      = (int)$svc['user_id'];
+                $categoryId  = (int)($config['loom']['support_category_id'] ?? 2);
+                $priority    = 'High';
+                $subject     = 'New URS case for ' . $domain;
+                $message     = 'New URS case for ' . $domain . ' submitted by ' . $provider . ' on ' . $date . '. Please review and act accordingly.';
+                $status      = 'Open';
+
+                $stmt = $dbh->prepare("
+                    INSERT INTO support_tickets (user_id, category_id, subject, message, status, priority)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$userId, $categoryId, $subject, $message, $status, $priority]);
+
+                $ticketId = $dbh->lastInsertId();
+                $log->info("Created LOOM support ticket ID $ticketId for domain $domain (user_id=$userId).");
+            } else {
+                $log->error('Domain ' . $domain . ' does not exist or is not active in LOOM services');
             }
         } else {
             $log->error("Unknown backend: $backend");

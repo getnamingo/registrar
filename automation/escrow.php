@@ -9,9 +9,12 @@
 
 use Registrar\Escrow\EscrowInterface;
 
+declare(strict_types=1);
+date_default_timezone_set('UTC');
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/config.php';
-require_once 'helpers.php';
 
 $logFilePath = '/var/log/namingo/escrow.log';
 $log = setupLogger($logFilePath, 'Escrow');

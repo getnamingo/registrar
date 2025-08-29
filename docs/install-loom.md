@@ -327,11 +327,9 @@ Once you have successfully configured all automation scripts, you are ready to i
 
 ## 12. TODO and Further Settings:
 
-1. Some specific modules are still missing. They are mentioned in issue #29, also WHMCS/foss modules need to be redone for Loom.
+1. In `/var/www/loom/resources/views`, update all six Twig files to match your company. When done, rename each file from `<name>.twig` to `<name>.custom.twig` (e.g., `index.twig` → `index.custom.twig`).
 
-2. In `/var/www/loom/resources/views`, update all six Twig files to match your company. When done, rename each file from `<name>.twig` to `<name>.custom.twig` (e.g., `index.twig` → `index.custom.twig`).
-
-3. Some manual tune-in is still required in various parts.
+2. Please note that some manual tune-in is still required in various parts.
 
 ### ICANN MoSAPI Integration
 

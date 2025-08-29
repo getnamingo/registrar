@@ -7,9 +7,12 @@
  * @license MIT
  */
 
-require_once 'config.php';
-require_once 'helpers.php';
-require_once 'vendor/autoload.php';
+declare(strict_types=1);
+date_default_timezone_set('UTC');
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
@@ -54,6 +57,12 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
         $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     } elseif ($backend === 'WHMCS') {
         $sql = "SELECT * FROM namingo_domain WHERE NOW() <= exdate AND exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+    } elseif ($backend === 'LOOM') {
+        $sql = "SELECT * FROM services
+                WHERE type = 'domain'
+                  AND status = 'active'
+                  AND NOW() <= expires_at
+                  AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);
@@ -67,8 +76,15 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
             if ($backend === 'FOSS') {
                 $domainExpiration = $domain['expires_at'];
                 $domainEmail = $domain['contact_email'];
+                $domainName = $domain['sld'] . '.' . $domain['tld'];
             } elseif ($backend === 'WHMCS') {
                 $domainExpiration = $domain['exdate'];
+                $domainName = $domain['name'];
+            } elseif ($backend === 'LOOM') {
+                $domainExpiration = $domain['expires_at'];
+                $cfg = json_decode($domain['config'] ?? '', true);
+                $domainEmail = $cfg['contacts']['registrant']['email'] ?? null;
+                $domainName = $domain['service_name'];
             } else {
                 $log->error("Unknown backend: $backend");
                 exit(1);
@@ -86,7 +102,11 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
                     $stmt->execute();
                     $domainEmail = $stmt->fetchColumn();
                 }
-                sendRenewalReminderEmail($domainEmail, $days_until_expiry, $config, $log);
+                if (!empty($domainEmail) && filter_var($domainEmail, FILTER_VALIDATE_EMAIL)) {
+                    sendRenewalReminderEmail($domainEmail, $days_until_expiry, $config, $log);
+                } else {
+                    $log->warning("Skipping {$domainName}: no valid email found for reminder ({$days_until_expiry}d).");
+                }
             }
         }
         $log->info('ERRP Notify job completed.');
