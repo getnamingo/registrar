@@ -54,6 +54,8 @@ For detailed installation steps, see:
 
 ### Update
 
+- v1.1.1 to v1.1.2 - backup registrar, download and run the [update112.sh](docs/update112.sh) script.
+
 - v1.1.0 to v1.1.1 - backup registrar, download and run the [update111.sh](docs/update111.sh) script.
 
 - v1.0.5 to v1.1.0 - backup registrar, download and run the [update110.sh](docs/update110.sh) script.
@@ -82,7 +84,7 @@ We appreciate your involvement and patience as Namingo continues to grow and ada
 
 ## Acknowledgements
 
-Special thanks to the [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), and [**Argora Loom**](https://github.com/getargora/loom) teams for their work on powerful billing platforms that Namingo builds upon.
+Special thanks to the [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), and [**Loom**](https://github.com/getargora/loom) teams for their work on powerful billing platforms that Namingo builds upon.
 
 Additionally, we extend our gratitude to:
 - **ChatGPT** for invaluable assistance with code and text writing.
