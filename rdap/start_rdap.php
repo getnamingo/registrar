@@ -163,7 +163,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
     // Check for prohibited patterns in domain names
     if (!preg_match('/^(?:(xn--[a-zA-Z0-9-]{1,63}|[a-zA-Z0-9-]{1,63})\.){1,3}(xn--[a-zA-Z0-9-]{2,63}|[a-zA-Z]{2,63})$/', $domain)) {
         $response->header('Content-Type', 'application/rdap+json');
-        $response->status(400); // Bad Request
+        $response->status(404); // Bad Request
         $response->end(json_encode(['error' => 'Domain name invalid format']));
         return;
     }
@@ -181,7 +181,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         $domainName = $parts[$partsCount - count($tldParts) - 1];
     } else {
         $response->header('Content-Type', 'application/rdap+json');
-        $response->status(400); // Bad Request
+        $response->status(404); // Bad Request
         $response->end(json_encode(['error' => 'Invalid domain']));
         return;
     }
@@ -189,7 +189,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
     // Check if the TLD exists
     if (!$adapter->isValidTLD($pdo, $tld)) {
         $response->header('Content-Type', 'application/rdap+json');
-        $response->status(400); // Bad Request
+        $response->status(404); // Bad Request
         $response->end(json_encode(['error' => 'Invalid TLD. Please search only allowed TLDs']));
         return;
     }
@@ -217,6 +217,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                 'description' => ['The requested domain was not found in the RDAP database.'],
                 "notices" => [
                     [
+                        "title" => "Terms of Service",
                         "description" => [
                             "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
                             "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
@@ -224,22 +225,21 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                             "enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or",
                             "(b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or NIC except as reasonably necessary to register domain names or modify existing registrations.",
                             "All rights reserved. The domain registrar reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
-                    ],
-                    "links" => [
-                        [
-                            "href" => $c['rdap_url'] . "/help",
-                            "value" => $c['rdap_url'] . "/help",
-                            "rel" => "self",
-                            "type" => "application/rdap+json"
                         ],
-                        [
-                            "href" => $c['registrar_url'],
-                            "value" => $c['registrar_url'],
-                            "rel" => "alternate",
-                            "type" => "text/html"
-                        ],
-                    ],
-                        "title" => "RDAP Terms of Service"
+                        "links" => [
+                            [
+                                "href" => $c['rdap_url'] . "/help",
+                                "value" => $c['rdap_url'] . "/domain/" . $domain,
+                                "rel" => "terms-of-service",
+                                "type" => "application/rdap+json"
+                            ],
+                            [
+                                "href" => $c['registrar_url'],
+                                "value" => $c['registrar_url'],
+                                "rel" => "alternate",
+                                "type" => "text/html"
+                            ],
+                        ]
                     ],
                     [
                     "description" => [
@@ -307,7 +307,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         // Define the basic events
         $events = [
             ['eventAction' => 'registration', 'eventDate' => $domainDetails['crdate']],
-            ['eventAction' => 'expiration', 'eventDate' => $domainDetails['exdate']],
+            ['eventAction' => 'registrar expiration', 'eventDate' => $domainDetails['exdate']],
             ['eventAction' => 'last update of RDAP database', 'eventDate' => (new DateTime())->format('Y-m-d\TH:i:s.v\Z')],
         ];
 
@@ -384,6 +384,12 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                             "value" => $c['rdap_url'] . "/entity/" . $c['registrar_iana'],
                             "type" => "application/rdap+json",
                             "title" => "Registrar Information"
+                        ],
+                        [
+                            "rel" => "service",
+                            "href" => $c['rdap_url'],
+                            "value" => $c['rdap_url'],
+                            "type" => "application/rdap+json"
                         ]
                     ],
                     ],
@@ -439,6 +445,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             "secureDNS" => $secureDNS,
             "notices" => [
                 [
+                    "title" => "Terms of Service",
                     "description" => [
                         "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
                         "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
@@ -446,22 +453,21 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                         "enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or",
                         "(b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or NIC except as reasonably necessary to register domain names or modify existing registrations.",
                         "All rights reserved. The domain registrar reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
-                ],
-                "links" => [
-                    [
-                        "href" => $c['rdap_url'] . "/help",
-                        "value" => $c['rdap_url'] . "/help",
-                        "rel" => "self",
-                        "type" => "application/rdap+json"
                     ],
-                    [
-                        "href" => $c['registrar_url'],
-                        "value" => $c['registrar_url'],
-                        "rel" => "alternate",
-                        "type" => "text/html"
-                    ],
-                ],
-                    "title" => "RDAP Terms of Service"
+                    "links" => [
+                        [
+                            "href" => $c['rdap_url'] . "/help",
+                            "value" => $c['rdap_url'] . "/domain/" . $domain,
+                            "rel" => "terms-of-service",
+                            "type" => "application/rdap+json"
+                        ],
+                        [
+                            "href" => $c['registrar_url'],
+                            "value" => $c['registrar_url'],
+                            "rel" => "alternate",
+                            "type" => "text/html"
+                        ],
+                    ]
                 ],
                 [
                 "description" => [
@@ -553,6 +559,7 @@ function handleHelpQuery($request, $response, $pdo, $c) {
 
     // Set the terms of service
     $termsOfService = [
+        "title" => "Terms of Service",
         "description" => [
             "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
             "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
@@ -565,7 +572,7 @@ function handleHelpQuery($request, $response, $pdo, $c) {
         [
             "href" => $c['rdap_url'] . "/help",
             "value" => $c['rdap_url'] . "/help",
-            "rel" => "self",
+            "rel" => "terms-of-service",
             "type" => "application/rdap+json"
         ],
         [
@@ -574,8 +581,7 @@ function handleHelpQuery($request, $response, $pdo, $c) {
             "rel" => "alternate",
             "type" => "text/html"
         ],
-        ],
-        "title" => "RDAP Terms of Service"
+        ]
     ];
 
     // Construct the RDAP response for help query
