@@ -13,41 +13,41 @@ This guide is for setting up **WHMCS 8.11** with **PHP 8.2** on Ubuntu 24.04.
 ```bash
 apt install -y curl software-properties-common ufw
 add-apt-repository ppa:ondrej/php
-apt update
 apt install -y bzip2 certbot composer git net-tools apache2 php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-apache unzip wget whois
 ```
 
-### 1.1. Configure PHP:
+### 1.1. Configure PHP Settings:
 
-Edit the PHP Configuration Files:
+1. Open the PHP-FPM configuration file:
 
 ```bash
-nano /etc/php/8.2/cli/php.ini
 nano /etc/php/8.2/fpm/php.ini
 ```
 
-Locate or add these lines in ```php.ini```:
+Add or uncomment the following session security settings:
 
-```bash
-opcache.enable=1
-opcache.enable_cli=1
-opcache.jit_buffer_size=100M
-opcache.jit=1255
-
+```ini
 session.cookie_secure = 1
 session.cookie_httponly = 1
 session.cookie_samesite = "Strict"
-session.cookie_domain =
 ```
 
-In ```/etc/php/8.2/mods-available/opcache.ini``` make one additional change:
+2. Open the OPCache configuration file:
 
 ```bash
+nano /etc/php/8.2/mods-available/opcache.ini
+```
+
+Verify or add the following OPCache and JIT settings:
+
+```ini
+opcache.enable=1
+opcache.enable_cli=1
 opcache.jit=1255
 opcache.jit_buffer_size=100M
 ```
 
-After configuring PHP, restart the service to apply changes:
+3. Restart PHP-FPM to apply the changes:
 
 ```bash
 systemctl restart php8.2-fpm

@@ -155,40 +155,23 @@ if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
     add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt update
     apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
     
     # Update php.ini files
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.jit" "1255"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "opcache.validate_timestamps" "0"
-    set_php_ini_value "/etc/php/8.3/cli/php.ini" "expose_php" "0"
-
-    # Repeat the same settings for php-fpm
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.jit" "1255"
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_domain" ""
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "opcache.validate_timestamps" "0"
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
 
-    # Modify Opcache config
-    echo "opcache.jit=1255" >> /etc/php/8.3/mods-available/opcache.ini
-    echo "opcache.jit_buffer_size=100M" >> /etc/php/8.3/mods-available/opcache.ini
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
 
     # Restart PHP service
     systemctl restart php8.3-fpm
@@ -199,36 +182,23 @@ else
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
     add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt update
     apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
-    
-    # Update php.ini files
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit" "1255"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.validate_timestamps" "0"
-    set_php_ini_value "/etc/php/8.2/cli/php.ini" "expose_php" "0"
 
-    # Repeat the same settings for php-fpm
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit" "1255"
+    # Update php.ini files
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_secure" "1"
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_httponly" "1"
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_domain" ""
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.validate_timestamps" "0"
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "expose_php" "0"
+
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable" "1"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable_cli" "1"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit" "1255"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.memory_consumption" "128"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
+    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
 
     # Restart PHP service
     systemctl restart php8.2-fpm
@@ -611,36 +581,23 @@ DB_COMMAND="mysql"
 apt update
 apt install -y curl software-properties-common ufw
 add-apt-repository ppa:ondrej/php
-apt update
 apt install -y bzip2 certbot composer git net-tools apache2 php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-apache unzip wget whois
     
 # Update php.ini files
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable" "1"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.enable_cli" "1"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit_buffer_size" "100M"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.jit" "1255"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.memory_consumption" "128"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.interned_strings_buffer" "16"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.max_accelerated_files" "10000"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "opcache.validate_timestamps" "0"
-set_php_ini_value "/etc/php/8.2/cli/php.ini" "expose_php" "0"
-
-# Repeat the same settings for php-fpm
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable" "1"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.enable_cli" "1"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit_buffer_size" "100M"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.jit" "1255"
 set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_secure" "1"
 set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_httponly" "1"
 set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_domain" ""
 set_php_ini_value "/etc/php/8.2/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.memory_consumption" "128"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.interned_strings_buffer" "16"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.max_accelerated_files" "10000"
-set_php_ini_value "/etc/php/8.2/fpm/php.ini" "opcache.validate_timestamps" "0"
 set_php_ini_value "/etc/php/8.2/fpm/php.ini" "expose_php" "0"
+
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable" "1"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable_cli" "1"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit" "1255"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.memory_consumption" "128"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
+set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
 
 # Restart PHP service
 systemctl restart php8.2-fpm
