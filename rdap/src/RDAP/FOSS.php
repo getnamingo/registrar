@@ -26,9 +26,9 @@ class FOSS implements RdapInterface
         $tld = '.' . $parts[count($parts) - 1];
 
         $stmt = $pdo->prepare("SELECT *,
-                DATE_FORMAT(`registered_at`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
-                DATE_FORMAT(`updated_at`, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
-                DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate`
+                DATE_FORMAT(registered_at, '%Y-%m-%dT%H:%i:%s.000Z') AS crdate,
+                DATE_FORMAT(updated_at, '%Y-%m-%dT%H:%i:%s.000Z') AS `update`,
+                DATE_FORMAT(expires_at, '%Y-%m-%dT%H:%i:%s.000Z') AS exdate
             FROM service_domain WHERE sld = :sld AND tld = :tld");
         $stmt->bindParam(':sld', $sld);
         $stmt->bindParam(':tld', $tld);

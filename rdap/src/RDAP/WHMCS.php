@@ -17,9 +17,9 @@ class WHMCS implements RdapInterface
     public function getDomainByName(PDOProxy $pdo, string $domain): ?array
     {
         $stmt = $pdo->prepare("SELECT *,
-                DATE_FORMAT(`crdate`, '%Y-%m-%dT%H:%i:%sZ') AS `crdate`,
-                DATE_FORMAT(`lastupdate`, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
-                DATE_FORMAT(`exdate`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate`
+                DATE_FORMAT(crdate, '%Y-%m-%dT%H:%i:%s.000Z')      AS crdate,
+                DATE_FORMAT(lastupdate, '%Y-%m-%dT%H:%i:%s.000Z') AS `update`,
+                DATE_FORMAT(exdate, '%Y-%m-%dT%H:%i:%s.000Z')     AS exdate
             FROM namingo_domain WHERE name = :domain");
         $stmt->bindParam(':domain', $domain);
         $stmt->execute();
