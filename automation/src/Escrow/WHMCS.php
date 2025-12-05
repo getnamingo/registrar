@@ -141,7 +141,7 @@ class WHMCS implements EscrowInterface {
         fputcsv($file, $header);
 
         // Fetch domains
-        $sql = "SELECT id, registrant, billing, name, exdate FROM namingo_domain";
+        $sql = "SELECT id, registrant, billing, name, DATE_FORMAT(exdate, '%Y-%m-%dT%H:%i:%sZ') AS exdate FROM namingo_domain";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
         $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);

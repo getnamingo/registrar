@@ -17,9 +17,9 @@ class LOOM implements RdapInterface
     public function getDomainByName(PDOProxy $pdo, string $domain): ?array
     {
         $query = "SELECT *,
-            DATE_FORMAT(registered_at, '%Y-%m-%dT%H:%i:%s.000Z') AS crdate,
-            DATE_FORMAT(updated_at, '%Y-%m-%dT%H:%i:%s.000Z') AS `update`,
-            DATE_FORMAT(expires_at, '%Y-%m-%dT%H:%i:%s.000Z') AS exdate
+            DATE_FORMAT(registered_at, '%Y-%m-%dT%H:%i:%sZ') AS crdate,
+            DATE_FORMAT(updated_at, '%Y-%m-%dT%H:%i:%sZ') AS `update`,
+            DATE_FORMAT(expires_at, '%Y-%m-%dT%H:%i:%sZ') AS exdate
             FROM services WHERE service_name = :domain AND service_type = 'domain'";
         $stmt = $pdo->prepare($query);
         $stmt->bindParam(':domain', $domain, PDO::PARAM_STR);
