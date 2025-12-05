@@ -10,7 +10,7 @@ Open source ICANN-accredited domain registrar management system.
 
 **Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs.
 
-**Namingo Registrar** integrates with [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), and [Argora Loom](https://github.com/getargora/loom) — allowing you to choose the platform that best suits your needs and workflow.
+**Namingo Registrar** integrates with [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), and [Loom](https://github.com/getargora/loom) — allowing you to choose the platform that best suits your needs and workflow.
 
 ## Get Involved
 
@@ -50,9 +50,11 @@ For detailed installation steps, see:
 
 - [install-fossbilling.md](docs/install-fossbilling.md) – for FOSSBilling setup  
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
-- [install-loom.md](docs/install-loom.md) – for Argora Loom setup ***(unfinished)***
+- [install-loom.md](docs/install-loom.md) – for Loom setup ***(unfinished)***
 
 ### Update
+
+- v1.1.2 to v1.1.3 - backup registrar, download and run the [update113.sh](docs/update113.sh) script.
 
 - v1.1.1 to v1.1.2 - backup registrar, download and run the [update112.sh](docs/update112.sh) script.
 
