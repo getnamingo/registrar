@@ -279,7 +279,7 @@ Add the following line to schedule the WHMCS cron job:
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.1.1 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.1.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
