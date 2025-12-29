@@ -6,7 +6,7 @@
 apt install -y curl software-properties-common ufw
 add-apt-repository ppa:ondrej/php
 add-apt-repository ppa:ondrej/nginx-mainline
-apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
+apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
 ```
 
 ### 1.1. Configure PHP Settings:
@@ -14,7 +14,7 @@ apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath p
 1. Open the PHP-FPM configuration file:
 
 ```bash
-nano /etc/php/8.2/fpm/php.ini
+nano /etc/php/8.3/fpm/php.ini
 ```
 
 Add or uncomment the following session security settings:
@@ -25,25 +25,10 @@ session.cookie_httponly = 1
 session.cookie_samesite = "Strict"
 ```
 
-2. Open the OPCache configuration file:
+2. Restart PHP-FPM to apply the changes:
 
 ```bash
-nano /etc/php/8.2/mods-available/opcache.ini
-```
-
-Verify or add the following OPCache and JIT settings:
-
-```ini
-opcache.enable=1
-opcache.enable_cli=1
-opcache.jit=1255
-opcache.jit_buffer_size=100M
-```
-
-3. Restart PHP-FPM to apply the changes:
-
-```bash
-systemctl restart php8.2-fpm
+systemctl restart php8.3-fpm
 ```
 
 ### 1.2. Configure Nginx:
@@ -109,7 +94,7 @@ server {
         # Or even localhost:port (Default 9000 will work fine)
         # Please check your server setup
 
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
             fastcgi_param PATH_INFO       $fastcgi_path_info;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             fastcgi_intercept_errors on;
@@ -190,6 +175,7 @@ rm /etc/nginx/sites-enabled/default
 Replace `%%DOMAIN%%` with your actual domain:
 
 ```bash
+ufw disable
 systemctl stop nginx
 certbot certonly -d %%DOMAIN%% -d rdap.%%DOMAIN%%
 certbot --nginx -d %%DOMAIN%% -d rdap.%%DOMAIN%%
@@ -228,7 +214,7 @@ Then execute the following commands:
 
 ```bash
 apt update
-apt install -y mariadb-client mariadb-server php8.2-mysql
+apt install -y mariadb-client mariadb-server php8.3-mysql
 mysql_secure_installation
 ```
 
@@ -417,7 +403,7 @@ After submitting to both DENIC and ICANN, you can proceed with regular data escr
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
 ```bash
-* * * * * /usr/bin/php8.2 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
+* * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
 ## 13. ICANN Registrar Module:
