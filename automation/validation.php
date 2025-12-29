@@ -107,7 +107,7 @@ foreach ($rows as $row) {
             $domain_name = $row['name'];
             $registrant_email = $row['email'];
             $token = $row['validation_log'];
-            $link = $config['registrar_url']."index.php?m=validation&token=".$token;
+            $link = $config['registrar_url']."index.php?m=namingo_registrar&page=validation&token=".$token;
         } elseif ($backend === 'LOOM') {
             $domain_name      = $row['service_name'];
             $registrant_email = $row['email'];
