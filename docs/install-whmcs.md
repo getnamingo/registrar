@@ -376,70 +376,20 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 13. ICANN Registrar Module:
+## 13. Namingo Registrar for WHMCS Module:
 
 ```bash
-git clone https://github.com/getnamingo/whmcs-registrar
-mv whmcs-registrar/whmcs_registrar /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/whmcs_registrar
-chmod -R 755 /var/www/html/whmcs/modules/addons/whmcs_registrar
+git clone https://github.com/getnamingo/whmcs-namingo-registrar
+mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons
+chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
+chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
 ```
 
-- Go to Settings > Apps & Integrations in the admin panel, search for "ICANN Registrar" and then activate "ICANN Registrar Accreditation".
+- Go to Settings > Apps & Integrations in the admin panel, search for "Namingo Registrar" and then activate it.
 
-## 14. Domain Contact Verification:
+## 14. Installing WHMCS EPP Registrar Modules:
 
-```bash
-git clone https://github.com/getnamingo/whmcs-validation
-mv whmcs-validation/validation /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/validation
-chmod -R 755 /var/www/html/whmcs/modules/addons/validation
-```
-
-- Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
-
-## 15. TMCH Claims Notice Support:
-
-```bash
-git clone https://github.com/getnamingo/whmcs-tmch
-mv whmcs-tmch/tmch /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/tmch
-chmod -R 755 /var/www/html/whmcs/modules/addons/tmch
-```
-
-- Go to Settings > Apps & Integrations in the admin panel, search for "TMCH Claims" and then activate "TMCH Claims Notice Support".
-
-- Still this needs to be integrated with your workflow.
-
-## 16. WHOIS & RDAP Client:
-
-```bash
-git clone https://github.com/getnamingo/whmcs-whois
-mv whmcs-whois/whois /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/whois
-chmod -R 755 /var/www/html/whmcs/modules/addons/whois
-```
-
-- Go to Settings > Apps & Integrations in the admin panel, search for "WHOIS & RDAP Client" and then activate "WHOIS & RDAP Client".
-
-- Set your WHOIS and RDAP server and contact form URLs in the module settings.
-
-## 17. Domain Registrant Contact:
-
-```bash
-git clone https://github.com/getnamingo/whmcs-contact
-mv whmcs-contact/contact /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/contact
-chmod -R 755 /var/www/html/whmcs/modules/addons/contact
-```
-
-- Go to Settings > Apps & Integrations in the admin panel, search for "Domain Registrant Contact" and then activate it.
-
-- Set your WHMCS API key in the module settings.
-
-## 18. Installing WHMCS EPP-RFC Extensions:
-
-For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP extension. Each module can handle one or more TLDs that share the same configuration details.
+For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP Registrar module. Each module can handle one or more TLDs that share the same configuration details.
 
 To configure a TLD using the Namingo WHMCS EPP module, follow these steps:
 
@@ -483,7 +433,7 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 
 To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
-## 19. Further Settings:
+## 15. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
