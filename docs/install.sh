@@ -155,7 +155,7 @@ if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
     add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
+    apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
     
     # Update php.ini files
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -163,15 +163,6 @@ if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
     set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
-
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit" "1255"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
 
     # Restart PHP service
     systemctl restart php8.3-fpm
@@ -182,7 +173,7 @@ else
     apt install -y curl software-properties-common ufw
     add-apt-repository -y ppa:ondrej/php
     add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-opcache php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
+    apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
 
     # Update php.ini files
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_secure" "1"
@@ -191,20 +182,12 @@ else
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
     set_php_ini_value "/etc/php/8.2/fpm/php.ini" "expose_php" "0"
 
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable" "1"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.enable_cli" "1"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.jit" "1255"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.memory_consumption" "128"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
-    set_php_ini_value "/etc/php/8.2/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
-
     # Restart PHP service
     systemctl restart php8.2-fpm
 fi
 
 # Configure Nginx
+ufw disable
 systemctl stop nginx
 nginx_conf_fossbilling="/etc/nginx/sites-available/fossbilling.conf"
 cat <<EOL > $nginx_conf_fossbilling
@@ -355,6 +338,9 @@ ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
 rm /etc/nginx/sites-enabled/default
 
 # Enable and restart Nginx
+ufw enable
+ufw allow 80/tcp
+ufw allow 443/tcp
 systemctl enable nginx
 systemctl restart nginx
 
@@ -611,6 +597,8 @@ apt install -y bzip2 certbot composer git net-tools apache2 libapache2-mod-fcgid
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
 
 echo "== Downloading ionCube Loader =="
 cd /tmp
@@ -838,6 +826,7 @@ $PHP_BIN -f "$INSTALL_PATH/bin/installer.php" -- -i -n -c "$INSTALL_PATH/install
 echo "Cleaning up..."
 rm -rf "$INSTALL_PATH/install"
 rm -f "$INSTALL_PATH/install_config.json"
+ufw disable
 
 echo "== Requesting SSL certificates for $panel_domain_name and rdap.$domain_name =="
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
@@ -846,6 +835,9 @@ else
     certbot --apache -d "$panel_domain_name" --non-interactive --agree-tos -m webmaster@"$domain_name"
 fi
 
+ufw enable
+ufw allow 80/tcp
+ufw allow 443/tcp
 echo "== Adding WHMCS cron job to crontab =="
 cron_line="*/5 * * * * /usr/bin/php -q /var/www/html/crons/cron.php"
 (crontab -l 2>/dev/null | grep -Fxq "$cron_line") || (crontab -l 2>/dev/null; echo "$cron_line") | crontab -
