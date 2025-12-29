@@ -438,7 +438,7 @@ chown -R www-data:www-data /var/www
 mv /var/www/config-sample.php /var/www/config.php
 
 # Update configuration in config.php
-sed -i "s|'url' => 'http://localhost/'|'url' => 'https://$panel_domain_name/'|" /var/www/config.php
+sed -i "s|'url' => 'localhost/'|'url' => '$panel_domain_name/'|" /var/www/config.php
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
 sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/config.php
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /var/www/config.php
