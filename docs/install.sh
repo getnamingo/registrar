@@ -427,6 +427,7 @@ rm fossbilling.zip
 # Make Directories Writable
 chmod -R 755 /var/www/config-sample.php
 chmod -R 755 /var/www/data/cache
+mkdir -p /var/www/data/log/event
 chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
 chown www-data:www-data /var/www/data/log
