@@ -1149,7 +1149,7 @@ fi
 echo
 log "Admin user for Loom"
 prompt ADMIN_USER "Choose an admin email" "admin@example.com"
-prompt ADMIN_PASS "Chhose an admin password" "" "secret"
+prompt ADMIN_PASS "Choose an admin password" "" "secret"
 
 # Optional custom bind IPs for Caddy
 USE_BIND="n"
@@ -1172,7 +1172,7 @@ install_php_repo
 apt update
 
 log "Installing PHP"
-apt install -y composer php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip php8.3-sqlite3 ufw git unzip bzip2 net-tools whois
+apt install -y composer php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip ufw git unzip bzip2 net-tools whois
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -1295,7 +1295,7 @@ SQL
 
   SQLite)
     log "Using SQLite (no server install)."
-    apt install -y sqlite3
+    apt install -y sqlite3 php8.3-sqlite3
     ;;
 esac
 
@@ -1355,7 +1355,7 @@ touch /var/log/loom/caddy.log
 chown caddy:caddy /var/log/loom/caddy.log
 chmod 664 /var/log/loom/caddy.log
 
-composer update
+COMPOSER_ALLOW_SUPERUSER=1 composer update --no-interaction --quiet
 
 # ---------- Install DB schema ----------
 log "Running Loom DB installer…"
