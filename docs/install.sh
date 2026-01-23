@@ -537,15 +537,25 @@ sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /v
 
 cron_job="*/5 * * * * /usr/bin/php8.3 /var/www/cron.php"
 
-tmp_cron="$(mktemp)"
-crontab -l 2>/dev/null > "$tmp_cron"
+tmp_cron="$(mktemp 2>/dev/null)" || {
+  echo "[!] Failed to create temp file (mktemp)."
+  exit 1
+}
 
-if ! grep -Fqx "$cron_job" "$tmp_cron"; then
-  echo "$cron_job" >> "$tmp_cron"
+crontab -l 2>/dev/null > "$tmp_cron" || true
+
+grep -Fqx "$cron_job" "$tmp_cron" 2>/dev/null || echo "$cron_job" >> "$tmp_cron"
+
+if ! crontab "$tmp_cron" 2>/tmp/crontab.err; then
+  echo "[!] Failed to install crontab."
+  echo "    Possible reasons: cron package not installed, invalid line endings, or crontab service missing."
+  echo "    Error output:"
+  cat /tmp/crontab.err
+  rm -f "$tmp_cron" /tmp/crontab.err
+  exit 1
 fi
 
-crontab "$tmp_cron"
-rm -f "$tmp_cron"
+rm -f "$tmp_cron" /tmp/crontab.err
 
 # Import SQL files into the database
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
@@ -965,16 +975,23 @@ ufw allow 443/tcp
 
 echo "== Adding WHMCS cron job to crontab =="
 
+command -v crontab >/dev/null 2>&1 || apt install -y cron
+systemctl enable --now cron 2>/dev/null || true
+
 cron_line="*/5 * * * * /usr/bin/php -q /var/www/html/crons/cron.php"
 
-tmp_cron="$(mktemp)"
-crontab -l 2>/dev/null > "$tmp_cron"
+tmp_cron="$(mktemp 2>/dev/null)" || exit 1
 
-if ! grep -Fqx "$cron_line" "$tmp_cron"; then
-    echo "$cron_line" >> "$tmp_cron"
-fi
+crontab -l 2>/dev/null > "$tmp_cron" || true
 
-crontab "$tmp_cron"
+grep -Fqx "$cron_line" "$tmp_cron" 2>/dev/null || echo "$cron_line" >> "$tmp_cron"
+
+crontab "$tmp_cron" || {
+    echo "[!] Failed to install WHMCS cron job"
+    rm -f "$tmp_cron"
+    exit 1
+}
+
 rm -f "$tmp_cron"
 
 echo "SSL and cron setup complete."
