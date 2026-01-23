@@ -11,7 +11,7 @@ apt update
 apt install -y curl software-properties-common ufw
 
 add-apt-repository -y ppa:ondrej/php
-add-apt-repository -y ppa:ondrej/nginx-mainline
+add-apt-repository -y ppa:ondrej/nginx
 apt update
 
 apt install -y \

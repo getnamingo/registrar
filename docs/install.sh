@@ -177,7 +177,7 @@ install_php_repo() {
     apt update
     apt install -y curl software-properties-common ca-certificates gnupg
     add-apt-repository -y ppa:ondrej/php
-    add-apt-repository -y ppa:ondrej/nginx-mainline
+    add-apt-repository -y ppa:ondrej/nginx
   elif [[ "$OS_ID" == "debian" ]]; then
     apt update
     apt install -y ca-certificates curl gnupg lsb-release
@@ -1083,13 +1083,12 @@ detect_os
 detect_ips
 
 # ---------- Ask user inputs ----------
-echo
 log "Basic configuration"
 
 DEFAULT_HOST="loom.local"
-prompt HOSTNAME "Enter your Loom hostname (FQDN for HTTPS)" "$DEFAULT_HOST"
-prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications" "admin@$HOSTNAME"
-prompt INSTALL_PATH "Install path for Loom" "/var/www/loom"
+prompt HOSTNAME "Enter the domain where the system will live (e.g., example.com or cp.example.com): " "$DEFAULT_HOST"
+prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications: " "admin@$HOSTNAME"
+prompt INSTALL_PATH "Install path for Loom: " "/var/www/loom"
 
 # DB choice
 echo
@@ -1315,6 +1314,8 @@ chmod -R 775 logs cache
 touch /var/log/loom/caddy.log
 chown caddy:caddy /var/log/loom/caddy.log
 chmod 664 /var/log/loom/caddy.log
+
+composer update
 
 # ---------- Install DB schema ----------
 log "Running Loom DB installer…"
