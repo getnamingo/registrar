@@ -1,16 +1,56 @@
 # Namingo Registrar: Installation Guide (WHMCS)
 
-This guide is for setting up **WHMCS 8.13** with **PHP 8.3** on Ubuntu 24.04.
+This guide is for setting up **WHMCS 8.13** with **PHP 8.3** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
 
 > **Important:** If **WHMCS 8.13** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
 
+Follow the instructions for your operating system.
+
+### Ubuntu 22.04 / 24.04
+
 ```bash
+apt update
 apt install -y curl software-properties-common ufw
-add-apt-repository ppa:ondrej/php
-apt install -y bzip2 certbot composer git net-tools apache2 libapache2-mod-fcgid php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache unzip wget whois
+
+add-apt-repository -y ppa:ondrej/php
+apt update
+
+apt install -y \
+  bzip2 certbot composer git net-tools unzip wget whois \
+  apache2 libapache2-mod-fcgid python3-certbot-apache \
+  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
+  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
+  php8.3-imap php8.3-intl php8.3-mbstring php8.3-soap \
+  php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip \
+  php8.3-mysql
+```
+
+### Debian 12 / 13
+
+```bash
+apt update
+apt install -y ca-certificates curl gnupg lsb-release ufw
+
+# PHP (SURY repo)
+curl -fsSL https://packages.sury.org/php/apt.gpg \
+ | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+ > /etc/apt/sources.list.d/sury-php.list
+
+apt update
+
+apt install -y \
+  bzip2 certbot composer git net-tools unzip wget whois \
+  apache2 libapache2-mod-fcgid python3-certbot-apache \
+  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
+  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
+  php8.3-imap php8.3-intl php8.3-mbstring php8.3-soap \
+  php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip \
+  php8.3-mysql
 ```
 
 ### 1.1. Configure PHP Settings:
@@ -153,18 +193,49 @@ ufw allow 443/tcp
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 ```
 
-Place the following in ```/etc/apt/sources.list.d/mariadb.sources```:
+Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.
 
-```bash
-# MariaDB 11.8 repository list - created 2025-12-24 08:25 UTC
-# https://mariadb.org/download/
+### Ubuntu 22.04 (Jammy)
+
+```ini
 X-Repolib-Name: MariaDB
 Types: deb
-# deb.mariadb.org is a dynamic mirror if your preferred mirror goes offline. See https://mariadb.org/mirrorbits/ for details.
-# URIs: https://deb.mariadb.org/11.8/ubuntu
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/ubuntu
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+Suites: jammy
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Ubuntu 24.04 (Noble)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
 Suites: noble
-Components: main main/debug
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Debian 12 (Bookworm)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+Suites: bookworm
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Debian 13 (Trixie)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+Suites: trixie
+Components: main
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```
 

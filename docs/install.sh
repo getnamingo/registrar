@@ -1,10 +1,71 @@
 #!/bin/bash
 
+set -euo pipefail
+
+# ---------- Helpers ----------
+log() { printf "\n\033[1;32m[%s]\033[0m %s\n" "$(date +%H:%M:%S)" "$*"; }
+warn() { printf "\n\033[1;33m[WARN]\033[0m %s\n" "$*"; }
+err() { printf "\n\033[1;31m[ERR]\033[0m %s\n" "$*" >&2; }
+die() { err "$*"; exit 1; }
+
+require_root() {
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    die "Please run as root (sudo bash $0)."
+  fi
+}
+
+detect_os() {
+  . /etc/os-release
+  OS_ID="$ID"            # ubuntu/debian
+  OS_VER="$VERSION_ID"   # e.g. 22.04, 24.04, 12, 13
+  OS_CODENAME="${VERSION_CODENAME:-}"
+  log "Detected: $PRETTY_NAME"
+}
+
+# Return best-guess A/AAAA for bind (optional)
+detect_ips() {
+  IPV4=$(hostname -I | awk '{print $1}' || true)
+  IPV6=$(ip -6 addr show scope global 2>/dev/null | awk '/inet6/{print $2}' | cut -d/ -f1 | head -n1 || true)
+}
+
+prompt() {
+  local var="$1"; local msg="$2"; local def="${3-}"; local secret="${4-}"
+  local val
+  while true; do
+    if [[ -n "$def" ]]; then
+      if [[ "$secret" == "secret" ]]; then
+        read -r -s -p "$msg [$def]: " val; echo
+      else
+        read -r -p "$msg [$def]: " val
+      fi
+      val="${val:-$def}"
+    else
+      if [[ "$secret" == "secret" ]]; then
+        read -r -s -p "$msg: " val; echo
+      else
+        read -r -p "$msg: " val
+      fi
+    fi
+    [[ -n "$val" ]] && break || warn "Value cannot be empty."
+  done
+  eval "$var=\"\$val\""
+}
+
+require_root
+
 # Check the Linux distribution and version
-if [[ -e /etc/os-release ]]; then
-    . /etc/os-release
-    OS=$NAME
-    VER=$VERSION_ID
+OS=""
+VER=""
+OS_ID=""
+CODENAME=""
+
+if [[ -r /etc/os-release ]]; then
+  . /etc/os-release
+
+  OS="${NAME}"
+  VER="${VERSION_ID}"
+  OS_ID="${ID,,}"
+  CODENAME="${VERSION_CODENAME:-}"
 fi
 
 # Get the available RAM in MB
@@ -35,7 +96,7 @@ install_rdap_and_whois_services() {
     echo "Installing RDAP & WHOIS services..."
 
     # Clone the registrar repository
-    git clone --branch v1.1.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+    git clone --branch v1.1.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 
     # Setup for WHOIS service
     cd /opt/registrar/whois
@@ -111,7 +172,34 @@ install_rdap_and_whois_services() {
     mkdir /var/log/namingo
 }
 
-echo "==== Namingo Registrar v1.1.3 ===="
+install_php_repo() {
+  if [[ "$OS_ID" == "ubuntu" ]]; then
+    apt update
+    apt install -y curl software-properties-common ca-certificates gnupg
+    add-apt-repository -y ppa:ondrej/php
+    add-apt-repository -y ppa:ondrej/nginx-mainline
+  elif [[ "$OS_ID" == "debian" ]]; then
+    apt update
+    apt install -y ca-certificates curl gnupg lsb-release
+
+    # PHP (SURY)
+    curl -fsSL https://packages.sury.org/php/apt.gpg \
+      | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+    echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+      > /etc/apt/sources.list.d/sury-php.list
+
+    # Nginx mainline (official)
+    curl -fsSL https://nginx.org/keys/nginx_signing.key \
+      | gpg --dearmor -o /usr/share/keyrings/nginx.gpg
+    echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/mainline/debian $(lsb_release -sc) nginx" \
+      > /etc/apt/sources.list.d/nginx.list
+  else
+    echo "Unsupported OS: ${OS_ID:-unknown} ${VER:-unknown}"
+    exit 1
+  fi
+}
+
+echo "==== Namingo Registrar v1.1.4 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
@@ -119,9 +207,10 @@ echo "Please choose the billing system you plan to use:"
 echo
 echo "  1) FOSSBilling – free & open-source"
 echo "  2) WHMCS       – commercial billing platform"
+echo "  3) Loom        – lightweight panel"
 echo "  c) Cancel"
 echo
-read -rp "Enter your choice [1/2/c]: " choice
+read -rp "Enter your choice [1/2/3/c]: " choice
 
 case "$choice" in
     1)
@@ -139,52 +228,62 @@ if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
     exit 1
 fi
 
-read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
-cookie_domain=".$domain_name"
-read -p "Enter the domain name where the panel will be hosted (e.g., example.com or panel.example.com): " panel_domain_name
+read -p "Enter the domain where the system will live (e.g., example.com or cp.example.com): " panel_domain_name
+
+# normalize
+panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+# count dots
+dot_count="$(grep -o "\." <<< "$panel_domain_name" | wc -l)"
+
+# reject complex domains
+if [[ "$dot_count" -gt 2 ]]; then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a simple domain like:"
+  echo "     - example.com"
+  echo "     - cp.example.com"
+  echo "     - cp.example.co.uk"
+  echo ""
+  echo "   Domains with multiple nested subdomains are not supported."
+  echo "   (e.g. cp.eu.example.com)"
+  echo ""
+  exit 1
+fi
+
+# derive main domain
+if [[ "$panel_domain_name" == *.*.* ]]; then
+  domain_name="${panel_domain_name#*.}"
+else
+  domain_name="$panel_domain_name"
+fi
+
 read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
-read -p "Enter the MySQL database username: " db_user
-read -sp "Enter the MySQL database password: " db_pass
+read -p "Choose a database username: " db_user
+read -sp "Choose a password for this user: " db_pass
 echo
 
 # Install necessary packages
-if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
-    PHP_V=8.3
-    DB_COMMAND="mariadb"
-    apt update
-    apt install -y curl software-properties-common ufw
-    add-apt-repository -y ppa:ondrej/php
-    add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
-    
-    # Update php.ini files
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
+install_php_repo
+apt update
 
-    # Restart PHP service
-    systemctl restart php8.3-fpm
-else
-    PHP_V=8.2
-    DB_COMMAND="mysql"
-    apt update
-    apt install -y curl software-properties-common ufw
-    add-apt-repository -y ppa:ondrej/php
-    add-apt-repository -y ppa:ondrej/nginx-mainline
-    apt install -y bzip2 certbot composer git net-tools nginx php8.2 php8.2-bcmath php8.2-bz2 php8.2-cli php8.2-common php8.2-curl php8.2-fpm php8.2-gd php8.2-gmp php8.2-imagick php8.2-imap php8.2-intl php8.2-mbstring php8.2-readline php8.2-soap php8.2-swoole php8.2-xml php8.2-yaml php8.2-zip python3-certbot-nginx unzip wget whois
+apt install -y \
+  ufw bzip2 certbot composer git net-tools unzip wget whois \
+  nginx python3-certbot-nginx \
+  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
+  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
+  php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline \
+  php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip \
+  php8.3-mysql
 
-    # Update php.ini files
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_secure" "1"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_httponly" "1"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-    set_php_ini_value "/etc/php/8.2/fpm/php.ini" "expose_php" "0"
+# Update php.ini (FPM)
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
 
-    # Restart PHP service
-    systemctl restart php8.2-fpm
-fi
+systemctl restart php8.3-fpm
 
 # Configure Nginx
 ufw disable
@@ -240,7 +339,7 @@ server {
 
     location ~ \.php {
         fastcgi_split_path_info ^(.+\.php)(/.*)\$;
-        fastcgi_pass unix:/run/php/php$PHP_V-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
         fastcgi_param PATH_INFO \$fastcgi_path_info;
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         fastcgi_intercept_errors on;
@@ -353,67 +452,59 @@ echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_
 chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 
 # Install and configure MariaDB
-if [[ "$OS" == "Ubuntu" && "$VER" == "24.04" ]]; then
-    curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+mkdir -p /etc/apt/keyrings
+curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
 
-    # Add the MariaDB 11.4 repository
-cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
-# MariaDB 11 Rolling repository list - created 2025-04-08 06:40 UTC
-# https://mariadb.org/download/
-X-Repolib-Name: MariaDB
-Types: deb
-# URIs: https://deb.mariadb.org/11/ubuntu
-URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
-Suites: noble
-Components: main main/debug
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOL
+MARIADB_URI=""
+MARIADB_SUITE=""
 
-    # Update the package list and install MariaDB
-    sudo apt update
-    sudo apt install -y mariadb-client mariadb-server php8.3-mysql
-    
-    # Secure MariaDB installation
-    mariadb-secure-installation
-
-    # MariaDB configuration
-    mariadb -u root -p <<MYSQL_QUERY
-    CREATE DATABASE registrar;
-    CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
-    GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
-    FLUSH PRIVILEGES;
-MYSQL_QUERY
-
+if [[ "${OS_ID}" == "ubuntu" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
+  if [[ "${VER}" == "22.04" ]]; then
+    MARIADB_SUITE="jammy"
+  elif [[ "${VER}" == "24.04" ]]; then
+    MARIADB_SUITE="noble"
+  else
+    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
+    exit 1
+  fi
+elif [[ "${OS_ID}" == "debian" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
+  if [[ "${VER}" == "12" ]]; then
+    MARIADB_SUITE="bookworm"
+  elif [[ "${VER}" == "13" ]]; then
+    MARIADB_SUITE="trixie"
+  else
+    echo "Unsupported Debian version for MariaDB repo: ${VER}"
+    exit 1
+  fi
 else
-    curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
+  exit 1
+fi
 
-cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
-# MariaDB 11 Rolling repository list - created 2025-04-08 06:39 UTC
-# https://mariadb.org/download/
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
-# URIs: https://deb.mariadb.org/11/ubuntu
-URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
-Suites: jammy
-Components: main main/debug
+URIs: ${MARIADB_URI}
+Suites: ${MARIADB_SUITE}
+Components: main
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOL
+EOF
 
-    apt update
-    apt install -y mariadb-client mariadb-server php8.2-mysql
-    
-    # Secure MariaDB installation
-    mysql_secure_installation
+apt update
+apt install -y mariadb-client mariadb-server php8.3-mysql
 
-    # MariaDB configuration
-    mysql -u root -p <<MYSQL_QUERY
-    CREATE DATABASE registrar;
-    CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
-    GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
-    FLUSH PRIVILEGES;
+# Secure MariaDB installation
+mysql_secure_installation
+
+# MariaDB configuration
+mariadb -u root -p <<MYSQL_QUERY
+CREATE DATABASE IF NOT EXISTS registrar;
+CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';
+GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';
+FLUSH PRIVILEGES;
 MYSQL_QUERY
-
-fi
 
 # Install Adminer
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
@@ -448,8 +539,8 @@ cron_job="*/5 * * * * php /var/www/cron.php"
 (crontab -l | grep -F "$cron_job") || (crontab -l ; echo "$cron_job") | crontab -
 
 # Import SQL files into the database
-$DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
-$DB_COMMAND -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
+mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
 
 read -p "Enter admin email: " email
 read -s -p "Enter admin password: " password
@@ -463,9 +554,9 @@ sql="INSERT INTO admin (email, pass, admin_group_id, role, status) VALUES ('$ema
 db_name="registrar"
 
 # Execute SQL
-$DB_COMMAND -u"$db_user" -p"$db_pass" "$db_name" -e "$sql"
+mariadb -u $db_user -p$db_pass registrar -e "$sql"
 
-echo "✅ Admin user created: $email"
+echo "Admin user created: $email"
 
 rm -rf /var/www/install
 
@@ -490,7 +581,7 @@ else
 fi
 
 # Update the 'theme' setting in the 'setting' table
-$DB_COMMAND -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
+mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     install_rdap_and_whois_services
@@ -510,7 +601,7 @@ echo "   - /opt/registrar/rdap/config.php"
 echo "   - /opt/registrar/automation/config.php"
 echo
 echo "4. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php$PHP_V /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
 echo
 echo "5. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
 echo
@@ -554,46 +645,47 @@ if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
     exit 1
 fi
 
-# ---- OS check: Ubuntu 24.04 only ----
-if [[ ! -f /etc/os-release ]]; then
-    echo "ERROR: Cannot determine operating system."
-    exit 1
+read -p "Enter the domain where the system will live (e.g., example.com or cp.example.com): " panel_domain_name
+
+# normalize
+panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+# count dots
+dot_count="$(grep -o "\." <<< "$panel_domain_name" | wc -l)"
+
+# reject complex domains
+if [[ "$dot_count" -gt 2 ]]; then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a simple domain like:"
+  echo "     - example.com"
+  echo "     - cp.example.com"
+  echo "     - cp.example.co.uk"
+  echo ""
+  echo "   Domains with multiple nested subdomains are not supported."
+  echo "   (e.g. cp.eu.example.com)"
+  echo ""
+  exit 1
 fi
 
-. /etc/os-release
-
-if [[ "$ID" != "ubuntu" ]]; then
-    echo "ERROR: Unsupported OS: $ID"
-    echo "This installer supports Ubuntu 24.04 only."
-    exit 1
+# derive main domain
+if [[ "$panel_domain_name" == *.*.* ]]; then
+  domain_name="${panel_domain_name#*.}"
+else
+  domain_name="$panel_domain_name"
 fi
 
-# VERSION_ID is "24.04" or "24.04.x"
-if [[ ! "$VERSION_ID" =~ ^24\.04 ]]; then
-    echo "ERROR: Unsupported Ubuntu version: $VERSION_ID"
-    echo "This installer supports Ubuntu 24.04 only."
-    exit 1
-fi
-
-echo "✔ OS check passed: Ubuntu $VERSION_ID"
-echo
-
-read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
-cookie_domain=".$domain_name"
-read -p "Enter the domain name where the panel will be hosted (e.g., example.com or panel.example.com): " panel_domain_name
 read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
-read -p "Enter the MySQL database username: " db_user
-read -sp "Enter the MySQL database password: " db_pass
+read -p "Choose a database username: " db_user
+read -sp "Choose a password for this user: " db_pass
 echo
 
 # Install necessary packages
-PHP_V=8.3
-DB_COMMAND="mysql"
+install_php_repo
 apt update
-apt install -y curl software-properties-common ufw
-add-apt-repository ppa:ondrej/php
-apt install -y bzip2 certbot composer git net-tools apache2 libapache2-mod-fcgid php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache unzip wget whois
-    
+
+apt install -y bzip2 certbot composer curl git net-tools apache2 libapache2-mod-fcgid php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache ufw unzip wget whois
+
 # Update php.ini files
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
@@ -606,9 +698,8 @@ cd /tmp
 wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
 tar xfz ioncube_loaders_lin_x86-64.tar.gz
 
-echo "== Detecting PHP version and extension directory =="
+echo "== Detecting PHP extension directory =="
 
-php_version=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
 ext_dir=$(php -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
 
 if [[ ! -d "$ext_dir" ]]; then
@@ -616,7 +707,7 @@ if [[ ! -d "$ext_dir" ]]; then
   exit 1
 fi
 
-loader_file="ioncube_loader_lin_${php_version}.so"
+loader_file="ioncube_loader_lin_8.3.so"
 loader_path="${ext_dir}/${loader_file}"
 
 echo "== Copying ionCube loader to extension dir =="
@@ -624,7 +715,7 @@ cp "/tmp/ioncube/${loader_file}" "$loader_path"
 
 echo "== Adding ionCube loader to php.ini files =="
 
-for ini in /etc/php/${php_version}/fpm/php.ini /etc/php/${php_version}/cli/php.ini; do
+for ini in /etc/php/8.3/fpm/php.ini /etc/php/8.3/cli/php.ini; do
     if [[ -f "$ini" ]]; then
         if ! grep -q "ioncube_loader_lin" "$ini"; then
             echo "Adding ionCube to $ini"
@@ -640,7 +731,7 @@ done
 # Restart PHP service
 systemctl restart php8.3-fpm
 
-echo "ionCube Loader installed successfully for PHP ${php_version}!"
+echo "ionCube Loader installed successfully"
 
 #Configure apache
 whmcs_docroot="/var/www/html"
@@ -725,39 +816,62 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 
 # Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+mkdir -p /etc/apt/keyrings
+curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
 
-# Add the MariaDB 11.4 repository
-cat <<EOL > /etc/apt/sources.list.d/mariadb.sources
-# MariaDB 11.8 repository list - created 2025-12-24 08:25 UTC
-# https://mariadb.org/download/
+MARIADB_URI=""
+MARIADB_SUITE=""
+
+if [[ "${OS_ID}" == "ubuntu" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
+  if [[ "${VER}" == "22.04" ]]; then
+    MARIADB_SUITE="jammy"
+  elif [[ "${VER}" == "24.04" ]]; then
+    MARIADB_SUITE="noble"
+  else
+    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
+    exit 1
+  fi
+elif [[ "${OS_ID}" == "debian" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
+  if [[ "${VER}" == "12" ]]; then
+    MARIADB_SUITE="bookworm"
+  elif [[ "${VER}" == "13" ]]; then
+    MARIADB_SUITE="trixie"
+  else
+    echo "Unsupported Debian version for MariaDB repo: ${VER}"
+    exit 1
+  fi
+else
+  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
+  exit 1
+fi
+
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
-# deb.mariadb.org is a dynamic mirror if your preferred mirror goes offline. See https://mariadb.org/mirrorbits/ for details.
-# URIs: https://deb.mariadb.org/11.8/ubuntu
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/ubuntu
-Suites: noble
-Components: main main/debug
+URIs: ${MARIADB_URI}
+Suites: ${MARIADB_SUITE}
+Components: main
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOL
+EOF
 
-# Update the package list and install MariaDB
 apt update
 apt install -y mariadb-client mariadb-server php8.3-mysql
-    
+
 # Secure MariaDB installation
-mariadb-secure-installation
+mysql_secure_installation
 
 # MariaDB configuration
 mariadb -u root -p <<MYSQL_QUERY
-    CREATE DATABASE registrar;
-    CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_pass';
-    GRANT ALL PRIVILEGES ON registrar.* TO '$db_user'@'localhost';
-    FLUSH PRIVILEGES;
+CREATE DATABASE IF NOT EXISTS registrar;
+CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';
+GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';
+FLUSH PRIVILEGES;
 MYSQL_QUERY
 
 # Install Adminer
-wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
+wget "http://www.adminer.org/latest.php" -O /var/www/html/adm.php
 
 # Install WHMCS
 DB_NAME="registrar"
@@ -863,7 +977,7 @@ echo "   - /opt/registrar/rdap/config.php"
 echo "   - /opt/registrar/automation/config.php"
 echo
 echo "4. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php$PHP_V /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
 echo
 echo "5. Ensure all contact details/profile fields are mandatory for your users within the WHMCS settings or configuration."
 echo
@@ -962,6 +1076,344 @@ fi
                 exit 1
                 ;;
         esac
+        ;;
+    3)
+        echo "Loom selected."
+detect_os
+detect_ips
+
+# ---------- Ask user inputs ----------
+echo
+log "Basic configuration"
+
+DEFAULT_HOST="loom.local"
+prompt HOSTNAME "Enter your Loom hostname (FQDN for HTTPS)" "$DEFAULT_HOST"
+prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications" "admin@$HOSTNAME"
+prompt INSTALL_PATH "Install path for Loom" "/var/www/loom"
+
+# DB choice
+echo
+echo "Choose database backend:"
+select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
+  case "$DB_BACKEND" in
+    MariaDB|PostgreSQL|SQLite) break ;;
+    *) echo "Invalid selection."; ;;
+  esac
+done
+
+# DB credentials (used unless SQLite)
+if [[ "$DB_BACKEND" != "SQLite" ]]; then
+  prompt DB_NAME "Choose a database name: " "loom"
+  prompt DB_USER "Choose a database username: " "loom"
+  prompt DB_PASS "Choose a password for this user: " "" "secret"
+fi
+
+# Admin user for Loom
+echo
+log "Admin user for Loom"
+prompt ADMIN_USER "Choose an admin email" "admin@example.com"
+prompt ADMIN_PASS "Chhose an admin password" "" "secret"
+
+# Optional custom bind IPs for Caddy
+USE_BIND="n"
+if [[ -n "${IPV4:-}" || -n "${IPV6:-}" ]]; then
+  echo
+  echo "Detected IPs: IPv4=${IPV4:-none}, IPv6=${IPV6:-none}"
+  read -r -p "Bind Caddy to these IPs? (y/N): " USE_BIND
+  USE_BIND="${USE_BIND:-n}"
+fi
+if [[ "$USE_BIND" =~ ^[Yy]$ ]]; then
+  CADDY_BIND_LINE="    bind ${IPV4:-} ${IPV6:-}"
+else
+  CADDY_BIND_LINE=""
+fi
+
+# ---------- PHP 8.3 repos ----------
+log "Configuring PHP 8.3 repository…"
+# Install necessary packages
+install_php_repo
+apt update
+
+log "Installing PHP"
+apt install -y composer php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip php8.3-sqlite3 ufw git unzip bzip2 net-tools whois
+
+# Update php.ini (FPM)
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable" "1"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable_cli" "1"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit" "1255"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.memory_consumption" "128"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
+set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
+
+systemctl restart php8.3-fpm
+
+# ---------- Caddy repo & install ----------
+log "Installing Caddy…"
+apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+apt update -y
+apt install -y caddy
+# ---------- Adminer (randomized path) ----------
+log "Installing Adminer…"
+mkdir -p /usr/share/adminer
+wget -q "https://www.adminer.org/latest.php" -O /usr/share/adminer/latest.php
+ADMINER_SLUG="adminer-$(cut -d- -f1 </proc/sys/kernel/random/uuid).php"
+ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
+
+# ---------- Database setup ----------
+case "$DB_BACKEND" in
+  MariaDB)
+    log "Configuring MariaDB repository…"
+MARIADB_URI=""
+MARIADB_SUITE=""
+
+if [[ "${OS_ID}" == "ubuntu" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
+  if [[ "${VER}" == "22.04" ]]; then
+    MARIADB_SUITE="jammy"
+  elif [[ "${VER}" == "24.04" ]]; then
+    MARIADB_SUITE="noble"
+  else
+    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
+    exit 1
+  fi
+elif [[ "${OS_ID}" == "debian" ]]; then
+  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
+  if [[ "${VER}" == "12" ]]; then
+    MARIADB_SUITE="bookworm"
+  elif [[ "${VER}" == "13" ]]; then
+    MARIADB_SUITE="trixie"
+  else
+    echo "Unsupported Debian version for MariaDB repo: ${VER}"
+    exit 1
+  fi
+else
+  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
+  exit 1
+fi
+
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: ${MARIADB_URI}
+Suites: ${MARIADB_SUITE}
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+EOF
+
+apt update -y
+apt install -y mariadb-server mariadb-client php8.3-mysql
+
+# Secure MariaDB installation
+mysql_secure_installation
+
+# MariaDB configuration
+mariadb --user=root <<SQL
+CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+    ;;
+
+  PostgreSQL)
+    log "Installing PostgreSQL…"
+    apt install -y postgresql php8.3-pgsql
+    systemctl enable --now postgresql
+
+    log "Creating database and role…"
+    sudo -u postgres psql -v ON_ERROR_STOP=1 \
+      -v dbuser="$DB_USER" -v dbpass="$DB_PASS" -v dbname="$DB_NAME" <<'SQL'
+-- Create role if missing
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'dbuser', :'dbpass')
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'dbuser'
+)
+\gexec
+
+-- Create database if missing
+SELECT format('CREATE DATABASE %I OWNER %I', :'dbname', :'dbuser')
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_database WHERE datname = :'dbname'
+)
+\gexec
+
+-- Grant privileges (idempotent)
+GRANT ALL PRIVILEGES ON DATABASE :"dbname" TO :"dbuser";
+SQL
+    ;;
+
+  SQLite)
+    log "Using SQLite (no server install)."
+    apt install -y sqlite3
+    ;;
+esac
+
+# ---------- Create Loom project ----------
+log "Creating Loom project in $INSTALL_PATH …"
+mkdir -p "$INSTALL_PATH"
+if [[ -z "$(ls -A "$INSTALL_PATH")" ]]; then
+  git clone https://github.com/getargora/loom.git "$INSTALL_PATH"
+else
+  warn "$INSTALL_PATH is not empty. Skipping git clone."
+fi
+
+# ---------- .env configuration ----------
+log "Configuring .env …"
+cd "$INSTALL_PATH"
+if [[ ! -f ".env" ]]; then
+  cp env-sample .env
+fi
+sed -i "s|^APP_URL=.*|APP_URL=https://${HOSTNAME//\//\\/}|" .env
+
+# DB DSN/env
+case "$DB_BACKEND" in
+  MariaDB)
+    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=mysql/" .env
+    sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+    sed -i "s/^DB_PORT=.*/DB_PORT=3306/" .env
+    sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
+    ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
+    ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
+    sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
+    sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
+    ;;
+  PostgreSQL)
+    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=pgsql/" .env
+    sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+    sed -i "s/^DB_PORT=.*/DB_PORT=5432/" .env
+    sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
+    ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
+    ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
+    sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
+    sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
+    ;;
+  SQLite)
+    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=sqlite/" .env
+    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${INSTALL_PATH}/storage/loom.sqlite|" .env
+    install -d -m 0775 -o www-data -g www-data "${INSTALL_PATH}/storage"
+    install -m 0664 -o www-data -g www-data /dev/null "${INSTALL_PATH}/storage/loom.sqlite"
+    ;;
+esac
+
+# ---------- Permissions ----------
+log "Setting permissions…"
+mkdir -p logs cache /var/log/loom
+chown -R www-data:www-data logs cache /var/log/loom
+chmod -R 775 logs cache
+touch /var/log/loom/caddy.log
+chown caddy:caddy /var/log/loom/caddy.log
+chmod 664 /var/log/loom/caddy.log
+
+# ---------- Install DB schema ----------
+log "Running Loom DB installer…"
+php bin/install-db.php
+
+# ---------- Create admin user (best effort) ----------
+log "Creating admin user (attempting non-interactive)…"
+
+if php -v >/dev/null 2>&1; then
+  set +e
+
+  # Replace sample variables directly in the original script
+  sed -i \
+    -e "s|\(\$email\s*=\s*\).*|\1'${ADMIN_USER}';|" \
+    -e "s|\(\$newPW\s*=\s*\).*|\1'${ADMIN_PASS}';|" \
+    bin/create-admin-user.php
+
+  php bin/create-admin-user.php >/tmp/loom-admin.log 2>&1
+  CREATE_EXIT=$?
+  set -e
+
+  if [[ "$CREATE_EXIT" -ne 0 ]]; then
+    warn "Automatic admin creation may have failed. Check /tmp/loom-admin.log"
+    warn "If needed, run: php bin/create-admin-user.php  (and enter credentials manually)"
+  fi
+else
+  warn "PHP CLI not found when creating admin (unexpected)."
+fi
+
+# ---------- Caddyfile ----------
+log "Writing Caddyfile for $HOSTNAME …"
+cat > /etc/caddy/Caddyfile <<EOF
+$HOSTNAME {
+$CADDY_BIND_LINE
+    root * $INSTALL_PATH/public
+    php_fastcgi unix//run/php/php8.3-fpm.sock
+    encode zstd gzip
+    file_server
+    tls $TLS_EMAIL
+    header -Server
+    log {
+        output file /var/log/loom/caddy.log
+    }
+    # Adminer (randomized path)
+    route /${ADMINER_SLUG}* {
+        root * /usr/share/adminer
+        php_fastcgi unix//run/php/php8.3-fpm.sock
+    }
+    header * {
+        Referrer-Policy "same-origin"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy: default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https: data:; font-src 'self' data:; style-src 'self' 'unsafe-inline' https://rsms.me; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/; form-action 'self'; worker-src 'none'; frame-src 'none';
+        Permissions-Policy: accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();
+    }
+}
+EOF
+
+systemctl enable caddy
+systemctl restart caddy
+
+# ---------- Firewall ----------
+log "Configuring UFW…"
+ufw allow OpenSSH >/dev/null 2>&1 || true
+ufw allow 80,443/tcp >/dev/null 2>&1 || true
+yes | ufw enable >/dev/null 2>&1 || true
+ufw status || true
+
+# ---------- Summary ----------
+cat <<SUM
+
+============================================================
+✅ Installation complete!
+
+• App path:          $INSTALL_PATH
+• Hostname:          https://$HOSTNAME
+• PHP-FPM:           php8.3-fpm (running)
+• Web server:        Caddy (running)
+• Adminer URL:       https://$HOSTNAME/${ADMINER_SLUG}
+
+• Database backend:  $DB_BACKEND
+$( [[ "$DB_BACKEND" != "SQLite" ]] && echo "• DB Name/User:     $DB_NAME / $DB_USER" )
+$( [[ "$DB_BACKEND" == "MariaDB" ]] && echo "• MySQL Tuning:     Run MySQLTuner later: perl mysqltuner.pl" )
+
+• Admin user:        $ADMIN_USER  (created best-effort)
+  If admin creation failed, run inside $INSTALL_PATH:
+     php bin/create-admin-user.php
+
+Pro tip: Add your domain's A/AAAA records to point at this server
+and wait for DNS to propagate before first TLS issuance.
+
+Logs:
+  - Caddy:           /var/log/loom/caddy.log
+  - Loom (app):      $INSTALL_PATH/logs
+
+Enjoy! 🚀
+============================================================
+SUM
         ;;
     c|C)
         echo "Installation cancelled."

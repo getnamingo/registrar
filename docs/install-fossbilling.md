@@ -2,11 +2,56 @@
 
 ## 1. Install the required packages:
 
+Follow the instructions for your operating system.
+
+### Ubuntu 22.04 / 24.04
+
 ```bash
+apt update
 apt install -y curl software-properties-common ufw
-add-apt-repository ppa:ondrej/php
-add-apt-repository ppa:ondrej/nginx-mainline
-apt install -y bzip2 certbot composer git net-tools nginx php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip python3-certbot-nginx unzip wget whois
+
+add-apt-repository -y ppa:ondrej/php
+add-apt-repository -y ppa:ondrej/nginx-mainline
+apt update
+
+apt install -y \
+  bzip2 certbot composer git net-tools unzip wget whois \
+  nginx python3-certbot-nginx \
+  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
+  php8.3-bcmath php8.3-bz2 php8.3-gmp php8.3-intl \
+  php8.3-mbstring php8.3-xml php8.3-zip php8.3-imap \
+  php8.3-swoole php8.3-yaml php8.3-mysql
+```
+
+### Debian 12 / 13
+
+```bash
+apt update
+apt install -y ca-certificates curl gnupg lsb-release ufw
+
+# PHP (SURY repo)
+curl -fsSL https://packages.sury.org/php/apt.gpg \
+ | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+ > /etc/apt/sources.list.d/sury-php.list
+
+# Nginx (official repo)
+curl -fsSL https://nginx.org/keys/nginx_signing.key \
+ | gpg --dearmor -o /usr/share/keyrings/nginx.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/mainline/debian $(lsb_release -sc) nginx" \
+ > /etc/apt/sources.list.d/nginx.list
+
+apt update
+
+apt install -y \
+  bzip2 certbot composer git net-tools unzip wget whois \
+  nginx python3-certbot-nginx \
+  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
+  php8.3-bcmath php8.3-bz2 php8.3-gmp php8.3-intl \
+  php8.3-mbstring php8.3-xml php8.3-zip php8.3-imap \
+  php8.3-swoole php8.3-yaml php8.3-mysql
 ```
 
 ### 1.1. Configure PHP Settings:
@@ -196,17 +241,49 @@ systemctl restart nginx
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 ```
 
-Place the following in ```/etc/apt/sources.list.d/mariadb.sources```:
+Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.
 
-```bash
-# MariaDB 11 Rolling repository list - created 2025-04-08 06:39 UTC
-# https://mariadb.org/download/
+### Ubuntu 22.04 (Jammy)
+
+```ini
 X-Repolib-Name: MariaDB
 Types: deb
-# URIs: https://deb.mariadb.org/11/ubuntu
-URIs: https://distrohub.kyiv.ua/mariadb/repo/11.rolling/ubuntu
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
 Suites: jammy
-Components: main main/debug
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Ubuntu 24.04 (Noble)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+Suites: noble
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Debian 12 (Bookworm)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+Suites: bookworm
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
+### Debian 13 (Trixie)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+Suites: trixie
+Components: main
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```
 
