@@ -38,7 +38,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 ### Installation
 
-**Minimum requirement:** a VPS running Ubuntu 22.04 or 24.04, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
+**Minimum requirement:** a VPS running Ubuntu 22.04 / 24.04 or Debian 12 / 13, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
 
 To get started, copy the command below and paste it into your server terminal:
 
@@ -53,6 +53,8 @@ For detailed installation steps, see:
 - [install-loom.md](docs/install-loom.md) – for Loom setup ***(unfinished)***
 
 ### Update
+
+- v1.1.3 to v1.1.4 - backup registrar, download and run the [update114.sh](docs/update114.sh) script.
 
 - v1.1.2 to v1.1.3 - backup registrar, download and run the [update113.sh](docs/update113.sh) script.
 
@@ -91,7 +93,7 @@ Special thanks to the [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](h
 Additionally, we extend our gratitude to:
 - **ChatGPT** for invaluable assistance with code and text writing.
 
-## 💖 Support This Project
+## Support This Project
 
 If you find Namingo Registry useful, consider donating:
 
