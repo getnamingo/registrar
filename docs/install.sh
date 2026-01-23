@@ -1102,6 +1102,7 @@ select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
 done
 
 # DB credentials (used unless SQLite)
+read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
 if [[ "$DB_BACKEND" != "SQLite" ]]; then
   prompt DB_NAME "Choose a database name: " "loom"
   prompt DB_USER "Choose a database username: " "loom"
@@ -1377,6 +1378,43 @@ EOF
 systemctl enable caddy
 systemctl restart caddy
 
+if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+  echo "Adding RDAP host to Caddyfile for rdap.${$HOSTNAME} …"
+
+  cat >> /etc/caddy/Caddyfile <<EOF
+
+rdap.${$HOSTNAME} {
+$CADDY_BIND_LINE
+    reverse_proxy 127.0.0.1:7500
+    encode gzip
+    tls $TLS_EMAIL
+    header -Server
+
+    log {
+        output file /var/log/loom/rdap.log {
+            roll_size 10MB
+            roll_keep 5
+        }
+        format json
+    }
+
+    header * {
+        Referrer-Policy "no-referrer"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Permissions-Policy: accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();
+
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type"
+    }
+}
+EOF
+fi
+
 # ---------- Firewall ----------
 log "Configuring UFW…"
 ufw allow OpenSSH >/dev/null 2>&1 || true
@@ -1385,15 +1423,11 @@ yes | ufw enable >/dev/null 2>&1 || true
 ufw status || true
 
 # ---------- Summary ----------
+echo "Installation is complete. Please follow these manual steps to finalize your setup:"
+echo
 cat <<SUM
-
-============================================================
-✅ Installation complete!
-
 • App path:          $INSTALL_PATH
 • Hostname:          https://$HOSTNAME
-• PHP-FPM:           php8.3-fpm (running)
-• Web server:        Caddy (running)
 • Adminer URL:       https://$HOSTNAME/${ADMINER_SLUG}
 
 • Database backend:  $DB_BACKEND
@@ -1404,16 +1438,25 @@ $( [[ "$DB_BACKEND" == "MariaDB" ]] && echo "• MySQL Tuning:     Run MySQLTune
   If admin creation failed, run inside $INSTALL_PATH:
      php bin/create-admin-user.php
 
-Pro tip: Add your domain's A/AAAA records to point at this server
-and wait for DNS to propagate before first TLS issuance.
-
 Logs:
   - Caddy:           /var/log/loom/caddy.log
   - Loom (app):      $INSTALL_PATH/logs
-
-Enjoy! 🚀
-============================================================
 SUM
+echo
+echo "1. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+echo "   - /opt/registrar/whois/config.php"
+echo "   - /opt/registrar/rdap/config.php"
+echo "   - /opt/registrar/automation/config.php"
+echo
+echo "2. Add the following cron job to ensure automation runs smoothly:"
+echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo
+echo "3. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+echo
+echo "9. Configure the escrow and backup tools following the instructions in the install-loom.md file (sections 11 and 12)."
+echo
+echo "Please follow these steps carefully to complete your installation and configuration."
         ;;
     c|C)
         echo "Installation cancelled."
