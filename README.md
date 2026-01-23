@@ -50,7 +50,7 @@ For detailed installation steps, see:
 
 - [install-fossbilling.md](docs/install-fossbilling.md) – for FOSSBilling setup  
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
-- [install-loom.md](docs/install-loom.md) – for Loom setup ***(unfinished)***
+- [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
 
 ### Update
 
