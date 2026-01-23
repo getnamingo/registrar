@@ -535,8 +535,17 @@ sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
 sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/config.php
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /var/www/config.php
 
-cron_job="*/5 * * * * php /var/www/cron.php"
-(crontab -l | grep -F "$cron_job") || (crontab -l ; echo "$cron_job") | crontab -
+cron_job="*/5 * * * * /usr/bin/php8.3 /var/www/cron.php"
+
+tmp_cron="$(mktemp)"
+crontab -l 2>/dev/null > "$tmp_cron"
+
+if ! grep -Fqx "$cron_job" "$tmp_cron"; then
+  echo "$cron_job" >> "$tmp_cron"
+fi
+
+crontab "$tmp_cron"
+rm -f "$tmp_cron"
 
 # Import SQL files into the database
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
@@ -953,9 +962,20 @@ fi
 ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
+
 echo "== Adding WHMCS cron job to crontab =="
+
 cron_line="*/5 * * * * /usr/bin/php -q /var/www/html/crons/cron.php"
-(crontab -l 2>/dev/null | grep -Fxq "$cron_line") || (crontab -l 2>/dev/null; echo "$cron_line") | crontab -
+
+tmp_cron="$(mktemp)"
+crontab -l 2>/dev/null > "$tmp_cron"
+
+if ! grep -Fqx "$cron_line" "$tmp_cron"; then
+    echo "$cron_line" >> "$tmp_cron"
+fi
+
+crontab "$tmp_cron"
+rm -f "$tmp_cron"
 
 echo "SSL and cron setup complete."
 
