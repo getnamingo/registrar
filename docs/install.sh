@@ -1211,6 +1211,9 @@ ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
 case "$DB_BACKEND" in
   MariaDB)
     log "Configuring MariaDB repository…"
+mkdir -p /etc/apt/keyrings
+curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
+
 MARIADB_URI=""
 MARIADB_SUITE=""
 
