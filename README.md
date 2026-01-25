@@ -18,21 +18,23 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 ## Features
 
-- **Billing System**: Manages domain registrations, renewals, and payments as an ICANN accredited registrar, while also establishing EPP connections to registries for seamless domain operations.
+- **Billing & Registrar Operations**: Manages domain registrations, renewals, transfers, and payments as an ICANN-accredited registrar, with seamless EPP connectivity to supported registries.
 
-- **WHOIS Server**: Provides instant domain registration information in line with ICANN's format.
+- **WHOIS & RDAP Services**: Provides public WHOIS services and modern RDAP endpoints.
 
-- **RDAP Server**: Modern protocol offering structured domain registration data, accessible via HTTP in JSON format.
+- **Registration Data Escrow**: Performs automated, encrypted data deposits with [DENIC](https://www.denic-services.de/services/data-escrow), an ICANN-approved escrow agent, in compliance with ICANN requirements.
 
-- **Escrow**: Safeguards domain registrants by depositing registration data with a trusted escrow agent, mandated by ICANN.
+- **Trademark Clearinghouse (TMCH) Integration**: Implements TMCH Claims verification and Claims-based domain registration in the WHMCS version. Sunrise workflow is not implemented.
 
-- **TMCH**: Allows trademark holders to register their marks and receive domain registration alerts.
+- **WHOIS Data Reminder Policy (WDRP)**: Sends periodic reminders to registrants to review and update their registration data.
 
-- **WDRP**: Sends regular reminders to domain name registrants to update their WHOIS data, ensuring accuracy.
+- **Expired Registration Recovery Policy (ERRP)**: Implements ICANN-compliant expiration, redemption, and deletion workflows.
 
-- **ERRP**: Ensures compliance with ICANN's policies on managing expired domain names.
+- **Contact Validation**: Performs ICANN-required registrant contact validation and verification workflows.
 
-- **Contact Validation**: Validates domain name registrant's contact details for accuracy and authenticity.
+- **Transfer Management (IRTP/ITRP)**: Handles inter-registrar domain transfers with secure authorization and policy-compliant workflows.
+
+- **Extended EPP Support**: Implements registry-specific extensions and custom provisioning workflows.
 
 ## Documentation
 
