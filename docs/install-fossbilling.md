@@ -534,19 +534,37 @@ mv fossbilling-contact/Contact /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "Domain Registrant Contact".
 
-## 18. Installing FOSSBilling EPP Extensions:
+## 18. Installing FOSSBilling EPP Registrar Module:
 
-For each registry you support, you will need to install a FOSSBilling EPP extension.
+For every registry backend your registrar wants to support, you need a separate installation of the FOSSBilling EPP Registrar module. Each module can handle one or more TLDs that share the same configuration details.
 
-### 18.1. Generic EPP:
+To configure a TLD using the Namingo FOSSBilling EPP module, follow these steps:
 
-Navigate to https://github.com/getpinga/fossbilling-epp-rfc and follow the installation instructions specific to each registry.
+1. Use our **[Module Customizer Tool](https://namingo.org/foss-module/)** to generate a fine-tuned EPP registrar module specifically for your registry.
 
-### 18.2. VeriSign EPP:
+2. Extract the **generated archive** (as produced by the Module Customizer Tool) into `/tmp`
 
-Navigate to https://github.com/getnamingo/fossbilling-epp-verisign and follow the installation instructions.
+3. Move the `namingo` directory and the synchronization script `YourRegistryNameSync.php` in the main `[FOSSBilling]` directory. Then place your `key.pem` and `cert.pem` files there too.
 
-### 18.3. Executing OT&E Tests:
+4. Move the main module file `YourRegistryName.php` into the `[FOSSBilling]/library/Registrar/Adapter` directory.
+
+5. Set up a cron job that runs the sync module twice a day. Open crontab using the command `crontab -e` in your terminal.
+
+Add the following cron job:
+
+`0 0,12 * * * php /var/www/html/YourRegistryNameSync.php`
+
+This command schedules the synchronization script to run once every 12 hours (at midnight and noon).
+
+### 18.1. Module Activation
+
+1. Within FOSSBilling, go to **System -> Domain Registration -> New Domain Registrar** and activate the new domain registrar.
+
+2. Head to the "**Registrars**" tab. Here, you'll need to enter your specific configuration details, including the path to your SSL certificate and key.
+
+3. Add a new Top Level Domain (TLD) using your module from the "**New Top Level Domain**" tab. Make sure to configure all necessary details, such as pricing, within this tab.
+
+### 18.2. Executing OT&E Tests:
 
 To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
