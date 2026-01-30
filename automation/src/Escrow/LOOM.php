@@ -33,6 +33,12 @@ class LOOM implements EscrowInterface {
 
             $domainAscii = idn_to_ascii($row['service_name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $row['service_name'];
 
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $tld = strtolower((string)substr((string)strrchr($domainAscii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
+
             $nameservers = $config['nameservers'] ?? [];
             $ns1 = $nameservers[0] ?? '';
             $ns2 = $nameservers[1] ?? '';
@@ -133,6 +139,13 @@ class LOOM implements EscrowInterface {
         $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($domains as $domain) {
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $ascii = idn_to_ascii($domain['service_name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['service_name'];
+            $tld = strtolower((string)substr((string)strrchr($ascii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
+
             $config = json_decode($domain['config'] ?? '{}', true);
             $contacts = $config['contacts'] ?? [];
 

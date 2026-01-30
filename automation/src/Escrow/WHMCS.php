@@ -28,6 +28,13 @@ class WHMCS implements EscrowInterface {
 
         // Loop through each domain and gather additional data
         foreach ($domains as $domain) {
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $ascii = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'];
+            $tld = strtolower((string)substr((string)strrchr($ascii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
+
             $domainId = $domain['id'];
 
             // Get status from namingo_domain_status, default to 'ok' if empty
@@ -45,19 +52,20 @@ class WHMCS implements EscrowInterface {
                 'tech' => $domain['tech'] ?? null,
                 'billing' => $domain['billing'] ?? null,
             ];
-            
+
             // Collect contact IDs
             $contactIds = array_filter([$domain['registrant'], $domain['admin'], $domain['tech'], $domain['billing']]);
 
-            // Prepare the SQL to fetch identifiers for all contact IDs in one query
-            $sqlContacts = "SELECT id, identifier FROM namingo_contact WHERE id IN (" . implode(',', array_fill(0, count($contactIds), '?')) . ")";
-            $stmtContacts = $this->pdo->prepare($sqlContacts);
-            $stmtContacts->execute($contactIds);
-
             // Map the identifiers to contact IDs
             $identifiers = [];
-            while ($row = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
-                $identifiers[$row['id']] = $row['identifier'];
+            if (!empty($contactIds)) {
+                $sqlContacts = "SELECT id, identifier FROM namingo_contact WHERE id IN (" . implode(',', array_fill(0, count($contactIds), '?')) . ")";
+                $stmtContacts = $this->pdo->prepare($sqlContacts);
+                $stmtContacts->execute(array_values($contactIds));
+
+                while ($row = $stmtContacts->fetch(\PDO::FETCH_ASSOC)) {
+                    $identifiers[$row['id']] = $row['identifier'];
+                }
             }
 
             // Replace the contact IDs with identifiers
@@ -147,6 +155,13 @@ class WHMCS implements EscrowInterface {
         $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($domains as $domain) {
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $ascii = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'];
+            $tld = strtolower((string)substr((string)strrchr($ascii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
+
             // Fetch contacts (registrant and billing only)
             $contacts = [];
 
@@ -238,7 +253,7 @@ class WHMCS implements EscrowInterface {
         $file = fopen($this->full, 'a');
 
         // Extract the necessary data from the domain array
-        $domainName = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+        $domainName = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'];
         $status = $domain['status'];
         $registrationDate = $domain['crdate'];
         $expiryDate = $domain['exdate'];

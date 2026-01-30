@@ -39,7 +39,12 @@ class FOSS implements EscrowInterface {
             $techContactId = $meta['tech_contact_id'] ?? '';
             $billingContactId = $meta['billing_contact_id'] ?? '';
 
-            $domainAscii = idn_to_ascii($row['domain'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $domainAscii = idn_to_ascii($row['domain'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $row['domain'];
+            $tld = strtolower((string)substr((string)strrchr($domainAscii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
 
             // Write the row data to the CSV
             $line = "\"{$domainAscii}\",\"{$row['ns1']}\",\"{$row['ns2']}\",\"{$row['ns3']}\",\"{$row['ns4']}\",\"{$row['exdate']}\",\"{$registrantContactId}\",\"{$techContactId}\",\"{$adminContactId}\",\"{$billingContactId}\",\"\",\"\",\"\",\"\"";
@@ -134,6 +139,13 @@ class FOSS implements EscrowInterface {
         $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         foreach ($domains as $domain) {
+            // Skip ccTLDs (2-letter ASCII TLD)
+            $ascii = idn_to_ascii($domain['domainname'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['domainname'];
+            $tld = strtolower((string)substr((string)strrchr($ascii, '.'), 1));
+            if (strlen($tld) === 2 && ctype_alpha($tld)) {
+                continue;
+            }
+
             // Fetch registrant and billing contact data
             $contactIds = array_filter([
                 $domain['registrant_contact_id'] ?? null,
