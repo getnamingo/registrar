@@ -1,15 +1,16 @@
 <?php
 /**
- * Namingo Registrar Escrow
+ * Namingo Registrar Data Escrow
  *
- * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2026 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
 
+declare(strict_types=1);
+
 use Registrar\Escrow\EscrowInterface;
 
-declare(strict_types=1);
 date_default_timezone_set('UTC');
 
 require_once __DIR__ . '/config.php';
