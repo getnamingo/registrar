@@ -339,6 +339,7 @@ mkdir -p /var/www/data/log/event
 chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
 chown www-data:www-data /var/www/data/log
+chown www-data:www-data /var/www/data/log/event
 chmod -R 755 /var/www/data/uploads
 chown www-data:www-data /var/www/data/uploads
 chown -R www-data:www-data /var/www
