@@ -29,19 +29,52 @@ class WHMCS implements RdapInterface
     public function getContacts(PDOProxy $pdo, string $domain, array $domainDetails): array
     {
         return [
-            'registrant' => $this->getContact($pdo, $domainDetails['registrant']),
-            'administrative' => $this->getContact($pdo, $domainDetails['admin']),
-            'technical' => $this->getContact($pdo, $domainDetails['tech']),
-            'billing' => $this->getContact($pdo, $domainDetails['billing']),
+            'registrant' => $this->getContact($pdo, $domainDetails['registrant'], $domain),
+            'administrative' => $this->getContact($pdo, $domainDetails['admin'], $domain),
+            'technical' => $this->getContact($pdo, $domainDetails['tech'], $domain),
+            'billing' => $this->getContact($pdo, $domainDetails['billing'], $domain),
         ];
     }
 
-    private function getContact(PDOProxy $pdo, int $id): array
+    private function getContact(PDOProxy $pdo, int $id, string $domain = ''): array
     {
         $stmt = $pdo->prepare("SELECT * FROM namingo_contact WHERE id = :id");
         $stmt->bindParam(':id', $id);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $contact = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($contact !== false) {
+            return $contact;
+        }
+
+        if ($domain === '') {
+            return [];
+        }
+
+        $stmt = $pdo->prepare("SELECT userid FROM tbldomains WHERE domain = :domain LIMIT 1");
+        $stmt->bindValue(':domain', $domain);
+        $stmt->execute();
+
+        $userid = $stmt->fetchColumn();
+
+        if (!$userid) {
+            return [];
+        }
+
+        $stmt = $pdo->prepare("SELECT country FROM tblclients WHERE id = :id LIMIT 1");
+        $stmt->bindValue(':id', (int)$userid);
+        $stmt->execute();
+
+        $country = $stmt->fetchColumn();
+
+        if (!$country) {
+            return [];
+        }
+
+        return [
+            'cc' => strtoupper($country),
+        ];
     }
 
     public function getDomainStatuses(PDOProxy $pdo, int $domainId): array
@@ -72,9 +105,9 @@ class WHMCS implements RdapInterface
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function mapContactToVCard(array $contact, string $role, array $config): array
+    public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardWHMCS($contact, $role, $config);
+        return mapContactToVCardWHMCS($contact, $role, $config, $domain);
     }
 
     public function getDomainHandle(array $domain): string

@@ -43,7 +43,7 @@ function mapContactToVCardFOSS($contactDetails, $role, $c, $domain)
 {
     return [
         'objectClassName' => 'entity',
-        ...rdapIfNotMinData($c, ['handle' => $contactDetails['id']]),
+        ...rdapIfNotMinData($c, ['handle' => $contactDetails['id'] ?? '']),
         'roles' => [$role],
         'vcardArray' => [
             "vcard",
@@ -76,7 +76,7 @@ function mapContactToVCardWHMCS($contactDetails, $role, $c, $domain)
 {
     return [
         'objectClassName' => 'entity',
-        ...rdapIfNotMinData($c, ['handle' => $contactDetails['identifier']]),
+        ...rdapIfNotMinData($c, ['handle' => $contactDetails['identifier'] ?? '']),
         'roles' => [$role],
         'vcardArray' => [
             "vcard",

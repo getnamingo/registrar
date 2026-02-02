@@ -282,7 +282,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         }
 
         $contacts = [];
-        $adapter->getContacts($pdo, $domain, $domainDetails);
+        $contacts = $adapter->getContacts($pdo, $domain, $domainDetails);
 
         $domainStatuses = $adapter->getDomainStatuses($pdo, $domainDetails['id']);
         $dnssecRecords = $adapter->getDNSSEC($pdo, $domainDetails['id']);
@@ -328,7 +328,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                 'rdap_level_0',
                 'icann_rdap_response_profile_1',
                 'icann_rdap_technical_implementation_guide_1',
-                ...(!empty($c['minimum_data']) || !empty($c['privacy']) ? ['redacted'] : []),
+                ...(!empty($c['minimum_data']) ? ['redacted'] : []),
             ],
             'objectClassName' => 'domain',
             'entities' => array_merge(

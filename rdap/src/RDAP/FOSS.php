@@ -96,9 +96,9 @@ class FOSS implements RdapInterface
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function mapContactToVCard(array $contact, string $role, array $config): array
+    public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardFOSS($contact, $role, $config);
+        return mapContactToVCardFOSS($contact, $role, $config, $domain);
     }
 
     public function getDomainHandle(array $domain): string

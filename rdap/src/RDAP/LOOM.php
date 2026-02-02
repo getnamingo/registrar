@@ -32,7 +32,6 @@ class LOOM implements RdapInterface
         $config = json_decode($domainDetails['config'] ?? '{}', true);
         $contactsFromJson = $config['contacts'] ?? [];
 
-        // Map JSON keys to RDAP-style role names
         $map = [
             'registrant' => 'registrant',
             'admin' => 'administrative',
@@ -92,9 +91,9 @@ class LOOM implements RdapInterface
         return $config['dnssec']['ds_records'] ?? [];
     }
 
-    public function mapContactToVCard(array $contact, string $role, array $config): array
+    public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardLOOM($contact, $role, $config);
+        return mapContactToVCardLOOM($contact, $role, $config, $domain);
     }
 
     public function getDomainHandle(array $domain): string
