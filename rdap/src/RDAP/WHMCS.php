@@ -36,8 +36,10 @@ class WHMCS implements RdapInterface
         ];
     }
 
-    private function getContact(PDOProxy $pdo, int $id, string $domain = ''): array
+    private function getContact(PDOProxy $pdo, ?int $id, string $domain = ''): array
     {
+        if ($id === null) $id = 0;
+
         $stmt = $pdo->prepare("SELECT * FROM namingo_contact WHERE id = :id");
         $stmt->bindParam(':id', $id);
         $stmt->execute();
