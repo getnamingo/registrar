@@ -1,5 +1,7 @@
 # Namingo Registrar: Installation Guide (FOSSBilling)
 
+This guide is for setting up **FOSSBilling 0.7.2** with **PHP 8.3** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
+
 ## 1. Install the required packages:
 
 Follow the instructions for your operating system.
@@ -372,7 +374,7 @@ Ensure you make all contact details/profile ***mandatory*** for your users withi
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.1.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.1.5 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```

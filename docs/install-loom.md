@@ -252,7 +252,7 @@ php bin/create-admin-user.php
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.1.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.1.5 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```

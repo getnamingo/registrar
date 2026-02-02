@@ -56,6 +56,8 @@ For detailed installation steps, see:
 
 ### Update
 
+- v1.1.4 to v1.1.5 - backup registrar, download and run the [update115.sh](docs/update115.sh) script.
+
 - v1.1.3 to v1.1.4 - backup registrar, download and run the [update114.sh](docs/update114.sh) script.
 
 - v1.1.2 to v1.1.3 - backup registrar, download and run the [update113.sh](docs/update113.sh) script.
