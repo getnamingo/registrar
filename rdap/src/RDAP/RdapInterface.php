@@ -39,7 +39,7 @@ interface RdapInterface {
     /**
      * Maps a contact record to a vCard entity block for the RDAP response.
      */
-    public function mapContactToVCard(array $contact, string $role, array $config): array;
+    public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array;
 
     /**
      * Returns the RDAP handle for the domain (e.g., registry ID or domain ID).

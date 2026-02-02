@@ -282,10 +282,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         }
 
         $contacts = [];
-
-        if (!$c['minimum_data']) {
-            $contacts = $adapter->getContacts($pdo, $domain, $domainDetails);
-        }
+        $adapter->getContacts($pdo, $domain, $domainDetails);
 
         $domainStatuses = $adapter->getDomainStatuses($pdo, $domainDetails['id']);
         $dnssecRecords = $adapter->getDNSSEC($pdo, $domainDetails['id']);
@@ -329,10 +326,9 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         $rdapResponse = [
             'rdapConformance' => [
                 'rdap_level_0',
-                'icann_rdap_response_profile_0',
                 'icann_rdap_response_profile_1',
-                'icann_rdap_technical_implementation_guide_0',
                 'icann_rdap_technical_implementation_guide_1',
+                ...(!empty($c['minimum_data']) || !empty($c['privacy']) ? ['redacted'] : []),
             ],
             'objectClassName' => 'domain',
             'entities' => array_merge(
@@ -390,16 +386,21 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                             "href" => $c['rdap_url'],
                             "value" => $c['rdap_url'],
                             "type" => "application/rdap+json"
+                        ],
+                        [
+                            "rel" => "about",
+                            "href" => $c['rdap_url'] . '/',
+                            "value" => $c['registrar_url']
                         ]
                     ],
                     ],
                 ],
-                !$c['minimum_data']
-                    ? array_map(
-                        fn($role) => $adapter->mapContactToVCard($contacts[$role] ?? [], $role, $c),
-                        ['registrant', 'administrative', 'billing', 'technical']
-                    )
-                    : []
+                array_map(
+                    fn($role) => $adapter->mapContactToVCard($contacts[$role] ?? [], $role, $c, $domain),
+                    !empty($c['minimum_data'])
+                        ? ['registrant']
+                        : ['registrant', 'administrative', 'billing', 'technical']
+                )
             ),
             'events' => $events,
             'handle' => $adapter->getDomainHandle($domainDetails),
@@ -443,6 +444,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             }, $adapter->getNameservers($domainDetails)),
             'status' => $domainStatuses,
             "secureDNS" => $secureDNS,
+            ...(!empty($c['minimum_data']) ? ['redacted' => getRdapRedactionMap()] : []),
             "notices" => [
                 [
                     "title" => "Terms of Service",
