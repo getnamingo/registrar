@@ -221,6 +221,10 @@ function rdapValue(?string $value, array $c): string
 function rdapEmailOrContactUriProp(?string $email, array $c, string $domain): array
 {
     if (!empty($c['minimum_data'])) {
+        if (!empty($c['contact_uri'])) {
+            return ["contact-uri", new stdClass(), "uri", $c['contact_uri'].'&domain='.$domain];
+        }
+
         $registrarUrl = rtrim((string)($c['registrar_url'] ?? ''), '/');
         $backend = strtolower((string)($c['backend'] ?? 'foss'));
 
