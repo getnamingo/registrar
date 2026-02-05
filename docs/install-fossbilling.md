@@ -583,8 +583,6 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
 
-3. Some manual tune-in is still required in various parts.
-
 ### ICANN MoSAPI Integration
 
 This script connects to [MoSAPI](https://mosapi.icann.org) to monitor registrar state and domain abuse reports (METRICA) using your ICANN-assigned credentials.

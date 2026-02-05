@@ -258,7 +258,7 @@ else
   domain_name="$panel_domain_name"
 fi
 
-read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
+read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 read -p "Choose a database username: " db_user
 read -sp "Choose a password for this user: " db_pass
 echo
@@ -608,37 +608,41 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 fi
 
 # Final instructions to the user
-echo "Installation is complete. Please follow these manual steps to finalize your setup:"
+echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
 echo
-echo "1. Open your browser and visit https://$panel_domain_name/admin to create a new admin account."
+echo "1. Open your browser and visit https://$panel_domain_name/admin to login with your admin account."
 echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
 echo "   Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
 echo
-echo "3. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
-echo "   - /opt/registrar/whois/config.php"
-echo "   - /opt/registrar/rdap/config.php"
-echo "   - /opt/registrar/automation/config.php"
+echo "3. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
 echo
-echo "4. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo "4. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
 echo
-echo "5. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
-echo
-echo "6. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
-echo "   - Domain Contact Verification"
-echo "   - TMCH Claims Notice Support"
-echo "   - WHOIS & RDAP Client"
-echo "   - Domain Registrant Contact"
-echo "   - ICANN Registrar Accreditation"
-echo
-echo "7. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
-echo
-echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-echo "   On your contact page, list all company details, including registration number and the name of the CEO."
-echo
-echo "9. Configure the escrow and backup tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
-echo
+
+if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    echo "5. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "   - /opt/registrar/whois/config.php"
+    echo "   - /opt/registrar/rdap/config.php"
+    echo "   - /opt/registrar/automation/config.php"
+    echo
+    echo "6. Add the following cron job to ensure automation runs smoothly:"
+    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
+    echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
+    echo "   - Domain Contact Verification"
+    echo "   - TMCH Claims Notice Support"
+    echo "   - WHOIS & RDAP Client"
+    echo "   - Domain Registrant Contact"
+    echo "   - ICANN Registrar Accreditation"
+    echo
+    echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo
+    echo "9. Configure the escrow and backup tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
+    echo
+fi
+
 echo "Please follow these steps carefully to complete your installation and configuration."
         ;;
     2)
@@ -695,7 +699,7 @@ else
   domain_name="$panel_domain_name"
 fi
 
-read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
+read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 read -p "Choose a database username: " db_user
 read -sp "Choose a password for this user: " db_pass
 echo
@@ -1009,30 +1013,29 @@ echo
 echo "2. For security reasons, please delete the /var/www/html/install directory:"
 echo "   sudo rm -rf /var/www/html/install"
 echo
-echo "3. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
-echo "   - /opt/registrar/whois/config.php"
-echo "   - /opt/registrar/rdap/config.php"
-echo "   - /opt/registrar/automation/config.php"
+echo "3. Ensure all contact details/profile fields are mandatory for your users within the WHMCS settings or configuration."
 echo
-echo "4. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+echo "4. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15 of install-whmcs.md."
 echo
-echo "5. Ensure all contact details/profile fields are mandatory for your users within the WHMCS settings or configuration."
-echo
-echo "6. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the following extensions:"
-echo "   - Domain Contact Verification"
-echo "   - TMCH Claims Notice Support"
-echo "   - WHOIS & RDAP Client"
-echo "   - Domain Registrant Contact"
-echo "   - ICANN Registrar Accreditation"
-echo
-echo "7. Install WHMCS extensions for EPP as outlined in step 18 of install-whmcs.md."
-echo
-echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-echo "   On your contact page, list all company details, including registration number and the name of the CEO."
-echo
-echo "9. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 20)."
-echo
+
+if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    echo "5. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "   - /opt/registrar/whois/config.php"
+    echo "   - /opt/registrar/rdap/config.php"
+    echo "   - /opt/registrar/automation/config.php"
+    echo
+    echo "6. Add the following cron job to ensure automation runs smoothly:"
+    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
+    echo "7. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the Namingo Registrar extension."
+    echo
+    echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo
+    echo "9. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 20)."
+    echo
+fi
+
 echo "Please follow these steps carefully to complete your installation and configuration."
                 ;;
             2)
@@ -1048,7 +1051,7 @@ echo "Please follow these steps carefully to complete your installation and conf
                         echo "Installation aborted."
                         exit 1
                     fi
-                    read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
+                    read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 
                     read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
 
@@ -1139,7 +1142,7 @@ select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
 done
 
 # DB credentials (used unless SQLite)
-read -p "Do you want to install RDAP and WHOIS services? (Y/N): " install_rdap_whois
+read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 if [[ "$DB_BACKEND" != "SQLite" ]]; then
   prompt DB_NAME "Choose a database name: " "loom"
   prompt DB_USER "Choose a database username: " "loom"
@@ -1465,7 +1468,7 @@ yes | ufw enable >/dev/null 2>&1 || true
 ufw status || true
 
 # ---------- Summary ----------
-echo "Installation is complete. Please follow these manual steps to finalize your setup:"
+echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
 echo
 cat <<SUM
 • App path:          $INSTALL_PATH
@@ -1485,19 +1488,23 @@ Logs:
   - Loom (app):      $INSTALL_PATH/logs
 SUM
 echo
-echo "1. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
-echo "   - /opt/registrar/whois/config.php"
-echo "   - /opt/registrar/rdap/config.php"
-echo "   - /opt/registrar/automation/config.php"
-echo
-echo "2. Add the following cron job to ensure automation runs smoothly:"
-echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-echo
-echo "3. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-echo "   On your contact page, list all company details, including registration number and the name of the CEO."
-echo
-echo "9. Configure the escrow and backup tools following the instructions in the install-loom.md file (sections 11 and 12)."
-echo
+
+if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    echo "1. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "   - /opt/registrar/whois/config.php"
+    echo "   - /opt/registrar/rdap/config.php"
+    echo "   - /opt/registrar/automation/config.php"
+    echo
+    echo "2. Add the following cron job to ensure automation runs smoothly:"
+    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
+    echo "3. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo
+    echo "9. Configure the escrow and backup tools following the instructions in the install-loom.md file (sections 11 and 12)."
+    echo
+fi
+
 echo "Please follow these steps carefully to complete your installation and configuration."
         ;;
     c|C)

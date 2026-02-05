@@ -482,7 +482,7 @@ chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/NAME
 chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 ```
 
-5. Go to Settings > Apps & Integrations in the admin panel, search for "Namingo EPP NAME" and then activate "Namingo EPP NAME".
+5. Go to Settings > Apps & Integrations in the admin panel, search for [MODULE] and then activate.
 
 6. Configure from Configuration -> System Settings -> Domain Registrars.
 
@@ -504,13 +504,61 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 
 To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
-## 15. Further Settings:
+## 15. Installing WHMCS Module:
+
+### 15.1. Upload the Module
+
+1. Download the latest release archive of the module.
+2. Extract the archive on your local machine.
+3. Upload the `whmcs_dns` directory to your WHMCS installation so the final structure is: `/modules/addons/whmcs_dns/`
+4. Verify that the module files are readable by the web server user.
+
+### 15.2. Activate the Addon in WHMCS
+
+1. Log in to the **WHMCS Admin Area**.
+2. Navigate to **System Settings → Addons**.
+3. Locate **DNS Hosting** in the list.
+4. Click **Activate**.
+
+### (BIND9 Module only) 15.3. Installation of BIND9 API Server:
+
+To use the BIND9 module, you must install the [bind9-api-server](https://github.com/getnamingo/bind9-api-server) on your master BIND server. This API server allows for seamless integration and management of your DNS zones via API.
+
+Make sure to configure the API server according to your BIND installation parameters to ensure proper synchronization of your DNS zones.
+
+### 15.4. Configure the Addon
+
+After activating the addon, configure the module settings in **WHMCS → System Settings → Addons**:
+
+- **DNS Provider**  
+  Identifier of the PlexDNS-supported provider  
+  *(e.g. `Desec`, `PowerDNS`, `Cloudflare`, etc.)*
+
+- **API Key**  
+  API key for the selected DNS provider.
+
+- **SOA Email**  
+  Email address used in the SOA record (where applicable).
+
+- **Nameservers (NS1–NS5)**  
+  Nameservers that clients should point their domains to when using this DNS service.
+
+Click **Save Changes** to apply the configuration.
+
+### 15.5. Usage (Client Area)
+
+- Clients access DNS management from their **Domain Details** page.
+- A **“DNS Manager”** link appears in the domain sidebar.
+- DNS zones are **not created automatically**.
+- Clients must explicitly click **“Enable DNS”** to create a DNS zone.
+- Once enabled, DNS records can be **added, edited, or deleted**.
+- Clicking **“Disable DNS”** removes (deletes) the DNS zone from the provider.
+
+## 16. Further Settings:
 
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
-
-3. Some manual tune-in is still required in various parts.
 
 ### ICANN MoSAPI Integration
 
