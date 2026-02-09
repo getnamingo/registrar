@@ -119,6 +119,7 @@ copy_files "/opt/registrar115/automation" "/opt/registrar/automation"
 copy_files "/opt/registrar115/whois" "/opt/registrar/whois"
 copy_files "/opt/registrar115/rdap" "/opt/registrar/rdap"
 copy_files "/opt/registrar115/tests" "/opt/registrar/tests"
+copy_files "/opt/registrar115/docs" "/opt/registrar/docs"
 
 # Run composer update in copied directories (excluding docs)
 echo "Running composer update..."

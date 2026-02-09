@@ -639,7 +639,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
     echo "   On your contact page, list all company details, including registration number and the name of the CEO."
     echo
-    echo "9. Configure the escrow and backup tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
+    echo "9. Configure the escrow and other tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
     echo
 fi
 
@@ -1032,7 +1032,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
     echo "   On your contact page, list all company details, including registration number and the name of the CEO."
     echo
-    echo "9. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 20)."
+    echo "9. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 16)."
     echo
 fi
 

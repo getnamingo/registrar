@@ -504,7 +504,7 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 
 To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
-## 15. Installing WHMCS Module:
+## 15. Installing WHMCS DNS Module:
 
 ### 15.1. Upload the Module
 
@@ -559,6 +559,8 @@ Click **Save Changes** to apply the configuration.
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
+
+3. You must activate **ICANN transfer notifications** by following the instructions in [hooks.md](docs/hooks/hooks.md).
 
 ### ICANN MoSAPI Integration
 
