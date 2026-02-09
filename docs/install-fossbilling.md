@@ -564,6 +564,7 @@ This command schedules the synchronization script to run once every 12 hours (at
 1. Within FOSSBilling, go to **System -> Domain Registration -> New Domain Registrar** and activate the new domain registrar.
 
 2. Head to the "**Registrars**" tab. Here, you'll need to enter your specific configuration details, including the path to your SSL certificate and key.
+If you are configuring a gTLD, make sure to enable "**Enable Minimum Data Set**" in the module settings.
 
 3. Add a new Top Level Domain (TLD) using your module from the "**New Top Level Domain**" tab. Make sure to configure all necessary details, such as pricing, within this tab.
 
@@ -582,6 +583,8 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
 
 2. In your contact page, you will need to list all company details, including registration number and name of CEO.
+
+3. If you experience issues saving any configuration options in the admin panel, enable the Error Reporting option to help identify the problem.
 
 ### ICANN MoSAPI Integration
 

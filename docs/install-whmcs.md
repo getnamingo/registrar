@@ -484,7 +484,7 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 
 5. Go to Settings > Apps & Integrations in the admin panel, search for [MODULE] and then activate.
 
-6. Configure from Configuration -> System Settings -> Domain Registrars.
+6. Configure from Configuration -> System Settings -> Domain Registrars. If you are configuring a **gTLD**, enable both "**gTLD Registry**" and "**Use Minimum Data Set**" options.
 
 7. Add a new TLD using Configuration -> System Settings -> Domain Pricing.
 
