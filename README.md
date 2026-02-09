@@ -36,6 +36,8 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **ICANN Transfer Notification**: Provides policy-compliant notifications for transfer requests, completions, and failures in accordance with the ICANN Transfer Policy. *Currently available in the WHMCS integration.*
 
+- **Premium Domain Support**: Provides automated detection and pricing of premium domain names via the EPP Fee Extension during availability checks and registration. *Currently available in the WHMCS integration.*
+
 - **Extended EPP Support**: Implements registry-specific extensions and custom provisioning workflows.
 
 ## Documentation
