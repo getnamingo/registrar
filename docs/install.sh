@@ -207,7 +207,7 @@ echo "Please choose the billing system you plan to use:"
 echo
 echo "  1) FOSSBilling – free & open-source"
 echo "  2) WHMCS       – commercial billing platform"
-echo "  3) Loom        – lightweight panel"
+echo "  3) Loom        – lightweight panel (beta)"
 echo "  c) Cancel"
 echo
 read -rp "Enter your choice [1/2/3/c]: " choice
