@@ -1132,14 +1132,15 @@ prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications: " "admin@$HOSTNA
 prompt INSTALL_PATH "Install path for Loom: " "/var/www/loom"
 
 # DB choice
-echo
-echo "Choose database backend:"
-select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
-  case "$DB_BACKEND" in
-    MariaDB|PostgreSQL|SQLite) break ;;
-    *) echo "Invalid selection."; ;;
-  esac
-done
+DB_BACKEND="MariaDB"
+# echo
+# echo "Choose database backend:"
+# select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
+  # case "$DB_BACKEND" in
+    # MariaDB|PostgreSQL|SQLite) break ;;
+    # *) echo "Invalid selection."; ;;
+  # esac
+# done
 
 # DB credentials (used unless SQLite)
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
