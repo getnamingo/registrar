@@ -24,7 +24,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **Registration Data Escrow**: Performs automated, encrypted data deposits with [DENIC](https://www.denic-services.de/services/data-escrow), an ICANN-approved escrow agent, in compliance with ICANN requirements.
 
-- **Trademark Clearinghouse (TMCH) Integration**: Implements TMCH Claims verification and Claims-based domain registration in the WHMCS version. Sunrise workflow is not implemented.
+- **Trademark Clearinghouse (TMCH) Integration**: Implements TMCH Claims verification and Claims-based domain registration. Sunrise workflow is not implemented. Currently available in the WHMCS integration.
 
 - **WHOIS Data Reminder Policy (WDRP)**: Sends periodic reminders to registrants to review and update their registration data.
 
@@ -33,6 +33,8 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 - **Contact Validation**: Performs ICANN-required registrant contact validation and verification workflows.
 
 - **Transfer Management (IRTP/ITRP)**: Handles inter-registrar domain transfers with secure authorization and policy-compliant workflows.
+
+- **ICANN Transfer Notification**: Provides policy-compliant notifications for transfer requests, completions, and failures in accordance with the ICANN Transfer Policy. Currently available in the WHMCS integration.
 
 - **Extended EPP Support**: Implements registry-specific extensions and custom provisioning workflows.
 
