@@ -112,7 +112,7 @@ foreach ($rows as $row) {
             $domain_name      = $row['service_name'];
             $registrant_email = $row['email'];
             $token            = $row['validation_log'];
-            $link             = rtrim($config['registrar_url'], '/')."/index.php?m=validation&token=".$token;
+            $link             = rtrim($config['registrar_url'], '/')."/validation/".$token;
         } else {
             $log->error("Unknown backend: $backend");
             exit(1);
