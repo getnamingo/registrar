@@ -40,7 +40,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **Extended EPP Support**: Implements registry-specific extensions and custom provisioning workflows.
 
-- **ICANN MoSAPI Monitoring**: Provides automated monitoring of registrar status, compliance indicators, and domain abuse statistics through ICANN’s MoSAPI platform. *Currently available in the WHMCS integration.*
+- **ICANN MoSAPI Monitoring**: Provides automated monitoring of registrar status, compliance indicators, and domain abuse statistics through ICANN’s MoSAPI platform. *Currently available in the WHMCS and Loom integrations.*
 
 ## Documentation
 
