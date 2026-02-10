@@ -20,13 +20,13 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **Billing & Registrar Operations**: Manages domain registrations, renewals, transfers, and payments as an ICANN-accredited registrar, with seamless EPP connectivity to supported registries.
 
-- **WHOIS & RDAP Services**: Provides public WHOIS services and modern RDAP endpoints.
+- **Registration Data Directory Services (RDDS) using RDAP**: Supports public access to domain registration data via RDAP, with continued support for legacy WHOIS services.
 
 - **Registration Data Escrow**: Performs automated, encrypted data deposits with [DENIC](https://www.denic-services.de/services/data-escrow), an ICANN-approved escrow agent, in compliance with ICANN requirements.
 
 - **Trademark Clearinghouse (TMCH) Integration**: Implements TMCH Claims verification and Claims-based domain registration. Sunrise workflow is not implemented. *Currently available in the WHMCS integration.*
 
-- **WHOIS Data Reminder Policy (WDRP)**: Sends periodic reminders to registrants to review and update their registration data.
+- **Registration Data Reminder Policy (RDRP)**: Sends periodic reminders to registrants to review and update their registration data.
 
 - **Expired Registration Recovery Policy (ERRP)**: Implements ICANN-compliant expiration, redemption, and deletion workflows.
 
