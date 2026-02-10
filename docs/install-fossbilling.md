@@ -580,9 +580,15 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 
 ## 20. Further Settings:
 
-1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
+1. **Footer Compliance Links**  
+   Your website footer must include links to all required ICANN documents, as well as your own **Terms and Conditions** and **Privacy Policy**.
 
-2. In your contact page, you will need to list all company details, including registration number and name of CEO.
+2. **Company Information on Contact Page**  
+   Your Contact page must clearly display your full company details, including:
+   - Legal company name  
+   - Registration number  
+   - Registered address  
+   - Name of the Chief Executive Officer (CEO)
 
 3. If you experience issues saving any configuration options in the admin panel, enable the Error Reporting option to help identify the problem.
 

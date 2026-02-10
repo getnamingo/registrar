@@ -556,35 +556,29 @@ Click **Save Changes** to apply the configuration.
 
 ## 16. Further Settings:
 
-1. You will need to link to various ICANN documents in your footer, and also provide your terms and conditions and privacy policy.
+1. **Footer Compliance Links**  
+   Your website footer must include links to all required ICANN documents, as well as your own **Terms and Conditions** and **Privacy Policy**.
+   
+2. **Company Information on Contact Page**  
+   Your Contact page must clearly display your full company details, including:
+   - Legal company name  
+   - Registration number  
+   - Registered address  
+   - Name of the Chief Executive Officer (CEO)
 
-2. In your contact page, you will need to list all company details, including registration number and name of CEO.
+3. **ICANN Transfer Notifications**  
+   You must enable ICANN transfer notifications in accordance with the instructions provided in [hooks.md](docs/hooks/hooks.md).
 
-3. You must activate **ICANN transfer notifications** by following the instructions in [hooks.md](docs/hooks/hooks.md).
+4. **ICANN MoSAPI Monitoring**  
+   MoSAPI is ICANN’s official platform for monitoring registrar compliance and domain abuse reports.
 
-### ICANN MoSAPI Integration
+   To enable MoSAPI support, install the Namingo MoSAPI Monitor module:
 
-This script connects to [MoSAPI](https://mosapi.icann.org) to monitor registrar state and domain abuse reports (METRICA) using your ICANN-assigned credentials.
+```bash
+git clone https://github.com/getnamingo/whmcs-mosapi-monitor
+mv whmcs-mosapi-monitor/mosapi_monitor /var/www/html/whmcs/modules/addons
+chown -R www-data:www-data /var/www/html/whmcs/modules/addons/mosapi_monitor
+chmod -R 755 /var/www/html/whmcs/modules/addons/mosapi_monitor
+```
 
-#### What It Does
-
-- Logs in using your MoSAPI username/password
-- Fetches current registrar state (`monitoring/state`)
-- Retrieves the latest Domain METRICA abuse statistics (`metrica/domainList/latest`)
-- Caches data for 5 minutes to reduce API calls
-
-#### Output Includes
-
-- Registrar status and tested services (e.g. RDAP)
-- Any active incidents or threshold alerts
-- Threat types (e.g. phishing, malware) with domain counts
-
-#### Requirements
-
-- PHP 8.3+
-- `apcu` extension enabled for CLI
-- ICANN MoSAPI access credentials
-
-#### Usage
-
-Configure and then run `/opt/registrar/tests/icann_mosapi_monitor.php`.
+- Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **"ICANN MoSAPI"**, activate the module, and then configure it from its respective configuration menu.
