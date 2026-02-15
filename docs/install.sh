@@ -440,6 +440,8 @@ rm /etc/nginx/sites-enabled/default
 ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
 systemctl enable nginx
 systemctl restart nginx
 
@@ -838,6 +840,8 @@ echo "Apache configured on $panel_domain_name"
 ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
 
 # Install and configure MariaDB
 mkdir -p /etc/apt/keyrings
@@ -977,6 +981,8 @@ fi
 ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
 
 echo "== Adding WHMCS cron job to crontab =="
 
@@ -1464,7 +1470,7 @@ fi
 # ---------- Firewall ----------
 log "Configuring UFW…"
 ufw allow OpenSSH >/dev/null 2>&1 || true
-ufw allow 80,443/tcp >/dev/null 2>&1 || true
+ufw allow 22,43,80,443/tcp >/dev/null 2>&1 || true
 yes | ufw enable >/dev/null 2>&1 || true
 ufw status || true
 
