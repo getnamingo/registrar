@@ -362,7 +362,7 @@ server {
     listen [::]:80;
     server_name rdap.$domain_name;
 
-    return 301 https://$host$request_uri;
+    return 301 https://\$host\$request_uri;
 }
 
 server {
