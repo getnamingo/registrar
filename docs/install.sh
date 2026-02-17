@@ -106,7 +106,8 @@ install_rdap_and_whois_services() {
     # Edit config.php with the database credentials
     sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
     sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+    escaped_pass=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+    sed -i "s|'db_password' => .*|'db_password' => '$escaped_pass',|" config.php
 
     # Copy and enable the WHOIS service
     cp whois.service /etc/systemd/system/
@@ -122,7 +123,8 @@ install_rdap_and_whois_services() {
     # Edit config.php with the database credentials
     sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
     sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass',|" config.php
+    db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+    sed -i "s|'db_password' => .*|'db_password' => '$db_pass_escaped',|" config.php
 
     # Copy and enable the RDAP service
     cp rdap.service /etc/systemd/system/
@@ -137,7 +139,8 @@ install_rdap_and_whois_services() {
 
     # Edit config.php with the database credentials
     sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
-    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass'/g" config.php
+    db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass_escaped'/g" config.php
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
@@ -536,7 +539,8 @@ mv /var/www/config-sample.php /var/www/config.php
 sed -i "s|'url' => 'localhost/'|'url' => '$panel_domain_name/'|" /var/www/config.php
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
 sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/config.php
-sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass'|" /var/www/config.php
+db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass_escaped'|" /var/www/config.php
 
 cron_job="*/5 * * * * /usr/bin/php8.3 /var/www/cron.php"
 
