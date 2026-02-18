@@ -236,11 +236,54 @@ read -p "Enter the domain where the system will live (e.g., example.com or cp.ex
 # normalize
 panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
 
-# count dots
-dot_count="$(grep -o "\." <<< "$panel_domain_name" | wc -l)"
+# basic sanity
+if [[ ! "$panel_domain_name" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a simple domain like:"
+  echo "     - example.com"
+  echo "     - cp.example.com"
+  echo "     - cp.example.co.uk"
+  echo ""
+  exit 1
+fi
 
-# reject complex domains
-if [[ "$dot_count" -gt 2 ]]; then
+# split into labels
+IFS='.' read -r -a parts <<< "$panel_domain_name"
+n=${#parts[@]}
+
+if (( n < 2 )); then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a domain like example.com"
+  echo ""
+  exit 1
+fi
+
+tld="${parts[n-1]}"
+sld="${parts[n-2]}"
+
+case "$sld" in
+  co|com|net|org|gov|edu|ac|mil|int|go|gob|nic|id|sch|school|k12|or)
+    if (( ${#tld} == 2 )) && (( n >= 3 )); then
+      registrable="${parts[n-3]}.${parts[n-2]}.${parts[n-1]}"
+      suffix_len=3
+    else
+      registrable="${parts[n-2]}.${parts[n-1]}"
+      suffix_len=2
+    fi
+    ;;
+  *)
+    registrable="${parts[n-2]}.${parts[n-1]}"
+    suffix_len=2
+    ;;
+esac
+
+# allow only:
+# - registrable domain itself (no subdomain)
+# - exactly one label before registrable (one subdomain)
+sub_labels=$(( n - suffix_len ))
+if (( sub_labels > 1 )); then
   echo ""
   echo "   Unsupported domain format."
   echo "   Please use a simple domain like:"
@@ -254,12 +297,7 @@ if [[ "$dot_count" -gt 2 ]]; then
   exit 1
 fi
 
-# derive main domain
-if [[ "$panel_domain_name" == *.*.* ]]; then
-  domain_name="${panel_domain_name#*.}"
-else
-  domain_name="$panel_domain_name"
-fi
+domain_name="$registrable"
 
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 read -p "Choose a database username: " db_user
