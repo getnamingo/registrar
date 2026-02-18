@@ -70,7 +70,7 @@ databases=("registrar")
 for db_name in "${databases[@]}"; do
     echo "Backing up database $db_name..."
     sql_backup_file="$backup_dir/db_${db_name}_backup_$(date +%F).sql"
-    mysqldump -u"$db_user" -p"$db_pass" -h"$db_host" "$db_name" > "$sql_backup_file"
+    mariadb-dump -u"$db_user" -p"$db_pass" -h"$db_host" "$db_name" > "$sql_backup_file"
     
     # Compress the SQL backup file
     echo "Compressing database backup $db_name..."

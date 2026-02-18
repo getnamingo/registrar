@@ -302,7 +302,7 @@ mariadb-secure-installation
 1. Access MariaDB:
 
 ```bash
-mysql -u root -p
+mariadb -u root -p
 ```
 
 2. Execute the following queries:
