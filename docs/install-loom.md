@@ -201,7 +201,7 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```bash
 apt update
 apt install -y mariadb-client mariadb-server php8.3-mysql
-mysql_secure_installation
+mariadb-secure-installation
 ```
 
 2. Access MariaDB:

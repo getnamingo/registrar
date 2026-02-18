@@ -474,8 +474,8 @@ else
     certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
 fi
 
-ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
-rm /etc/nginx/sites-enabled/default
+ln -sfn /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/fossbilling.conf
+rm -f /etc/nginx/sites-enabled/default
 
 # Enable and restart Nginx
 ufw enable
@@ -539,7 +539,7 @@ apt update
 apt install -y mariadb-client mariadb-server php8.3-mysql
 
 # Secure MariaDB installation
-mysql_secure_installation
+mariadb-secure-installation
 
 # MariaDB configuration
 mariadb -u root -p <<MYSQL_QUERY
@@ -930,7 +930,7 @@ apt update
 apt install -y mariadb-client mariadb-server php8.3-mysql
 
 # Secure MariaDB installation
-mysql_secure_installation
+mariadb-secure-installation
 
 # MariaDB configuration
 mariadb -u root -p <<MYSQL_QUERY
@@ -1308,7 +1308,7 @@ apt update -y
 apt install -y mariadb-server mariadb-client php8.3-mysql
 
 # Secure MariaDB installation
-mysql_secure_installation
+mariadb-secure-installation
 
 # MariaDB configuration
 mariadb --user=root <<SQL
