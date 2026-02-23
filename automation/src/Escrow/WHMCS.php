@@ -14,7 +14,8 @@ class WHMCS implements EscrowInterface {
         $this->hdl = $hdl;
     }
 
-    public function generateFull(): void {
+    public function generateFull(): void
+    {
         // Query to get id, registrant, admin, tech, billing, name, crdate, exdate from namingo_domain
         $sqlDomain = "SELECT d.id, d.registrant, d.admin, d.tech, d.billing, d.name, DATE_FORMAT(d.crdate, '%Y-%m-%dT%H:%i:%sZ') AS crdate, DATE_FORMAT(d.exdate, '%Y-%m-%dT%H:%i:%sZ') AS exdate FROM namingo_domain d";
         $stmtDomain = $this->pdo->prepare($sqlDomain);
@@ -81,7 +82,8 @@ class WHMCS implements EscrowInterface {
         }
     }
 
-    public function generateHDL(): void {
+    public function generateHDL(): void
+    {
         // Query the database to get data from both tables
         $sql = "
             SELECT identifier, voice AS phone, fax, email, name, street1 AS address, city, sp AS state, pc AS postcode, cc AS country
@@ -127,7 +129,8 @@ class WHMCS implements EscrowInterface {
         fclose($file);
     }
 
-    public function generateRDE(int $ianaID): void {
+    public function generateRDE(int $ianaID): void
+    {
         // Open file for writing
         $file = fopen($this->full, 'w');
 
@@ -239,10 +242,12 @@ class WHMCS implements EscrowInterface {
         }
 
         fclose($file);
+        $this->splitCsvIfTooLarge($this->full, 100000);
     }
 
     // Normalize phone numbers to +E.164
-    private function normalizePhone(string $number): string {
+    private function normalizePhone(string $number): string
+    {
         $number = preg_replace('/[^0-9+]/', '', $number);
         return '+' . ltrim($number, '+');
     }
@@ -279,7 +284,8 @@ class WHMCS implements EscrowInterface {
         fclose($file);
     }
 
-    private function cleanText(string $text): string {
+    private function cleanText(string $text): string
+    {
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         if (class_exists('Transliterator')) {
@@ -291,5 +297,87 @@ class WHMCS implements EscrowInterface {
         $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
 
         return trim(preg_replace('/\s+/', ' ', $text));
+    }
+
+    private function splitCsvIfTooLarge(string $path, int $maxLines = 100000): void
+    {
+        if (!file_exists($path)) {
+            return;
+        }
+
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return;
+        }
+
+        $header = fgets($handle);
+        if ($header === false) {
+            fclose($handle);
+            return;
+        }
+
+        // Pre-check (count data rows, excluding header)
+        $totalLines = 0;
+        while (fgets($handle) !== false) {
+            $totalLines++;
+        }
+
+        // If within limit, keep single original file as-is
+        if ($totalLines <= $maxLines) {
+            fclose($handle);
+            return;
+        }
+
+        // Rewind for the actual split pass
+        rewind($handle);
+        $header = fgets($handle);
+        if ($header === false) {
+            fclose($handle);
+            return;
+        }
+
+        $pi   = pathinfo($path);
+        $dir  = $pi['dirname'] ?? '.';
+        $name = $pi['filename'] ?? 'export';
+        $ext  = isset($pi['extension']) ? '.' . $pi['extension'] : '.csv';
+        $dir  = rtrim($dir, DIRECTORY_SEPARATOR);
+
+        $lineCount = 0;
+        $part = 1;     // split sequence starts at 1
+        $out = null;
+
+        while (($line = fgets($handle)) !== false) {
+
+            if ($lineCount % $maxLines === 0) {
+                if ($out) {
+                    fclose($out);
+                }
+
+                $target = $dir . DIRECTORY_SEPARATOR . $name . '_' . $part . $ext;
+
+                $out = fopen($target, 'w');
+                if (!$out) {
+                    fclose($handle);
+                    return; // cannot write output
+                }
+
+                if ($part === 1) {
+                    fwrite($out, $header); // header only in first split file
+                }
+
+                $part++;
+            }
+
+            fwrite($out, $line);
+            $lineCount++;
+        }
+
+        fclose($handle);
+        if ($out) {
+            fclose($out);
+        }
+
+        // Remove the original unsplit file; split files are now the deposit
+        @unlink($path);
     }
 }

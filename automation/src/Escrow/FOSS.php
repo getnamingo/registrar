@@ -14,7 +14,8 @@ class FOSS implements EscrowInterface {
         $this->hdl = $hdl;
     }
 
-    public function generateFull(): void {
+    public function generateFull(): void
+    {
         // Query the database for the domain data and include domain_id (s.id)
         $stmt = $this->pdo->prepare("SELECT s.id, CONCAT(s.sld, '', s.tld) AS domain, s.ns1, s.ns2, s.ns3, s.ns4, s.expires_at, c.aid, DATE_FORMAT(`expires_at`, '%Y-%m-%dT%H:%i:%sZ') AS `exdate` FROM service_domain s JOIN client c ON s.client_id = c.id");
         $stmt->execute();
@@ -55,7 +56,8 @@ class FOSS implements EscrowInterface {
         fclose($file);
     }
 
-    public function generateHDL(): void {
+    public function generateHDL(): void
+    {
         // Query the database to fetch data from service_domain and join domain_meta to get the registrant_contact_id
         $stmt = $this->pdo->prepare("
             SELECT dm.registrant_contact_id AS handle, 
@@ -104,7 +106,8 @@ class FOSS implements EscrowInterface {
         fclose($file);
     }
 
-    public function generateRDE(int $ianaID): void {
+    public function generateRDE(int $ianaID): void
+    {
         // Open file
         $file = fopen($this->full, 'w');
 
@@ -229,9 +232,11 @@ class FOSS implements EscrowInterface {
         }
 
         fclose($file);
+        $this->splitCsvIfTooLarge($this->full, 100000);
     }
 
-    private function cleanText(string $text): string {
+    private function cleanText(string $text): string
+    {
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         if (class_exists('Transliterator')) {
@@ -243,5 +248,87 @@ class FOSS implements EscrowInterface {
         $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
 
         return trim(preg_replace('/\s+/', ' ', $text));
+    }
+
+    private function splitCsvIfTooLarge(string $path, int $maxLines = 100000): void
+    {
+        if (!file_exists($path)) {
+            return;
+        }
+
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return;
+        }
+
+        $header = fgets($handle);
+        if ($header === false) {
+            fclose($handle);
+            return;
+        }
+
+        // Pre-check (count data rows, excluding header)
+        $totalLines = 0;
+        while (fgets($handle) !== false) {
+            $totalLines++;
+        }
+
+        // If within limit, keep single original file as-is
+        if ($totalLines <= $maxLines) {
+            fclose($handle);
+            return;
+        }
+
+        // Rewind for the actual split pass
+        rewind($handle);
+        $header = fgets($handle);
+        if ($header === false) {
+            fclose($handle);
+            return;
+        }
+
+        $pi   = pathinfo($path);
+        $dir  = $pi['dirname'] ?? '.';
+        $name = $pi['filename'] ?? 'export';
+        $ext  = isset($pi['extension']) ? '.' . $pi['extension'] : '.csv';
+        $dir  = rtrim($dir, DIRECTORY_SEPARATOR);
+
+        $lineCount = 0;
+        $part = 1;     // split sequence starts at 1
+        $out = null;
+
+        while (($line = fgets($handle)) !== false) {
+
+            if ($lineCount % $maxLines === 0) {
+                if ($out) {
+                    fclose($out);
+                }
+
+                $target = $dir . DIRECTORY_SEPARATOR . $name . '_' . $part . $ext;
+
+                $out = fopen($target, 'w');
+                if (!$out) {
+                    fclose($handle);
+                    return; // cannot write output
+                }
+
+                if ($part === 1) {
+                    fwrite($out, $header); // header only in first split file
+                }
+
+                $part++;
+            }
+
+            fwrite($out, $line);
+            $lineCount++;
+        }
+
+        fclose($handle);
+        if ($out) {
+            fclose($out);
+        }
+
+        // Remove the original unsplit file; split files are now the deposit
+        @unlink($path);
     }
 }
