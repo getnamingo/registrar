@@ -592,35 +592,19 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 
 3. If you experience issues saving any configuration options in the admin panel, enable the Error Reporting option to help identify the problem.
 
-### ICANN MoSAPI Integration
+4. **ICANN MoSAPI Monitoring**  
+   MoSAPI is ICANN’s official platform for monitoring registrar compliance and domain abuse reports.
 
-This script connects to [MoSAPI](https://mosapi.icann.org) to monitor registrar state and domain abuse reports (METRICA) using your ICANN-assigned credentials.
+   To enable MoSAPI support, install the Namingo MoSAPI Monitor module:
 
-#### What It Does
+```bash
+git clone https://github.com/getnamingo/fossbilling-mosapi-monitor
+mv fossbilling-mosapi-monitor/Mosapimonitor /var/www/modules/
+```
 
-- Logs in using your MoSAPI username/password
-- Fetches current registrar state (`monitoring/state`)
-- Retrieves the latest Domain METRICA abuse statistics (`metrica/domainList/latest`)
-- Caches data for 5 minutes to reduce API calls
+Navigate to **Extensions → Overview** in the FOSSBilling admin area and enable **"ICANN MoSAPI Monitor"**.
 
-#### Output Includes
+Once activated, configure your MoSAPI credentials under **System → Settings**, then view registrar status and METRICA data via the **Extensions** menu.
 
-- Registrar status and tested services (e.g. RDAP)
-- Any active incidents or threshold alerts
-- Threat types (e.g. phishing, malware) with domain counts
-
-#### Requirements
-
-- PHP 8.2+
-- `apcu` extension enabled for CLI
-- ICANN MoSAPI access credentials
-
-#### Usage
-
-Configure and then run `/opt/registrar/tests/icann_mosapi_monitor.php`.
-
-### Setup Backup
-
-To ensure the safety and availability of your data in Namingo, it's crucial to set up and verify automated backups. Begin by editing the backup.json file in the automation directory, where you'll input your database details. Ensure that the details for the database are accurately entered in two specified locations within the backup.json file.
-
-Additionally, check that the cronjob for PHPBU is correctly scheduled on your server `cron.php`, as this automates the backup process. You can verify this by reviewing your server's cronjob list. These steps are vital to maintain regular, secure backups of your system, safeguarding against data loss and ensuring business continuity.
+5. **Backup**
+   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.

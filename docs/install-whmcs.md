@@ -582,3 +582,6 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/mosapi_monitor
 ```
 
 - Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **"ICANN MoSAPI"**, activate the module, and then configure it from its respective configuration menu.
+
+5. **Backup**
+   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.
