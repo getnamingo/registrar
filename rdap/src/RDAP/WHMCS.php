@@ -109,7 +109,35 @@ class WHMCS implements RdapInterface
 
     public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardWHMCS($contact, $role, $config, $domain);
+        return [
+            'objectClassName' => 'entity',
+            ...rdapIfNotMinData($config, ['handle' => $contact['identifier'] ?? '']),
+            'roles' => [$role],
+            'vcardArray' => [
+                "vcard",
+                [
+                    ['version', new \stdClass(), 'text', '4.0'],
+                    ["fn", new \stdClass(), 'text', rdapValue($contact['name'] ?? '', $config)],
+                    ...rdapIfNotMinData($config, [
+                        ["org", new \stdClass(), 'text', rdapValue($contact['org'] ?? '', $config)],
+                    ]),
+                    ["adr", ["cc" => strtoupper($contact['cc'] ?? '')], 'text', [
+                        "",
+                        rdapValue($contact['street1'] ?? '', $config), // Extended address
+                        rdapValue($contact['street2'] ?? '', $config), // Street address
+                        rdapValue($contact['city'] ?? '', $config),    // Locality
+                        rdapValue($contact['sp'] ?? '', $config),      // Region
+                        rdapValue($contact['pc'] ?? '', $config),      // Postal code
+                        ""
+                    ]],
+                    ...rdapIfNotMinData($config, [
+                        ["tel", ["type" => "voice"], 'text', rdapValue($contact['voice'] ?? '', $config)],
+                        ["tel", ["type" => "fax"], 'text', rdapValue($contact['fax'] ?? '', $config)],
+                    ]),
+                    rdapEmailOrContactUriProp($contact['email'] ?? '', $config, $domain),
+                ]
+            ],
+        ];
     }
 
     public function getDomainHandle(array $domain): string

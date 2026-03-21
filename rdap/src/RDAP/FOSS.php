@@ -98,7 +98,35 @@ class FOSS implements RdapInterface
 
     public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardFOSS($contact, $role, $config, $domain);
+        return [
+            'objectClassName' => 'entity',
+            ...rdapIfNotMinData($config, ['handle' => $contact['id'] ?? '']),
+            'roles' => [$role],
+            'vcardArray' => [
+                "vcard",
+                [
+                    ['version', new \stdClass(), 'text', '4.0'],
+                    ["fn", new \stdClass(), 'text', rdapValue(($contact['contact_first_name'] ?? '') . ' ' . ($contact['contact_last_name'] ?? ''), $config)],
+                    ...rdapIfNotMinData($config, [
+                        ["org", new \stdClass(), 'text', rdapValue($contact['contact_company'] ?? '', $config)],
+                    ]),
+                    ["adr", ["cc" => strtoupper($contact['contact_country'] ?? '')], 'text', [
+                        "",
+                        rdapValue($contact['contact_address1'] ?? '', $config), // Extended address
+                        rdapValue($contact['contact_address2'] ?? '', $config), // Street address
+                        rdapValue($contact['contact_city'] ?? '', $config),     // Locality
+                        rdapValue($contact['contact_state'] ?? '', $config),    // Region
+                        rdapValue($contact['contact_postcode'] ?? '', $config), // Postal code
+                        ""
+                    ]],
+                    ...rdapIfNotMinData($config, [
+                        ["tel", ["type" => "voice"], 'text', rdapValue(($contact['contact_phone_cc'] ?? '') . '.' . ($contact['contact_phone'] ?? ''), $config)],
+                        ["tel", ["type" => "fax"], 'text', rdapValue($contact['fax'] ?? '', $config)],
+                    ]),
+                    rdapEmailOrContactUriProp($contact['contact_email'] ?? '', $config, $domain),
+                ]
+            ],
+        ];
     }
 
     public function getDomainHandle(array $domain): string

@@ -93,7 +93,35 @@ class LOOM implements RdapInterface
 
     public function mapContactToVCard(array $contact, string $role, array $config, string $domain): array
     {
-        return mapContactToVCardLOOM($contact, $role, $config, $domain);
+        return [
+            'objectClassName' => 'entity',
+            ...rdapIfNotMinData($config, ['handle' => $contact['registry_id'] ?? '']),
+            'roles' => [$role],
+            'vcardArray' => [
+                "vcard",
+                [
+                    ['version', new \stdClass(), 'text', '4.0'],
+                    ["fn", new \stdClass(), 'text', rdapValue($contact['name'] ?? '', $config)],
+                    ...rdapIfNotMinData($config, [
+                        ["org", new \stdClass(), 'text', rdapValue($contact['org'] ?? '', $config)],
+                    ]),
+                    ["adr", ["cc" => strtoupper($contact['cc'] ?? '')], 'text', [
+                        "",
+                        rdapValue($contact['street1'] ?? '', $config),
+                        rdapValue($contact['street2'] ?? '', $config),
+                        rdapValue($contact['city'] ?? '', $config),
+                        rdapValue($contact['sp'] ?? '', $config),
+                        rdapValue($contact['pc'] ?? '', $config),
+                        ""
+                    ]],
+                    ...rdapIfNotMinData($config, [
+                        ["tel", ["type" => "voice"], 'text', rdapValue($contact['phone'] ?? '', $config)],
+                        ["tel", ["type" => "fax"], 'text', rdapValue($contact['fax'] ?? '', $config)],
+                    ]),
+                    rdapEmailOrContactUriProp($contact['email'] ?? '', $config, $domain),
+                ]
+            ],
+        ];
     }
 
     public function getDomainHandle(array $domain): string
