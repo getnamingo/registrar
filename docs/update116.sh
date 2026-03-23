@@ -146,6 +146,17 @@ systemctl restart php8.3-fpm
 
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
+CONFIG_FILE="/opt/registrar/automation/config.php"
+
+if ! grep -q "'cron_tools'" "$CONFIG_FILE"; then
+  sed -i "/'urs_imap_password'/a\\
+\\
+    // Cron / Automation Configuration\\
+    'cron_tools' => true,\\
+    'cron_backup' => false,\\
+    'cron_backup_upload' => false," "$CONFIG_FILE"
+fi
+
 # Start services
 echo "Starting services..."
 if systemctl is-active --quiet nginx || systemctl is-enabled --quiet nginx; then
