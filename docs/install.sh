@@ -14,13 +14,57 @@ require_root() {
   fi
 }
 
-detect_os() {
-  . /etc/os-release
-  OS_ID="$ID"            # ubuntu/debian
-  OS_VER="$VERSION_ID"   # e.g. 22.04, 24.04, 12, 13
-  OS_CODENAME="${VERSION_CODENAME:-}"
-  log "Detected: $PRETTY_NAME"
-}
+# Check the Linux distribution and version
+if [[ -r /etc/os-release ]]; then
+    . /etc/os-release
+    OS_ID="$ID"
+    VER="$VERSION_ID"
+else
+    echo "Error: /etc/os-release not found."
+    exit 1
+fi
+
+PHP_VERSION="php8.3"
+PHP_SHORT="8.3"
+
+case "${OS_ID}:${VER}" in
+    ubuntu:22.04)
+        OS_NAME="Ubuntu"
+        DISTRO_CODENAME="jammy"
+        PHP_REPO_TYPE="ondrej"
+        MARIADB_DISTRO="ubuntu"
+        MARIADB_SUITE="jammy"
+        MARIADB_COMPONENTS="main main/debug"
+        ;;
+    ubuntu:24.04)
+        OS_NAME="Ubuntu"
+        DISTRO_CODENAME="noble"
+        PHP_REPO_TYPE="ondrej"
+        MARIADB_DISTRO="ubuntu"
+        MARIADB_SUITE="noble"
+        MARIADB_COMPONENTS="main main/debug"
+        ;;
+    debian:12)
+        OS_NAME="Debian"
+        DISTRO_CODENAME="bookworm"
+        PHP_REPO_TYPE="sury"
+        MARIADB_DISTRO="debian"
+        MARIADB_SUITE="bookworm"
+        MARIADB_COMPONENTS="main"
+        ;;
+    debian:13)
+        OS_NAME="Debian"
+        DISTRO_CODENAME="trixie"
+        PHP_REPO_TYPE="sury"
+        MARIADB_DISTRO="debian"
+        MARIADB_SUITE="trixie"
+        MARIADB_COMPONENTS="main"
+        ;;
+    *)
+        echo "Unsupported Linux distribution or version: ${OS_ID} ${VER}"
+        exit 1
+        ;;
+esac
 
 # Return best-guess A/AAAA for bind (optional)
 detect_ips() {
@@ -495,59 +539,33 @@ echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_
 chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 
 # Install and configure MariaDB
-mkdir -p /etc/apt/keyrings
-curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
-
-MARIADB_URI=""
-MARIADB_SUITE=""
-
-if [[ "${OS_ID}" == "ubuntu" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
-  if [[ "${VER}" == "22.04" ]]; then
-    MARIADB_SUITE="jammy"
-  elif [[ "${VER}" == "24.04" ]]; then
-    MARIADB_SUITE="noble"
-  else
-    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-elif [[ "${OS_ID}" == "debian" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
-  if [[ "${VER}" == "12" ]]; then
-    MARIADB_SUITE="bookworm"
-  elif [[ "${VER}" == "13" ]]; then
-    MARIADB_SUITE="trixie"
-  else
-    echo "Unsupported Debian version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-else
-  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
-  exit 1
-fi
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: ${MARIADB_URI}
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
 Suites: ${MARIADB_SUITE}
-Components: main
+Components: ${MARIADB_COMPONENTS}
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
-apt update
+apt update -y
 apt install -y mariadb-client mariadb-server php8.3-mysql
 
-# Secure MariaDB installation
-mariadb-secure-installation
+echo "Applying MariaDB hardening..."
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mariadb -u root -e "DROP DATABASE IF EXISTS test;"
+mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
-# MariaDB configuration
-mariadb -u root -p <<MYSQL_QUERY
-CREATE DATABASE IF NOT EXISTS registrar;
-CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';
-GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';
-FLUSH PRIVILEGES;
-MYSQL_QUERY
+# Create user and grant privileges
+echo "Creating user $db_user and setting privileges..."
+mariadb -u root -e "CREATE DATABASE IF NOT EXISTS registrar;"
+mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
+mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # Install Adminer
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
@@ -886,59 +904,33 @@ ufw allow 43/tcp
 ufw allow 22/tcp
 
 # Install and configure MariaDB
-mkdir -p /etc/apt/keyrings
-curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
-
-MARIADB_URI=""
-MARIADB_SUITE=""
-
-if [[ "${OS_ID}" == "ubuntu" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
-  if [[ "${VER}" == "22.04" ]]; then
-    MARIADB_SUITE="jammy"
-  elif [[ "${VER}" == "24.04" ]]; then
-    MARIADB_SUITE="noble"
-  else
-    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-elif [[ "${OS_ID}" == "debian" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
-  if [[ "${VER}" == "12" ]]; then
-    MARIADB_SUITE="bookworm"
-  elif [[ "${VER}" == "13" ]]; then
-    MARIADB_SUITE="trixie"
-  else
-    echo "Unsupported Debian version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-else
-  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
-  exit 1
-fi
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: ${MARIADB_URI}
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
 Suites: ${MARIADB_SUITE}
-Components: main
+Components: ${MARIADB_COMPONENTS}
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
-apt update
+apt update -y
 apt install -y mariadb-client mariadb-server php8.3-mysql
 
-# Secure MariaDB installation
-mariadb-secure-installation
+echo "Applying MariaDB hardening..."
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mariadb -u root -e "DROP DATABASE IF EXISTS test;"
+mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
-# MariaDB configuration
-mariadb -u root -p <<MYSQL_QUERY
-CREATE DATABASE IF NOT EXISTS registrar;
-CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';
-GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';
-FLUSH PRIVILEGES;
-MYSQL_QUERY
+# Create user and grant privileges
+echo "Creating user $db_user and setting privileges..."
+mariadb -u root -e "CREATE DATABASE IF NOT EXISTS registrar;"
+mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
+mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # Install Adminer
 wget "http://www.adminer.org/latest.php" -O /var/www/html/adm.php
@@ -1168,7 +1160,6 @@ fi
         ;;
     3)
         echo "Loom selected."
-detect_os
 detect_ips
 
 # ---------- Ask user inputs ----------
@@ -1264,59 +1255,34 @@ ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
 case "$DB_BACKEND" in
   MariaDB)
     log "Configuring MariaDB repository…"
-mkdir -p /etc/apt/keyrings
-curl -fsSL 'https://mariadb.org/mariadb_release_signing_key.pgp' -o /etc/apt/keyrings/mariadb-keyring.pgp
-
-MARIADB_URI=""
-MARIADB_SUITE=""
-
-if [[ "${OS_ID}" == "ubuntu" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu"
-  if [[ "${VER}" == "22.04" ]]; then
-    MARIADB_SUITE="jammy"
-  elif [[ "${VER}" == "24.04" ]]; then
-    MARIADB_SUITE="noble"
-  else
-    echo "Unsupported Ubuntu version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-elif [[ "${OS_ID}" == "debian" ]]; then
-  MARIADB_URI="https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian"
-  if [[ "${VER}" == "12" ]]; then
-    MARIADB_SUITE="bookworm"
-  elif [[ "${VER}" == "13" ]]; then
-    MARIADB_SUITE="trixie"
-  else
-    echo "Unsupported Debian version for MariaDB repo: ${VER}"
-    exit 1
-  fi
-else
-  echo "Unsupported OS for MariaDB repo: ${OS_ID:-unknown} ${VER:-unknown}"
-  exit 1
-fi
+# Install and configure MariaDB
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: ${MARIADB_URI}
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
 Suites: ${MARIADB_SUITE}
-Components: main
+Components: ${MARIADB_COMPONENTS}
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
 apt update -y
-apt install -y mariadb-server mariadb-client php8.3-mysql
+apt install -y mariadb-client mariadb-server php8.3-mysql
 
-# Secure MariaDB installation
-mariadb-secure-installation
+echo "Applying MariaDB hardening..."
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
+mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mariadb -u root -e "DROP DATABASE IF EXISTS test;"
+mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
-# MariaDB configuration
-mariadb --user=root <<SQL
-CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
-FLUSH PRIVILEGES;
-SQL
+# Create user and grant privileges
+echo "Creating user $db_user and setting privileges..."
+mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+mariadb -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
+mariadb -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
     ;;
 
   PostgreSQL)
