@@ -522,11 +522,11 @@ ln -sfn /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/fos
 rm -f /etc/nginx/sites-enabled/default
 
 # Enable and restart Nginx
-ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 43/tcp
 ufw allow 22/tcp
+ufw --force enable
 systemctl enable nginx
 systemctl restart nginx
 
@@ -897,11 +897,11 @@ systemctl restart apache2
 
 echo "Apache configured on $panel_domain_name"
 
-ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 43/tcp
 ufw allow 22/tcp
+ufw --force enable
 
 # Install and configure MariaDB
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
@@ -1012,11 +1012,11 @@ else
     certbot --apache -d "$panel_domain_name" --non-interactive --agree-tos -m webmaster@"$domain_name"
 fi
 
-ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 43/tcp
 ufw allow 22/tcp
+ufw --force enable
 
 echo "== Adding WHMCS cron job to crontab =="
 
