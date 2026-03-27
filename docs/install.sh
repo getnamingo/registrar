@@ -221,14 +221,10 @@ install_rdap_and_whois_services() {
 
 install_php_repo() {
   if [[ "$OS_ID" == "ubuntu" ]]; then
-    apt update
-    apt install -y curl software-properties-common ca-certificates gnupg
+    apt install -y software-properties-common
     add-apt-repository -y ppa:ondrej/php
     add-apt-repository -y ppa:ondrej/nginx
   elif [[ "$OS_ID" == "debian" ]]; then
-    apt update
-    apt install -y ca-certificates curl gnupg lsb-release
-
     # PHP (SURY)
     curl -fsSL https://packages.sury.org/php/apt.gpg \
       | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
@@ -349,17 +345,22 @@ read -sp "Choose a password for this user: " db_pass
 echo
 
 # Install necessary packages
+apt update -y
+apt install -y ufw bzip2 ca-certificates certbot composer curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-apt update
 
-apt install -y \
-  ufw bzip2 certbot composer git net-tools unzip wget whois \
-  nginx python3-certbot-nginx \
-  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
-  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
-  php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline \
-  php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip \
-  php8.3-mysql
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
+Suites: ${MARIADB_SUITE}
+Components: ${MARIADB_COMPONENTS}
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+EOF
+
+apt update -y
+apt install -y mariadb-client mariadb-server nginx python3-certbot-nginx php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip php8.3-mysql
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -537,21 +538,6 @@ chmod +x /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
 echo "#\!/bin/bash" | tee /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
 chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
-
-# Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
-
-cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
-X-Repolib-Name: MariaDB
-Types: deb
-URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
-Suites: ${MARIADB_SUITE}
-Components: ${MARIADB_COMPONENTS}
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOF
-
-apt update -y
-apt install -y mariadb-client mariadb-server php8.3-mysql
 
 echo "Applying MariaDB hardening..."
 mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
@@ -767,10 +753,23 @@ read -sp "Choose a password for this user: " db_pass
 echo
 
 # Install necessary packages
+apt update -y
+apt install -y ufw bzip2 ca-certificates certbot composer curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-apt update
 
-apt install -y bzip2 certbot composer curl git net-tools apache2 libapache2-mod-fcgid php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache ufw unzip wget whois
+# Install and configure MariaDB
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
+Suites: ${MARIADB_SUITE}
+Components: ${MARIADB_COMPONENTS}
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+EOF
+
+apt update -y
+apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache
 
 # Update php.ini files
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -902,21 +901,6 @@ ufw allow 443/tcp
 ufw allow 43/tcp
 ufw allow 22/tcp
 ufw --force enable
-
-# Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
-
-cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
-X-Repolib-Name: MariaDB
-Types: deb
-URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
-Suites: ${MARIADB_SUITE}
-Components: ${MARIADB_COMPONENTS}
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOF
-
-apt update -y
-apt install -y mariadb-client mariadb-server php8.3-mysql
 
 echo "Applying MariaDB hardening..."
 mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
@@ -1196,14 +1180,26 @@ else
   CADDY_BIND_LINE=""
 fi
 
-# ---------- PHP 8.3 repos ----------
-log "Configuring PHP 8.3 repository…"
-# Install necessary packages
+log "Install necessary packages…"
+apt update -y
+apt install -y apt-transport-https ufw bzip2 ca-certificates certbot composer curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-apt update
 
-log "Installing PHP"
-apt install -y composer php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip ufw git unzip bzip2 net-tools whois
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+
+curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
+Suites: ${MARIADB_SUITE}
+Components: ${MARIADB_COMPONENTS}
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+EOF
+
+apt update -y
+apt install -y caddy mariadb-client mariadb-server php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -1222,39 +1218,12 @@ set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.validate_ti
 
 systemctl restart php8.3-fpm
 
-# ---------- Caddy repo & install ----------
-log "Installing Caddy…"
-apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-chmod o+r /etc/apt/sources.list.d/caddy-stable.list
-apt update -y
-apt install -y caddy
 # ---------- Adminer (randomized path) ----------
 log "Installing Adminer…"
 mkdir -p /usr/share/adminer
 wget -q "https://www.adminer.org/latest.php" -O /usr/share/adminer/latest.php
 ADMINER_SLUG="adminer-$(cut -d- -f1 </proc/sys/kernel/random/uuid).php"
 ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
-
-# ---------- Database setup ----------
-log "Configuring MariaDB repository…"
-
-# Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
-
-cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
-X-Repolib-Name: MariaDB
-Types: deb
-URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
-Suites: ${MARIADB_SUITE}
-Components: ${MARIADB_COMPONENTS}
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
-EOF
-
-apt update -y
-apt install -y mariadb-client mariadb-server php8.3-mysql
 
 echo "Applying MariaDB hardening..."
 mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
