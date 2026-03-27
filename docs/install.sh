@@ -1170,24 +1170,11 @@ prompt HOSTNAME "Enter the domain where the system will live (e.g., example.com 
 prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications: " "admin@$HOSTNAME"
 prompt INSTALL_PATH "Install path for Loom: " "/var/www/loom"
 
-# DB choice
-DB_BACKEND="MariaDB"
-# echo
-# echo "Choose database backend:"
-# select DB_BACKEND in "MariaDB" "PostgreSQL" "SQLite"; do
-  # case "$DB_BACKEND" in
-    # MariaDB|PostgreSQL|SQLite) break ;;
-    # *) echo "Invalid selection."; ;;
-  # esac
-# done
-
-# DB credentials (used unless SQLite)
+# DB credentials
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-if [[ "$DB_BACKEND" != "SQLite" ]]; then
-  prompt DB_NAME "Choose a database name: " "loom"
-  prompt DB_USER "Choose a database username: " "loom"
-  prompt DB_PASS "Choose a password for this user: " "" "secret"
-fi
+prompt DB_NAME "Choose a database name: " "loom"
+prompt DB_USER "Choose a database username: " "loom"
+prompt DB_PASS "Choose a password for this user: " "" "secret"
 
 # Admin user for Loom
 echo
@@ -1252,9 +1239,8 @@ ADMINER_SLUG="adminer-$(cut -d- -f1 </proc/sys/kernel/random/uuid).php"
 ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
 
 # ---------- Database setup ----------
-case "$DB_BACKEND" in
-  MariaDB)
-    log "Configuring MariaDB repository…"
+log "Configuring MariaDB repository…"
+
 # Install and configure MariaDB
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 
@@ -1283,40 +1269,6 @@ mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 mariadb -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
 mariadb -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
-    ;;
-
-  PostgreSQL)
-    log "Installing PostgreSQL…"
-    apt install -y postgresql php8.3-pgsql
-    systemctl enable --now postgresql
-
-    log "Creating database and role…"
-    sudo -u postgres psql -v ON_ERROR_STOP=1 \
-      -v dbuser="$DB_USER" -v dbpass="$DB_PASS" -v dbname="$DB_NAME" <<'SQL'
--- Create role if missing
-SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'dbuser', :'dbpass')
-WHERE NOT EXISTS (
-  SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'dbuser'
-)
-\gexec
-
--- Create database if missing
-SELECT format('CREATE DATABASE %I OWNER %I', :'dbname', :'dbuser')
-WHERE NOT EXISTS (
-  SELECT 1 FROM pg_database WHERE datname = :'dbname'
-)
-\gexec
-
--- Grant privileges (idempotent)
-GRANT ALL PRIVILEGES ON DATABASE :"dbname" TO :"dbuser";
-SQL
-    ;;
-
-  SQLite)
-    log "Using SQLite (no server install)."
-    apt install -y sqlite3 php8.3-sqlite3
-    ;;
-esac
 
 # ---------- Create Loom project ----------
 log "Creating Loom project in $INSTALL_PATH …"
@@ -1336,34 +1288,14 @@ fi
 sed -i "s|^APP_URL=.*|APP_URL=https://${HOSTNAME//\//\\/}|" .env
 
 # DB DSN/env
-case "$DB_BACKEND" in
-  MariaDB)
-    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=mysql/" .env
-    sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
-    sed -i "s/^DB_PORT=.*/DB_PORT=3306/" .env
-    sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
-    ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
-    ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
-    sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
-    sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
-    ;;
-  PostgreSQL)
-    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=pgsql/" .env
-    sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
-    sed -i "s/^DB_PORT=.*/DB_PORT=5432/" .env
-    sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
-    ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
-    ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
-    sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
-    sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
-    ;;
-  SQLite)
-    sed -i "s/^DB_DRIVER=.*/DB_DRIVER=sqlite/" .env
-    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${INSTALL_PATH}/storage/loom.sqlite|" .env
-    install -d -m 0775 -o www-data -g www-data "${INSTALL_PATH}/storage"
-    install -m 0664 -o www-data -g www-data /dev/null "${INSTALL_PATH}/storage/loom.sqlite"
-    ;;
-esac
+sed -i "s/^DB_DRIVER=.*/DB_DRIVER=mysql/" .env
+sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+sed -i "s/^DB_PORT=.*/DB_PORT=3306/" .env
+sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
+ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
+ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
+sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
+sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
 
 # ---------- Permissions ----------
 log "Setting permissions…"
@@ -1490,9 +1422,8 @@ cat <<SUM
 • Hostname:          https://$HOSTNAME
 • Adminer URL:       https://$HOSTNAME/${ADMINER_SLUG}
 
-• Database backend:  $DB_BACKEND
-$( [[ "$DB_BACKEND" != "SQLite" ]] && echo "• DB Name/User:     $DB_NAME / $DB_USER" )
-$( [[ "$DB_BACKEND" == "MariaDB" ]] && echo "• MySQL Tuning:     Run MySQLTuner later: perl mysqltuner.pl" )
+• DB Name/User:     $DB_NAME / $DB_USER
+• MySQL Tuning:     Run MySQLTuner later: perl mysqltuner.pl
 
 • Admin user:        $ADMIN_USER  (created best-effort)
   If admin creation failed, run inside $INSTALL_PATH:
