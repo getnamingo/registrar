@@ -296,7 +296,7 @@ class WHMCS implements EscrowInterface {
 
         // Allow @ and _ only if it is an email address
         if ($isEmail) {
-            $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/@_]/u', '', $text);
+            $text = preg_replace('/[^A-Za-z0-9._%+\-@]/', '', $text);
         } else {
             $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
         }
