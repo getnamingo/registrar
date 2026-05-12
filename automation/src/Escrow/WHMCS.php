@@ -217,7 +217,7 @@ class WHMCS implements EscrowInterface {
             $registrant['sp']       = $this->cleanText($registrant['sp']       ?? '');
             $registrant['pc']       = $this->cleanText($registrant['pc']       ?? '');
             $registrant['cc']       = $this->cleanText($registrant['cc']       ?? '');
-            $registrant['email']    = $this->cleanText($registrant['email']    ?? '');
+            $registrant['email']    = $this->cleanText($registrant['email']    ?? '', true);
             $registrant['voice']    = $this->cleanText($registrant['voice']    ?? '');
 
             // Clean up billing fields
@@ -284,7 +284,7 @@ class WHMCS implements EscrowInterface {
         fclose($file);
     }
 
-    private function cleanText(string $text): string
+    private function cleanText(string $text, bool $isEmail = false): string
     {
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -294,7 +294,12 @@ class WHMCS implements EscrowInterface {
             $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
         }
 
-        $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
+        // Allow @ and _ only if it is an email address
+        if ($isEmail) {
+            $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/@_]/u', '', $text);
+        } else {
+            $text = preg_replace('/[^\p{L}\p{N}\s\-\.\/]/u', '', $text);
+        }
 
         return trim(preg_replace('/\s+/', ' ', $text));
     }
