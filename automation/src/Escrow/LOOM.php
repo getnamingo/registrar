@@ -177,7 +177,10 @@ class LOOM implements EscrowInterface {
     // Normalize phone to +E.164-like format
     private function normalizePhone(string $number): string
     {
-        return '+' . ltrim(preg_replace('/[^0-9+]/', '', $number), '+');
+        $number = preg_replace('/[^0-9.]/', '', $number);
+        $number = trim(preg_replace('/\.+/', '.', $number), '.');
+
+        return $number === '' ? '' : '+' . $number;
     }
 
     private function splitCsvIfTooLarge(string $path, int $maxLines = 100000): void

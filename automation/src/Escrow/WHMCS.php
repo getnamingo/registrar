@@ -248,8 +248,10 @@ class WHMCS implements EscrowInterface {
     // Normalize phone numbers to +E.164
     private function normalizePhone(string $number): string
     {
-        $number = preg_replace('/[^0-9+]/', '', $number);
-        return '+' . ltrim($number, '+');
+        $number = preg_replace('/[^0-9.]/', '', $number);
+        $number = trim(preg_replace('/\.+/', '.', $number), '.');
+
+        return $number === '' ? '' : '+' . $number;
     }
 
     private function writeToCsv(array $domain): void
