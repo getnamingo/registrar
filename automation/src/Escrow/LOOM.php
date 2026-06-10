@@ -153,7 +153,7 @@ class LOOM implements EscrowInterface {
             $billing = $contacts['billing'] ?? [];
 
             $line = [
-                idn_to_ascii($domain['service_name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['service_name'],
+                $ascii,
                 $domain['expire'] ?? '',
                 $ianaID,
                 $registrant['name'] ?? '',

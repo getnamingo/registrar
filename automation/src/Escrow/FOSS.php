@@ -214,7 +214,7 @@ class FOSS implements EscrowInterface {
 
             // Compose row for RDE CSV
             $line = [
-                idn_to_ascii($domain['domainname'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['domainname'],
+                $ascii,
                 $domain['expire']             ?? '',
                 $ianaID,
                 $registrant['name']           ?? '',

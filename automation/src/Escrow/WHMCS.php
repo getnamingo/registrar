@@ -195,7 +195,7 @@ class WHMCS implements EscrowInterface {
                     WHERE td.domain = ?
                     ORDER BY td.id DESC LIMIT 1
                 ");
-                $stmt->execute([$domain['name']]);
+                $stmt->execute([$ascii]);
                 $fallbackRegistrant = $stmt->fetch(\PDO::FETCH_ASSOC);
                 if ($fallbackRegistrant) {
                     $contacts[$domain['registrant']] = $fallbackRegistrant;
@@ -224,7 +224,7 @@ class WHMCS implements EscrowInterface {
             $billing['name']        = $this->cleanText($billing['name']        ?? '');
 
             $row = [
-                idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'],
+                $ascii,
                 $domain['exdate']            ?? '',
                 $ianaID,
                 $registrant['name']          ?? '',
