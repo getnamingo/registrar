@@ -160,6 +160,7 @@ class WHMCS implements EscrowInterface {
         foreach ($domains as $domain) {
             // Skip ccTLDs (2-letter ASCII TLD)
             $ascii = idn_to_ascii($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'];
+            $unicode = idn_to_utf8($domain['name'], IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain['name'];
             $tld = strtolower((string)substr((string)strrchr($ascii, '.'), 1));
             if (strlen($tld) === 2 && ctype_alpha($tld)) {
                 continue;
@@ -195,7 +196,7 @@ class WHMCS implements EscrowInterface {
                     WHERE td.domain = ?
                     ORDER BY td.id DESC LIMIT 1
                 ");
-                $stmt->execute([$ascii]);
+                $stmt->execute([$unicode]);
                 $fallbackRegistrant = $stmt->fetch(\PDO::FETCH_ASSOC);
                 if ($fallbackRegistrant) {
                     $contacts[$domain['registrant']] = $fallbackRegistrant;
