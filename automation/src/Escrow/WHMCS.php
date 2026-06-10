@@ -214,8 +214,8 @@ class WHMCS implements EscrowInterface {
             $registrant['name']     = $this->cleanText($registrant['name']     ?? '');
             $registrant['street1']  = $this->cleanText($registrant['street1']  ?? '');
             $registrant['city']     = $this->cleanText($registrant['city']     ?? '');
-            $registrant['sp']       = $this->cleanText($registrant['sp']       ?? '');
-            $registrant['pc']       = $this->cleanText($registrant['pc']       ?? '');
+            $registrant['sp']       = $this->cleanText($registrant['sp']       ?? 'No-State-Land');
+            $registrant['pc']       = $this->cleanText($registrant['pc']       ?? 'No-ZIP-City');
             $registrant['cc']       = $this->cleanText($registrant['cc']       ?? '');
             $registrant['email']    = $this->cleanText($registrant['email']    ?? '', true);
             $registrant['voice']    = $this->cleanText($registrant['voice']    ?? '');
