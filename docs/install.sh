@@ -69,6 +69,14 @@ detect_ips() {
   IPV6=$(ip -6 addr show scope global 2>/dev/null | awk '/inet6/{print $2}' | cut -d/ -f1 | head -n1 || true)
 }
 
+generate_db_username() {
+    printf 'nmg_%s' "$(openssl rand -hex 4)"
+}
+
+generate_password() {
+    openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_'
+}
+
 prompt() {
   local var="$1"; local msg="$2"; local def="${3-}"; local secret="${4-}"
   local val
@@ -345,9 +353,8 @@ fi
 domain_name="$registrable"
 
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-read -p "Choose a database username: " db_user
-read -sp "Choose a password for this user: " db_pass
-echo
+db_user="$(generate_db_username)"
+db_pass="$(generate_password)"
 
 # Install necessary packages
 apt update -y
@@ -667,6 +674,9 @@ fi
 # Final instructions to the user
 echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
 echo
+echo "Generated database user: $db_user"
+echo "Generated database password: $db_pass"
+echo
 echo "1. Open your browser and visit https://$panel_domain_name/admin to login with your admin account."
 echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
@@ -757,9 +767,8 @@ else
 fi
 
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-read -p "Choose a database username: " db_user
-read -sp "Choose a password for this user: " db_pass
-echo
+db_user="$(generate_db_username)"
+db_pass="$(generate_password)"
 
 # Install necessary packages
 apt update -y
@@ -1044,6 +1053,9 @@ fi
 # Final instructions to the user
 echo "Installation is complete. Please follow these manual steps to finalize your setup:"
 echo
+echo "Generated database user: $db_user"
+echo "Generated database password: $db_pass"
+echo
 echo "1. Open your browser and visit https://$panel_domain_name/admin to complete the installation."
 echo
 echo "2. For security reasons, please delete the /var/www/html/install directory:"
@@ -1168,9 +1180,9 @@ prompt INSTALL_PATH "Install path for Loom: " "/var/www/loom"
 
 # DB credentials
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-prompt DB_NAME "Choose a database name: " "loom"
-prompt DB_USER "Choose a database username: " "loom"
-prompt DB_PASS "Choose a password for this user: " "" "secret"
+DB_NAME="loom_registrar"
+DB_USER="$(generate_db_username)"
+DB_PASS="$(generate_password)"
 
 # Admin user for Loom
 echo
