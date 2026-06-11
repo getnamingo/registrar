@@ -1,6 +1,6 @@
 # Namingo Registrar: Installation Guide (FOSSBilling)
 
-This guide is for setting up **FOSSBilling 0.7.2** with **PHP 8.3** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
+This guide is for setting up **FOSSBilling 0.8.2** with **PHP 8.5** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
 
 ## 1. Install the required packages:
 
@@ -9,20 +9,17 @@ Follow the instructions for your operating system.
 ### Ubuntu 22.04 / 24.04
 
 ```bash
-apt update
 apt install -y curl software-properties-common ufw
-
 add-apt-repository -y ppa:ondrej/php
-add-apt-repository -y ppa:ondrej/nginx
 apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
   nginx python3-certbot-nginx \
-  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
-  php8.3-bcmath php8.3-bz2 php8.3-gmp php8.3-intl \
-  php8.3-mbstring php8.3-xml php8.3-zip php8.3-imap \
-  php8.3-swoole php8.3-yaml php8.3-mysql
+  php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
+  php8.5-bcmath php8.5-bz2 php8.5-gmp php8.5-intl \
+  php8.5-mbstring php8.5-xml php8.5-zip php8.5-imap \
+  php8.5-swoole php8.5-yaml php8.5-mysql php8.5-gd php8.5-imagick
 ```
 
 ### Debian 12 / 13
@@ -38,22 +35,15 @@ curl -fsSL https://packages.sury.org/php/apt.gpg \
 echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
  > /etc/apt/sources.list.d/sury-php.list
 
-# Nginx (official repo)
-curl -fsSL https://nginx.org/keys/nginx_signing.key \
- | gpg --dearmor -o /usr/share/keyrings/nginx.gpg
-
-echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/mainline/debian $(lsb_release -sc) nginx" \
- > /etc/apt/sources.list.d/nginx.list
-
 apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
   nginx python3-certbot-nginx \
-  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
-  php8.3-bcmath php8.3-bz2 php8.3-gmp php8.3-intl \
-  php8.3-mbstring php8.3-xml php8.3-zip php8.3-imap \
-  php8.3-swoole php8.3-yaml php8.3-mysql
+  php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
+  php8.5-bcmath php8.5-bz2 php8.5-gmp php8.5-intl \
+  php8.5-mbstring php8.5-xml php8.5-zip php8.5-imap \
+  php8.5-swoole php8.5-yaml php8.5-mysql php8.5-gd php8.5-imagick
 ```
 
 ### 1.1. Configure PHP Settings:
@@ -61,7 +51,7 @@ apt install -y \
 1. Open the PHP-FPM configuration file:
 
 ```bash
-nano /etc/php/8.3/fpm/php.ini
+nano /etc/php/8.5/fpm/php.ini
 ```
 
 Add or uncomment the following session security settings:
@@ -75,7 +65,7 @@ session.cookie_samesite = "Strict"
 2. Restart PHP-FPM to apply the changes:
 
 ```bash
-systemctl restart php8.3-fpm
+systemctl restart php8.5-fpm
 ```
 
 ### 1.2. Configure Nginx:
@@ -88,7 +78,7 @@ systemctl restart php8.3-fpm
 server {
     listen 80;
     server_name %%DOMAIN%%;
-    return 301 https://%%DOMAIN%%/request_uri/;
+    return 301 https://$host$request_uri;
 }
 
 server {
@@ -107,24 +97,29 @@ server {
     sendfile off;
     include /etc/nginx/mime.types;
 
-    # Block access to sensitive files and return 404 to make it indistinguishable from a missing file
+    # Block access to sensitive files
     location ~* .(ini|sh|inc|bak|twig|sql)$ {
-        return 404;
+        return 403;
+    }
+
+    # Block /vendor completely
+    location ^~ /vendor/ {
+        return 403;
+    }
+
+    # Block direct access to config.php
+    location = /config.php {
+        return 403;
     }
 
     # Block access to hidden files except .well-known
     location ~ /\.(?!well-known\/) {
-        return 404;
+        return 403;
     }
 
-    # Disable PHP execution in /uploads
-    location ~* /uploads/.*\.php$ {
-        return 404;
-    }
-
-    # Deny access to /data
-    location ~* /data/ {
-        return 404;
+    # Deny access to runtime data
+    location ^~ /data/ {
+        return 403;
     }
 
     location @rewrite {
@@ -134,24 +129,17 @@ server {
 
     location ~ \.php {
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
-
-        # fastcgi_pass need to be changed according your server setup:
-        # phpx.x is your server setup
-        # examples: /var/run/phpx.x-fpm.sock, /var/run/php/phpx.x-fpm.sock or /run/php/phpx.x-fpm.sock are all valid options
-        # Or even localhost:port (Default 9000 will work fine)
-        # Please check your server setup
-
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
             fastcgi_param PATH_INFO       $fastcgi_path_info;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             fastcgi_intercept_errors on;
             include fastcgi_params;
-        }
+    }
 
-        location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
-            root $root_path;
-            expires off;
-        }
+    location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root $root_path;
+        expires off;
+    }
 }
 ```
 
@@ -293,7 +281,7 @@ Then execute the following commands:
 
 ```bash
 apt update
-apt install -y mariadb-client mariadb-server php8.3-mysql
+apt install -y mariadb-client mariadb-server php8.5-mysql
 mariadb-secure-installation
 ```
 
@@ -328,7 +316,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 ```bash
 cd /tmp
-wget https://fossbilling.org/downloads/stable -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.2/FOSSBilling-0.8.2.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 ```
 
@@ -484,7 +472,7 @@ After submitting to both DENIC and ICANN, you can proceed with regular data escr
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
 ```bash
-* * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
+* * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
 ## 13. ICANN Registrar Module:

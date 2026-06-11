@@ -24,9 +24,6 @@ else
     exit 1
 fi
 
-PHP_VERSION="php8.3"
-PHP_SHORT="8.3"
-
 case "${OS_ID}:${VER}" in
     ubuntu:22.04)
         OS_NAME="Ubuntu"
@@ -137,6 +134,8 @@ set_php_ini_value() {
 }
 
 install_rdap_and_whois_services() {
+    local panel="${1:-foss}"
+
     echo "Installing RDAP & WHOIS services..."
 
     # Clone the registrar repository
@@ -152,6 +151,7 @@ install_rdap_and_whois_services() {
     sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
     escaped_pass=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
     sed -i "s|'db_password' => .*|'db_password' => '$escaped_pass',|" config.php
+    sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
 
     # Copy and enable the WHOIS service
     cp whois.service /etc/systemd/system/
@@ -169,6 +169,7 @@ install_rdap_and_whois_services() {
     sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
     db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
     sed -i "s|'db_password' => .*|'db_password' => '$db_pass_escaped',|" config.php
+    sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
 
     # Copy and enable the RDAP service
     cp rdap.service /etc/systemd/system/
@@ -185,6 +186,8 @@ install_rdap_and_whois_services() {
     sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
     db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
     sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass_escaped'/g" config.php
+    panel_upper=$(printf '%s' "$panel" | tr '[:lower:]' '[:upper:]')
+    sed -i "s|'backend' => .*|'backend' => '$panel_upper',|" config.php
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
@@ -193,26 +196,33 @@ install_rdap_and_whois_services() {
     mv escrow-rde-client-v2.3.1-linux_x86_64 escrow-rde-client
     rm escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
 
-    # Clone and move FOSSBilling modules
-    cd /opt
-    git clone https://github.com/getnamingo/fossbilling-validation
-    mv fossbilling-validation/Validation /var/www/modules/
+    if [ "$panel" = "foss" ]; then
+        # Clone and move FOSSBilling modules
+        cd /opt
+        git clone https://github.com/getnamingo/fossbilling-validation
+        mv fossbilling-validation/Validation /var/www/modules/
 
-    git clone https://github.com/getnamingo/fossbilling-tmch
-    mv fossbilling-tmch/Tmch /var/www/modules/
+        git clone https://github.com/getnamingo/fossbilling-tmch
+        mv fossbilling-tmch/Tmch /var/www/modules/
 
-    git clone https://github.com/getnamingo/fossbilling-whois
-    mv fossbilling-whois/Whois /var/www/modules/
-    mv fossbilling-whois/check.php /var/www/
+        git clone https://github.com/getnamingo/fossbilling-whois
+        mv fossbilling-whois/Whois /var/www/modules/
+        mv fossbilling-whois/check.php /var/www/
 
-    sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
-    sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
-    
-    git clone https://github.com/getnamingo/fossbilling-contact
-    mv fossbilling-contact/Contact /var/www/modules/
+        sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
+        sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
+        
+        git clone https://github.com/getnamingo/fossbilling-contact
+        mv fossbilling-contact/Contact /var/www/modules/
 
-    git clone https://github.com/getnamingo/fossbilling-registrar
-    mv fossbilling-registrar/Registrar /var/www/modules/
+        git clone https://github.com/getnamingo/fossbilling-registrar
+        mv fossbilling-registrar/Registrar /var/www/modules/
+    elif [ "$panel" = "whmcs" ]; then
+        echo "WHMCS selected, skipping FOSSBilling modules."
+
+    else
+        echo "LOOM selected, skipping FOSSBilling modules."
+    fi
 
     mkdir /opt/registrar/escrow
     mkdir /opt/registrar/escrow/process
@@ -223,19 +233,12 @@ install_php_repo() {
   if [[ "$OS_ID" == "ubuntu" ]]; then
     apt install -y software-properties-common
     add-apt-repository -y ppa:ondrej/php
-    add-apt-repository -y ppa:ondrej/nginx
   elif [[ "$OS_ID" == "debian" ]]; then
     # PHP (SURY)
     curl -fsSL https://packages.sury.org/php/apt.gpg \
       | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
     echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
       > /etc/apt/sources.list.d/sury-php.list
-
-    # Nginx mainline (official)
-    curl -fsSL https://nginx.org/keys/nginx_signing.key \
-      | gpg --dearmor -o /usr/share/keyrings/nginx.gpg
-    echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/mainline/debian $(lsb_release -sc) nginx" \
-      > /etc/apt/sources.list.d/nginx.list
   else
     echo "Unsupported OS: ${OS_ID:-unknown} ${VER:-unknown}"
     exit 1
@@ -360,16 +363,16 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
 apt update -y
-apt install -y mariadb-client mariadb-server nginx python3-certbot-nginx php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-yaml php8.3-zip php8.3-mysql
+apt install -y mariadb-client mariadb-server nginx python3-certbot-nginx php8.5-cli php8.5-common php8.5-curl php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-gmp php8.5-imagick php8.5-imap php8.5-intl php8.5-mbstring php8.5-readline php8.5-soap php8.5-swoole php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
 
 # Update php.ini (FPM)
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_httponly" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "expose_php" "0"
 
-systemctl restart php8.3-fpm
+systemctl restart php8.5-fpm
 
 # Configure Nginx
 ufw disable
@@ -379,7 +382,7 @@ cat <<EOL > $nginx_conf_fossbilling
 server {
     listen 80;
     server_name $panel_domain_name;
-    return 301 https://$panel_domain_name\$request_uri;
+    return 301 https://\$host\$request_uri;
 }
 
 server {
@@ -399,23 +402,23 @@ server {
     include /etc/nginx/mime.types;
 
     location ~* \.(ini|sh|inc|bak|twig|sql)\$ {
-        return 404;
+        return 403;
+    }
+
+    location ^~ /vendor/ {
+        return 403;
+    }
+
+    location = /config.php {
+        return 403;
     }
 
     location ~ /\.(?!well-known/) {
-        return 404;
+        return 403;
     }
 
-    location ~* /uploads/.*\.php\$ {
-        return 404;
-    }
-
-    location ~* ^/data/.*\.(jpg|jpeg|png)$ {
-        allow all;
-    }
-
-    location ~* /data/ {
-        return 404;
+    location ^~ /data/ {
+        return 403;
     }
 
     location @rewrite {
@@ -425,7 +428,7 @@ server {
 
     location ~ \.php {
         fastcgi_split_path_info ^(.+\.php)(/.*)\$;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
         fastcgi_param PATH_INFO \$fastcgi_path_info;
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         fastcgi_intercept_errors on;
@@ -558,7 +561,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 # Download and Extract FOSSBilling
 cd /tmp
-wget https://fossbilling.org/downloads/stable -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.2/FOSSBilling-0.8.2.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
@@ -584,7 +587,7 @@ sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/c
 db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass_escaped'|" /var/www/config.php
 
-cron_job="*/5 * * * * /usr/bin/php8.3 /var/www/cron.php"
+cron_job="*/5 * * * * php /var/www/cron.php"
 
 tmp_cron="$(mktemp 2>/dev/null)" || {
   echo "[!] Failed to create temp file (mktemp)."
@@ -626,7 +629,8 @@ mariadb -u $db_user -p$db_pass registrar -e "$sql"
 
 echo "Admin user created: $email"
 
-rm -rf /var/www/install
+rm -rfv /var/www/install
+chmod 644 /var/www/config.php
 
 # Clone the Tide theme repository
 git clone https://github.com/getpinga/tide /var/www/themes/tide
@@ -652,7 +656,7 @@ fi
 mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    install_rdap_and_whois_services
+    install_rdap_and_whois_services "foss"
 fi
 
 # Final instructions to the user
@@ -675,7 +679,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "   - /opt/registrar/automation/config.php"
     echo
     echo "6. Add the following cron job to ensure automation runs smoothly:"
-    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
     echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
     echo "   - Domain Contact Verification"
@@ -1026,7 +1030,7 @@ rm -f "$tmp_cron"
 echo "SSL and cron setup complete."
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    install_rdap_and_whois_services
+    install_rdap_and_whois_services "whmcs"
 fi
 
 # Final instructions to the user
@@ -1086,7 +1090,7 @@ echo "Please follow these steps carefully to complete your installation and conf
                     db_name=$(grep "^\$db_name" "$config_file" | sed -E "s/^\$db_name\s*=\s*\"(.*)\";/\1/")
 
                     if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-                        install_rdap_and_whois_services
+                        install_rdap_and_whois_services "whmcs"
             
 if systemctl is-active --quiet apache2; then            
 echo "== Creating RDAP VirtualHost config =="
@@ -1340,6 +1344,8 @@ systemctl enable caddy
 systemctl restart caddy
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+  install_rdap_and_whois_services "loom"
+
   echo "Adding RDAP host to Caddyfile for rdap.${$HOSTNAME} …"
 
   cat >> /etc/caddy/Caddyfile <<EOF
