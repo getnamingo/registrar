@@ -218,8 +218,10 @@ install_rdap_and_whois_services() {
         git clone https://github.com/getnamingo/fossbilling-registrar
         mv fossbilling-registrar/Registrar /var/www/modules/
     elif [ "$panel" = "whmcs" ]; then
-        echo "WHMCS selected, skipping FOSSBilling modules."
-
+        git clone https://github.com/getnamingo/whmcs-namingo-registrar
+        mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons
+        chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
+        chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
     else
         echo "LOOM selected, skipping FOSSBilling modules."
     fi
@@ -349,8 +351,11 @@ echo
 
 # Install necessary packages
 apt update -y
-apt install -y ufw bzip2 ca-certificates certbot composer curl git gnupg lsb-release openssl net-tools unzip wget whois
+apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
@@ -758,8 +763,11 @@ echo
 
 # Install necessary packages
 apt update -y
-apt install -y ufw bzip2 ca-certificates certbot composer curl git gnupg lsb-release openssl net-tools unzip wget whois
+apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 # Install and configure MariaDB
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
@@ -1186,8 +1194,11 @@ fi
 
 log "Install necessary packages…"
 apt update -y
-apt install -y apt-transport-https ufw bzip2 ca-certificates certbot composer curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
+apt install -y apt-transport-https ufw bzip2 ca-certificates certbot curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
