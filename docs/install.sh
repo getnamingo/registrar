@@ -360,9 +360,6 @@ db_pass="$(generate_password)"
 apt update -y
 apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
 
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
@@ -376,6 +373,9 @@ EOF
 
 apt update -y
 apt install -y mariadb-client mariadb-server nginx python3-certbot-nginx php8.5-cli php8.5-common php8.5-curl php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-gmp php8.5-imagick php8.5-imap php8.5-intl php8.5-mbstring php8.5-readline php8.5-soap php8.5-swoole php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
@@ -774,9 +774,6 @@ db_pass="$(generate_password)"
 apt update -y
 apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
 
 # Install and configure MariaDB
 curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
@@ -791,6 +788,9 @@ EOF
 
 apt update -y
 apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.3 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 # Update php.ini files
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -1208,9 +1208,6 @@ log "Install necessary packages…"
 apt update -y
 apt install -y apt-transport-https ufw bzip2 ca-certificates certbot curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
 
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
@@ -1227,6 +1224,9 @@ EOF
 
 apt update -y
 apt install -y caddy mariadb-client mariadb-server php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-zip
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+php8.3 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
