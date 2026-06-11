@@ -625,8 +625,8 @@ rm -f "$tmp_cron" /tmp/crontab.err
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
 
-read -p "Enter admin email: " email
-read -s -p "Enter admin password: " password
+read -p "Enter registrar admin email: " email
+read -s -p "Enter registrar admin password: " password
 echo ""
 
 # Hash password using PHP (bcrypt, cost 12)
@@ -672,6 +672,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 fi
 
 # Final instructions to the user
+echo
 echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
 echo
 echo "Generated database user: $db_user"
