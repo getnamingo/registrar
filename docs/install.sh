@@ -678,9 +678,9 @@ echo
 echo "Generated database user: $db_user"
 echo "Generated database password: $db_pass"
 echo
-echo "1. Open your browser and visit https://$panel_domain_name/admin to login with your admin account."
+echo "1. Open your browser, visit https://$panel_domain_name/admin and login with your admin account."
 echo
-echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Theme."
+echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "   Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
 echo
 echo "3. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."

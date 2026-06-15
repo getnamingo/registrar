@@ -351,7 +351,7 @@ chown www-data:www-data /var/www/themes/tide/assets
 chown www-data:www-data /var/www/themes/tide/config/settings_data.json
 ```
 
-Activate the Tide theme from the admin panel, `System -> Settings -> Theme`, by clicking on "Set as default".
+Activate the Tide theme from the admin panel, `System -> Settings -> Themes`, by clicking on "Set as default".
 
 ## 8. Configure FOSSBilling Settings:
 
