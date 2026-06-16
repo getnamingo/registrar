@@ -43,6 +43,11 @@
 >
 > Do not continue unless you have verified that your backups can be restored.
 
+> [!IMPORTANT]
+> For the best compatibility and long-term support, consider upgrading your server to **PHP 8.5** before or shortly after completing the FOSSBilling upgrade process.
+>
+> Namingo Registrar v1.1.7 and future releases are tested primarily against PHP 8.5.
+
 ### Step 1: Upgrade FOSSBilling
 
 First, upgrade FOSSBilling to v0.8.x by following the official FOSSBilling upgrade documentation:

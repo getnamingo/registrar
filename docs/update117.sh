@@ -11,24 +11,28 @@ if [[ "$confirm" != "y" ]]; then
     exit 0
 fi
 
-# Check for unsupported legacy FOSSBilling installation
+# Check for previous FOSSBilling installation
 if [[ -s /var/www/di.php ]]; then
     echo
     echo "============================================================"
-    echo " Upgrade cannot continue"
+    echo " WARNING"
     echo "============================================================"
     echo
-    echo "A legacy FOSSBilling installation was detected."
+    echo "A previous FOSSBilling installation has been detected."
     echo
-    echo "Automated upgrade from earlier FOSSBilling versions to"
-    echo "Namingo Registrar v1.1.7 with FOSSBilling v0.8.2 is not supported."
+    echo "Namingo Registrar v1.1.7 includes FOSSBilling v0.8.2"
+    echo "and PHP v8.5, but these components will not be upgraded"
+    echo "automatically by this script."
     echo
-    echo "Please read the upgrade.md file and follow the manual upgrade"
-    echo "instructions for legacy FOSSBilling installations."
+    echo "If you wish to upgrade FOSSBilling and related modules,"
+    echo "please follow the instructions in docs/upgrade.md."
     echo
-    echo "Upgrade aborted."
-    echo
-    exit 1
+    read -p "Continue with the Namingo Registrar upgrade and manage any FOSSBilling upgrades manually? (y/n): " fbconfirm
+
+    if [[ "$fbconfirm" != "y" ]]; then
+        echo "Upgrade aborted."
+        exit 1
+    fi
 fi
 
 # Check the Linux distribution and version
@@ -195,3 +199,9 @@ echo
 echo "Check logs for any warnings or errors during the upgrade."
 echo "If you encounter issues or unexpected behavior, please contact the Namingo team for support."
 echo
+if [[ -s /var/www/di.php ]]; then
+    echo
+    echo "NOTE: A previous FOSSBilling installation was detected."
+    echo "This script did not upgrade FOSSBilling, its theme, PHP, or related modules."
+    echo "If needed, upgrade them manually by following docs/upgrade.md."
+fi
