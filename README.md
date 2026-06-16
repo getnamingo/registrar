@@ -68,9 +68,9 @@ For detailed installation steps, see:
 > For example, to upgrade from **v1.1.5** to **v1.1.7**, first run the **v1.1.6** upgrade, then the **v1.1.7** upgrade.
 
 > [!WARNING]
-> If you are using **FOSSBilling** with Namingo Registrar, any upgrades to **FOSSBilling v0.8.2**, **PHP v8.5**, themes, or modules must be performed manually.
+> Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
 >
-> Please review the **FOSSBilling Upgrade Path** in [`docs/upgrade.md`](docs/upgrade.md) before upgrading to Namingo Registrar v1.1.7.
+> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.2**, please refer to the **FOSSBilling Upgrade Path** in [`docs/upgrade.md`](docs/upgrade.md).
 
 - **v1.1.6 → v1.1.7**  
   Download and run the [`update117.sh`](docs/update117.sh) script.
