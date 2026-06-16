@@ -11,6 +11,26 @@ if [[ "$confirm" != "y" ]]; then
     exit 0
 fi
 
+# Check for unsupported legacy FOSSBilling installation
+if [[ -s /var/www/di.php ]]; then
+    echo
+    echo "============================================================"
+    echo " Upgrade cannot continue"
+    echo "============================================================"
+    echo
+    echo "A legacy FOSSBilling installation was detected."
+    echo
+    echo "Automated upgrade from earlier FOSSBilling versions to"
+    echo "Namingo Registrar v1.1.7 with FOSSBilling v0.8.2 is not supported."
+    echo
+    echo "Please read the upgrade.md file and follow the manual upgrade"
+    echo "instructions for legacy FOSSBilling installations."
+    echo
+    echo "Upgrade aborted."
+    echo
+    exit 1
+fi
+
 # Check the Linux distribution and version
 if [[ -e /etc/os-release ]]; then
     . /etc/os-release

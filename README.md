@@ -60,31 +60,28 @@ For detailed installation steps, see:
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 - [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
 
-### Update
+### Upgrade
 
-- v1.1.6 to v1.1.7 - backup registrar, download and run the [update117.sh](docs/update117.sh) script.
+> [!IMPORTANT]
+> Upgrade scripts **must be run sequentially** without skipping versions.
+>
+> For example, to upgrade from **v1.1.5** to **v1.1.7**, first run the **v1.1.6** upgrade, then the **v1.1.7** upgrade.
 
-- v1.1.5 to v1.1.6 - backup registrar, download and run the [update116.sh](docs/update116.sh) script.
+> [!WARNING]
+> If you are running **Namingo Registrar v1.1.6 or earlier** with **FOSSBilling v0.7.2 or earlier**, automated upgrades are **not supported**.
+>
+> Please refer to the **FOSSBilling Upgrade Path** section in [`upgrade.md`](docs/upgrade.md) for manual upgrade instructions.
 
-- v1.1.4 to v1.1.5 - backup registrar, download and run the [update115.sh](docs/update115.sh) script.
+- **v1.1.6 → v1.1.7**  
+  Download and run the [`update117.sh`](docs/update117.sh) script.
+  
+- **v1.1.5 → v1.1.6**  
+  Download and run the [`update116.sh`](docs/update116.sh) script.
+  
+- **v1.1.4 → v1.1.5**  
+  Download and run the [`update115.sh`](docs/update115.sh) script.
 
-- v1.1.3 to v1.1.4 - backup registrar, download and run the [update114.sh](docs/update114.sh) script.
-
-- v1.1.2 to v1.1.3 - backup registrar, download and run the [update113.sh](docs/update113.sh) script.
-
-- v1.1.1 to v1.1.2 - backup registrar, download and run the [update112.sh](docs/update112.sh) script.
-
-- v1.1.0 to v1.1.1 - backup registrar, download and run the [update111.sh](docs/update111.sh) script.
-
-- v1.0.5 to v1.1.0 - backup registrar, download and run the [update110.sh](docs/update110.sh) script.
-
-- v1.0.4 to v1.0.5 - backup registrar, download and run the [update105.sh](docs/update105.sh) script.
-
-- v1.0.3 to v1.0.4 - backup registrar, download and run the [update104.sh](docs/update104.sh) script.
-
-- v1.0.2 to v1.0.3 - backup registrar, download and run the [update103.sh](docs/update103.sh) script.
-
-- v1.0.0/v1.0.1 to v1.0.2 - backup registrar, download and run the [update102.sh](docs/update102.sh) script.
+For **older versions**, please refer to [`upgrade.md`](docs/upgrade.md).
 
 ## Support
 
@@ -95,8 +92,6 @@ Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If
 - **Discord**: Or chat with us on our [Discord](https://discord.gg/97R9VCrWgc) channel.
   
 - **GitHub Issues**: For bug reports or feature requests, please use the [Issues](https://github.com/getnamingo/registrar/issues) section of our GitHub repository.
-
-- **GitHub Discussions**: For general discussions, ideas, or to connect with our community, visit the [Discussion](https://github.com/getnamingo/registrar/discussions) page on our GitHub project.
 
 We appreciate your involvement and patience as Namingo continues to grow and adapt.
 
