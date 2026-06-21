@@ -664,7 +664,7 @@ settings_file="/var/www/themes/tide/config/settings_data.json"
 
 # Replace "Welcome to Tide" with "Welcome to Namingo Registrar" in settings_data.json
 if [ -f "$settings_file" ]; then
-    sed -i 's/Welcome to Tide/Welcome to Namingo Registrar/g' "$settings_file"
+    sed -i 's/Welcome to Tide theme for FOSSBilling/Welcome to Namingo Registrar/g' "$settings_file"
 else
     echo "Error: $settings_file not found!"
     exit 1
