@@ -20,7 +20,7 @@ if [[ -s /var/www/di.php ]]; then
     echo
     echo "A previous FOSSBilling installation has been detected."
     echo
-    echo "Namingo Registrar v1.1.7 includes FOSSBilling v0.8.2"
+    echo "Namingo Registrar v1.1.7 includes FOSSBilling v0.8.3"
     echo "and PHP v8.5, but these components will not be upgraded"
     echo "automatically by this script."
     echo

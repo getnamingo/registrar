@@ -1,6 +1,6 @@
 # Namingo Registrar: Installation Guide (FOSSBilling)
 
-This guide is for setting up **FOSSBilling 0.8.2** with **PHP 8.5** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
+This guide is for setting up **FOSSBilling 0.8.3** with **PHP 8.5** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
 
 ## 1. Install the required packages:
 
@@ -316,7 +316,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 ```bash
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.2/FOSSBilling-0.8.2.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.3/FOSSBilling-0.8.3.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 ```
 

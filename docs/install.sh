@@ -573,7 +573,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 # Download and Extract FOSSBilling
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.2/FOSSBilling-0.8.2.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.3/FOSSBilling-0.8.3.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
