@@ -272,19 +272,21 @@ case "$choice" in
     1)
         echo "FOSSBilling selected."
         echo 
-echo "Before continuing, ensure that you have the following domains pointing to this server:"
-echo "1. example.com or panel.example.com"
-echo "2. whois.example.com"
-echo "3. rdap.example.com"
+echo "Before continuing, make sure the required domains already point to this server:"
 echo
-read -p "Do you want to continue? (Y/N): " continue_install
+echo "1. Your panel domain, for example: example.com or cp.example.com"
+echo "2. WHOIS service domain, for example: whois.example.com"
+echo "3. RDAP service domain, for example: rdap.example.com"
+
+echo
+read -p "Do these domains already point to this server? (Y/N): " continue_install
 
 if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
-    echo "Installation aborted."
+    echo "Installation aborted. Please update DNS first, then run the installer again."
     exit 1
 fi
 
-read -p "Enter the domain where the system will live (e.g., example.com or cp.example.com): " panel_domain_name
+read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
 
 # normalize
 panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
