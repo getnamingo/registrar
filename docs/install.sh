@@ -236,7 +236,7 @@ install_rdap_and_whois_services() {
 
     mkdir /opt/registrar/escrow
     mkdir /opt/registrar/escrow/process
-    mkdir /var/log/namingo
+    mkdir -p /var/log/namingo
 }
 
 install_php_repo() {
@@ -624,6 +624,12 @@ rm -f "$tmp_cron" /tmp/crontab.err
 # Import SQL files into the database
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
+echo ""
+echo "=================================================="
+echo " Namingo Registrar Admin Account"
+echo "=================================================="
+echo ""
 
 read -p "Enter registrar admin email: " email
 read -s -p "Enter registrar admin password: " password
