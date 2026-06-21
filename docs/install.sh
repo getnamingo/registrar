@@ -664,7 +664,12 @@ settings_file="/var/www/themes/tide/config/settings_data.json"
 
 # Replace "Welcome to Tide" with "Welcome to Namingo Registrar" in settings_data.json
 if [ -f "$settings_file" ]; then
-    sed -i 's/Welcome to Tide theme for FOSSBilling/Welcome to Namingo Registrar/g' "$settings_file"
+    sed -i \
+      -e 's/Welcome to Tide theme for FOSSBilling/Welcome to Namingo Registrar/g' \
+      -e 's/Welcome to Tide/Welcome to Namingo Registrar/g' \
+      -e 's/"footer_link_1_enabled":"0"/"footer_link_1_enabled":"1"/g' \
+      -e 's/"footer_link_2_enabled":"0"/"footer_link_2_enabled":"1"/g' \
+      "$settings_file"
 else
     echo "Error: $settings_file not found!"
     exit 1
@@ -674,6 +679,12 @@ fi
 mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    sed -i \
+      -e 's/"footer_link_3_enabled":"0"/"footer_link_3_enabled":"1"/g' \
+      -e 's/"footer_link_3_title":"Status"/"footer_link_3_title":"Lookup"/g' \
+      -e "s|\"footer_link_3_page\":\"\"|\"footer_link_3_page\":\"whois.$domain_name\"|g" \
+      "$settings_file"
+
     install_rdap_and_whois_services "foss"
 fi
 
@@ -710,10 +721,9 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "   - Domain Registrant Contact"
     echo "   - ICANN Registrar Accreditation"
     echo
-    echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo "8. Update your Contact page with all required company details, including the company registration number and responsible person."
     echo
-    echo "9. Configure the escrow and other tools following the instructions in the install-fossbilling.md file (sections 12.1 and 20)."
+    echo "9. Complete the escrow, website content, and compliance configuration described in install-fossbilling.md (sections 12.1 and 20) to meet ICANN requirements."
     echo
 fi
 

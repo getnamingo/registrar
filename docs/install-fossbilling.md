@@ -568,8 +568,44 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
 
 ## 20. Further Settings:
 
-1. **Footer Compliance Links**  
-   Your website footer must include links to all required ICANN documents, as well as your own **Terms and Conditions** and **Privacy Policy**.
+1. **Footer Compliance Links**
+
+   Your website footer should include links to the required ICANN information pages, your own **Terms and Conditions**, your **Privacy Policy**, and a clear **Report Abuse** page.
+
+   **1a. Add your legal pages**
+
+   In the admin panel, go to:
+
+   **System → Settings → System tab → Company Legal**
+
+   Add the contents of your **Terms and Conditions** and **Privacy Policy** pages there.
+
+   **1b. Create a Registrant Information page**
+
+   On your main website, create a separate page called **Registrant Information** and include links to:
+
+   - [Registrants’ Benefits and Responsibilities Specification](https://www.icann.org/resources/pages/approved-with-specs-2013-09-17-en#registrant)
+   - [Registrant Educational Information](https://www.icann.org/registrants)
+   - [ICANN Consensus Policies](https://www.icann.org/resources/pages/registrars/consensus-policies-en)
+
+   **1c. Create a Report Abuse page**
+
+   Create another separate page called **Report Abuse**, explaining how users can report domain abuse and how your team handles abuse reports.
+
+   **1d. Add both pages to the footer**
+
+   In the admin panel, go to:
+
+   **System → Settings → Theme → Tide → Settings**
+
+   Find **Footer Link 4** and **Footer Link 5**.
+
+   Rename them to:
+
+   - **Registrant Information**
+   - **Report Abuse**
+
+   Add the correct page links, enable both footer links, and save the settings.
 
 2. **Company Information on Contact Page**  
    Your Contact page must clearly display your full company details, including:
