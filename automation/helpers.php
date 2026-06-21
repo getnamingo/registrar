@@ -6,37 +6,102 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Formatter\LineFormatter;
-use Ds\Map;
-use Swoole\Coroutine;
-use Swoole\Coroutine\Http\Client;
 
-function connectEpp(string $registry, $config)
+function epp_client($config)
 {
-    try
-    {
-        $epp = new Client();
-        $info = [
-        "host" => $config["host"],
-        "port" => $config["port"], "timeout" => 30, "tls" => "1.2", "bind" => false, "bindip" => "1.2.3.4:0", "verify_peer" => false, "verify_peer_name" => false,
-        "verify_host" => false, "cafile" => $config["ssl_cafile"], "local_cert" => $config["ssl_cert"], "local_pk" => $config["ssl_key"], "passphrase" => $config["passphrase"], "allow_self_signed" => true, ];
-        $epp->connect($info);
-        $login = $epp->login(["clID" => $config["username"], "pw" => $config["password"],
-        "prefix" => "namingo", ]);
-        if (array_key_exists("error", $login))
-        {
-            echo "Login Error: " . $login["error"] . PHP_EOL;
-            exit();
-        }
-        else
-        {
-            echo "Login Result: " . $login["code"] . ": " . $login["msg"][0] . PHP_EOL;
-        }
-        return $epp;
+    $profile = $config['registry_profile'] ?? 'generic';
+
+    $epp = EppRegistryFactory::create($profile);
+    $epp->disableLogging();
+
+    $tls_version = '1.2';
+    if (!empty($config['tls_version'])) {
+        $tls_version = '1.3';
     }
-    catch(EppException $e)
-    {
-        return "Error : " . $e->getMessage();
+        
+    $verify_peer = false;
+    if ($config['verify_peer'] == 'on') {
+        $verify_peer = true;
     }
+
+    $moduleDir = __DIR__;
+
+    $certPath = trim($config['local_cert'] ?? '');
+    $keyPath  = trim($config['local_pk'] ?? '');
+
+    if ($certPath === '' || $keyPath === '') {
+        echo 'Client certificate and private key are required.';
+    }
+
+    if ($certPath[0] !== '/' && !preg_match('~^[A-Za-z]:[\\\\/]~', $certPath)) {
+        $certPath = $moduleDir . '/' . $certPath;
+    }
+    if ($keyPath[0] !== '/' && !preg_match('~^[A-Za-z]:[\\\\/]~', $keyPath)) {
+        $keyPath = $moduleDir . '/' . $keyPath;
+    }
+
+    $certPath = realpath($certPath);
+    $keyPath  = realpath($keyPath);
+
+    if ($certPath === false || $keyPath === false) {
+        echo 'EPP TLS certificate or key not found or not readable. '
+            . 'cert=' . ($certPath ?: 'false') . ' key=' . ($keyPath ?: 'false');
+    }
+
+    $info = [
+        'host'    => $config['host'] ?? '',
+        'port'    => (int)($config['port'] ?? 700),
+        'timeout' => 30,
+        'tls'     => $tls_version ?? '1.2',
+        'bind'    => false,
+        'bindip'  => '1.2.3.4:0',
+        'verify_peer'      => !empty($verify_peer),
+        'verify_peer_name' => false,
+        'cafile'           => $config['cafile'] ?? '',
+        'local_cert' => $certPath,
+        'local_pk' => $keyPath,
+        'passphrase'       => $config['passphrase'] ?? '',
+        'allow_self_signed'=> true,
+    ];
+    if ($profile === 'generic') {
+        $raw = $config['login_extensions'] ?? '';
+
+        if (is_array($raw)) {
+            $info['loginExtensions'] = array_values(array_filter(array_map('trim', $raw)));
+        } else {
+            $info['loginExtensions'] = trim($raw) !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[,\s]+/', $raw))))
+                : [
+                    'urn:ietf:params:xml:ns:secDNS-1.1',
+                    'urn:ietf:params:xml:ns:rgp-1.0',
+                ];
+        }
+
+        $epp->setLoginExtensions($info['loginExtensions']);
+    }
+
+    if (empty($info['host']) || empty($info['port'])) {
+        echo 'EPP host/port not configured';
+    }
+
+    $epp->connect($info);
+
+    $login = $epp->login([
+        'clID'   => $config['clid'] ?? '',
+        'pw'     => $config['pw'] ?? '',
+        'prefix' => $config['registrarprefix'] ?? 'epp',
+    ]);
+
+    if (isset($login['error'])) {
+        echo 'Login Error: ' . $login['error'];
+    }
+
+    return $epp;
+}
+
+function epp_client_logout($epp)
+{
+    try { $epp->logout(); } catch (\Throwable $e) {}
 }
 
 function send_email($to, $subject, $message, $config) {
@@ -102,7 +167,7 @@ function setupLogger($logFilePath, $channelName = 'app') {
     return $log;
 }
 
-function seedWhmcsContactValidation(PDO $pdo, string $registeredAt): void
+function seedWhmcsContactValidation(PDO $pdo): void
 {
     $stmt = $pdo->prepare("
         INSERT IGNORE INTO namingo_contact_validation (
@@ -119,11 +184,10 @@ function seedWhmcsContactValidation(PDO $pdo, string $registeredAt): void
         LEFT JOIN namingo_contact_validation ncv ON ncv.client_id = tc.id
         WHERE td.registrationdate IS NOT NULL
           AND td.registrationdate <> '0000-00-00'
-          AND td.registrationdate < :registered_at
           AND ncv.id IS NULL
     ");
 
-    $stmt->execute(['registered_at' => $registeredAt]);
+    $stmt->execute();
 }
 
 function getWhmcsPendingContactValidation(PDO $pdo, string $registeredAt): array
@@ -183,7 +247,7 @@ function getWhmcsLegacyPendingContactValidation(PDO $pdo, string $registeredAt):
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function seedFossContactValidation(PDO $pdo, string $registeredAt): void
+function seedFossContactValidation(PDO $pdo): void
 {
     $stmt = $pdo->prepare("
         INSERT IGNORE INTO domain_contact_validation (
@@ -199,11 +263,10 @@ function seedFossContactValidation(PDO $pdo, string $registeredAt): void
         JOIN client c ON c.id = sd.client_id
         LEFT JOIN domain_contact_validation dcv ON dcv.client_id = c.id
         WHERE sd.registered_at IS NOT NULL
-          AND sd.registered_at < :registered_at
           AND dcv.id IS NULL
     ");
 
-    $stmt->execute(['registered_at' => $registeredAt]);
+    $stmt->execute();
 }
 
 function getFossPendingContactValidation(PDO $pdo, string $registeredAt): array

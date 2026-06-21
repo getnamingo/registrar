@@ -15,6 +15,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
+use Pinga\Tembo\EppRegistryFactory;
 
 $logFilePath = '/var/log/namingo/validation.log';
 $log = setupLogger($logFilePath, 'Validation');
@@ -22,7 +23,6 @@ $log->info('job started.');
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
-use Registrar\EppClient\Client;
 
 // Set up database connection
 try {
@@ -33,6 +33,60 @@ try {
     exit(1);
 }
 
+if ($backend === 'FOSS') {
+	require_once '/var/www/load.php';
+	$di = include '/var/www/di.php';
+
+	$dbConfig = \FOSSBilling\Config::getProperty('db', []);
+	$registrar = "Epp";
+	////TODO from loom choose profile
+
+	try
+	{
+		$dsn = 'mysql' . ":host=" . $dbConfig["host"] . ";port=" . $dbConfig["port"] . ";dbname=" . $dbConfig["name"];
+		$pdo = new PDO($dsn, $dbConfig["user"], $dbConfig["password"]);
+		$stmt = $pdo->prepare("SELECT id, config FROM tld_registrar WHERE registrar = :registrar LIMIT 1");
+		$stmt->bindValue(":registrar", $registrar);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$row) {
+			$log->error("Registrar not found: {$registrar}");
+			exit(1);
+		}
+
+		$config = json_decode($row['config'] ?? '', true);
+
+		if (!is_array($config)) {
+			$err = json_last_error_msg();
+			$log->error("Registrar config is empty/invalid JSON ({$err})");
+			exit(1);
+		}
+
+		$registrar_id = (int)$row['id'];
+
+		if (empty($config))
+		{
+			$log->error('Database connection error: ' . $e->getMessage());
+			exit(1);
+		}
+
+	} catch(PDOException $e) {
+		$log->error('Database connection error: ' . $e->getMessage());
+		exit(1);
+	} catch(Exception $e) {
+		$log->error('General error: ' . $e->getMessage());
+		exit(1);
+	}
+} elseif ($backend === 'WHMCS') {
+    $log->warning("WHMCS");
+} elseif ($backend === 'LOOM') {
+    $log->warning("LOOM");
+} else {
+    $log->error("Unknown backend: $backend");
+    exit(1);
+}
+
 // Get all contacts/clients with domains registered more than 15 days ago and pending contact validation.
 $date = new DateTime();
 $date->sub(new DateInterval('P15D'));
@@ -40,10 +94,10 @@ $registration_date = $date->format('Y-m-d H:i:s');
 
 try {
     if ($backend === 'FOSS') {
-        seedFossContactValidation($pdo, $registration_date);
+        seedFossContactValidation($pdo);
         $rows = getFossPendingContactValidation($pdo, $registration_date);
     } elseif ($backend === 'WHMCS') {
-        seedWhmcsContactValidation($pdo, $registration_date);
+        seedWhmcsContactValidation($pdo);
         $rows = getWhmcsPendingContactValidation($pdo, $registration_date);
     } elseif ($backend === 'LOOM') {
         $stmt = $pdo->prepare("
@@ -84,90 +138,97 @@ try {
 }
 
 // Loop through domains and send reminder email and EPP command to update nameservers
-$epp = connectEpp("generic", $config);
+try {
+	$epp = epp_client($config);
 
-foreach ($rows as $row) {
-    if ($backend === 'FOSS') {
-        $validationRow = (int) ($row['validation'] ?? $row['custom_2'] ?? 0);
-    } elseif ($backend === 'WHMCS') {
-        $validationRow = (int) ($row['validation'] ?? 0);
-    } elseif ($backend === 'LOOM') {
-        $validationRow = (int) ($row['validation'] ?? 0);
-    } else {
-        $log->error("Unknown backend: $backend");
-        exit(1);
-    }
+	foreach ($rows as $row) {
+		if ($backend === 'FOSS') {
+			$validationRow = (int) ($row['validation'] ?? $row['custom_2'] ?? 0);
+		} elseif ($backend === 'WHMCS') {
+			$validationRow = (int) ($row['validation'] ?? 0);
+		} elseif ($backend === 'LOOM') {
+			$validationRow = (int) ($row['validation'] ?? 0);
+		} else {
+			$log->error("Unknown backend: $backend");
+			exit(1);
+		}
 
-    if ($validationRow !== 0) {
-        continue;
-    }
+		if ($validationRow !== 0) {
+			continue;
+		}
 
-    if ($backend === 'FOSS') {
-        $domain_name = buildFossDomainName($row);
-        $registrant_email = $row['contact_email'] ?: ($row['email'] ?? null);
-        $token = getOrCreateValidationToken($pdo, $backend, $row);
-        $link = rtrim($config['registrar_url'], '/') . "/validate?token=" . urlencode($token);
-    } elseif ($backend === 'WHMCS') {
-        $domain_name = $row['name'];
-        $registrant_email = $row['email'];
-        $token = getOrCreateValidationToken($pdo, $backend, $row);
-        $link = rtrim($config['registrar_url'], '/') . "/index.php?m=namingo_registrar&page=validation&token=" . urlencode($token);
-    } elseif ($backend === 'LOOM') {
-        $domain_name = $row['service_name'];
-        $registrant_email = $row['email'];
-        $token = getOrCreateValidationToken($pdo, $backend, $row);
-        $link = rtrim($config['registrar_url'], '/') . "/validation/" . urlencode($token);
-    } else {
-        $log->error("Unknown backend: $backend");
-        exit(1);
-    }
+		if ($backend === 'FOSS') {
+			$domain_name = buildFossDomainName($row);
+			$registrant_email = $row['contact_email'] ?: ($row['email'] ?? null);
+			$token = getOrCreateValidationToken($pdo, $backend, $row);
+			$link = rtrim($config['registrar_url'], '/') . "/validate?token=" . urlencode($token);
+		} elseif ($backend === 'WHMCS') {
+			$domain_name = $row['name'];
+			$registrant_email = $row['email'];
+			$token = getOrCreateValidationToken($pdo, $backend, $row);
+			$link = rtrim($config['registrar_url'], '/') . "/index.php?m=namingo_registrar&page=validation&token=" . urlencode($token);
+		} elseif ($backend === 'LOOM') {
+			$domain_name = $row['service_name'];
+			$registrant_email = $row['email'];
+			$token = getOrCreateValidationToken($pdo, $backend, $row);
+			$link = rtrim($config['registrar_url'], '/') . "/validation/" . urlencode($token);
+		} else {
+			$log->error("Unknown backend: $backend");
+			exit(1);
+		}
 
-    if (empty($registrant_email)) {
-        $log->warning("Skipping validation reminder for {$domain_name}: missing registrant email.");
-        continue;
-    }
+		if (empty($registrant_email)) {
+			$log->warning("Skipping validation reminder for {$domain_name}: missing registrant email.");
+			continue;
+		}
 
-    $subject = 'Contact Information Validation Reminder';
-    $message = "Dear Registrant,\n\n"
-        . "This is a reminder to validate your contact information for the domain {$domain_name}. "
-        . "Please click the following link to validate your information:\n\n"
-        . "{$link}\n\n"
-        . "If you have already validated your information, please disregard this message.\n\n"
-        . "Sincerely,\n"
-        . "The Registrar";
+		$subject = 'Contact Information Validation Reminder';
+		$message = "Dear Registrant,\n\n"
+			. "This is a reminder to validate your contact information for the domain {$domain_name}. "
+			. "Please click the following link to validate your information:\n\n"
+			. "{$link}\n\n"
+			. "If you have already validated your information, please disregard this message.\n\n"
+			. "Sincerely,\n"
+			. "The Registrar";
 
-    send_email($registrant_email, $subject, $message, $config);
+		send_email($registrant_email, $subject, $message, $config);
 
-    $ns1 = $config['ns1'];
-    $ns2 = $config['ns2'];
+		$ns1 = $config['ns1'];
+		$ns2 = $config['ns2'];
 
-    updateLocalNameservers($pdo, $backend, $row, $ns1, $ns2);
+		updateLocalNameservers($pdo, $backend, $row, $ns1, $ns2);
 
-    $domainUpdateNS = $epp->domainUpdateNS([
-        'domainname' => $domain_name,
-        'ns1' => $ns1,
-        'ns2' => $ns2,
-    ]);
+		$domainUpdateNS = $epp->domainUpdateNS([
+			'domainname' => $domain_name,
+			'ns1' => $ns1,
+			'ns2' => $ns2,
+		]);
 
-    if (array_key_exists('error', $domainUpdateNS)) {
-        $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
-    } else {
-        $log->info("Validation cron nameserver update completed for {$domain_name}.");
-    }
+		if (array_key_exists('error', $domainUpdateNS)) {
+			$log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+		} else {
+			$log->info("Validation cron nameserver update completed for {$domain_name}.");
+		}
 
-    $domainUpdateStatus = $epp->domainUpdateStatus([
-        'domainname' => $domain_name,
-        'command' => 'add',
-        'status' => 'clientHold',
-    ]);
+		$domainUpdateStatus = $epp->domainUpdateStatus([
+			'domainname' => $domain_name,
+			'command' => 'add',
+			'status' => 'clientHold',
+		]);
 
-    if (array_key_exists('error', $domainUpdateStatus)) {
-        $log->error('DomainUpdateStatus Error: ' . $domainUpdateStatus['error']);
-    } else {
-        $log->info("Validation cron clientHold update completed for {$domain_name}.");
-    }
+		if (array_key_exists('error', $domainUpdateStatus)) {
+			$log->error('DomainUpdateStatus Error: ' . $domainUpdateStatus['error']);
+		} else {
+			$log->info("Validation cron clientHold update completed for {$domain_name}.");
+		}
 
-    markValidationReminderSent($pdo, $backend, $row, $domainUpdateStatus);
+		markValidationReminderSent($pdo, $backend, $row, $domainUpdateStatus);
+	}
+
+} catch (PDOException $e) {
+    exit("Database error: " . $e->getMessage().PHP_EOL);
+} catch(EppException $e) {
+    exit("Error: " . $e->getMessage().PHP_EOL);
+} finally {
+    epp_client_logout($epp);
 }
-
-$logout = $epp->logout();
