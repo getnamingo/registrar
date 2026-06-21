@@ -684,7 +684,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     sed -i \
       -e 's/"footer_link_3_enabled":"0"/"footer_link_3_enabled":"1"/g' \
       -e 's/"footer_link_3_title":"Status"/"footer_link_3_title":"Lookup"/g' \
-      -e "s|\"footer_link_3_page\":\"\"|\"footer_link_3_page\":\"whois.$domain_name\"|g" \
+      -e 's|"footer_link_3_page":""|"footer_link_3_page":"/whois"|g' \
       "$settings_file"
 
     install_rdap_and_whois_services "foss"
