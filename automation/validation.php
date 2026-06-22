@@ -39,8 +39,7 @@ if ($backend === 'FOSS') {
 
     $dbConfig = \FOSSBilling\Config::getProperty('db', []);
 	$registrar = getRegistryExtensionByTld('.'.$domainData[0]['tld']);
-    $registrar = "Epp";
-    ////TODO from loom choose profile
+    ////TODO strtoUpper
 
     try
     {
