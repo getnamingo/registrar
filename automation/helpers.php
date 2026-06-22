@@ -529,3 +529,49 @@ function markValidationReminderSent(PDO $pdo, string $backend, array $row, mixed
 
     throw new RuntimeException("Unknown backend: $backend");
 }
+
+function getRegistryExtensionByTld(string $tld): string
+{
+    static $tldMap = [
+        'fr' => 'FR',
+        'pm' => 'FR',
+        're' => 'FR',
+        'tf' => 'FR',
+        'wf' => 'FR',
+        'yt' => 'FR',
+        'hr' => 'HR',
+        'lt' => 'LT',
+        'eu' => 'EU',
+        'gr' => 'GR',
+        'ελ' => 'GR',
+        'cz' => 'FRED',
+        'ua' => 'UA',
+        'se' => 'SE',
+        'nu' => 'SE',
+        'hk' => 'HK',
+        'pl' => 'PL',
+        'mx' => 'MX',
+        'lv' => 'LV',
+        'no' => 'NO',
+        'pt' => 'PT',
+        'it' => 'IT',
+        'fi' => 'FI',
+        'com' => 'VRSN',
+        'net' => 'VRSN'
+    ];
+
+    $tld = strtolower(ltrim($tld, '.'));
+    
+    // If the TLD has multiple labels, check the last one.
+    $parts = explode('.', $tld);
+    if (count($parts) > 1) {
+        $last = end($parts);
+
+        // If last label is exactly 2 chars, treat as ccTLD
+        if (strlen($last) === 2 && isset($tldMap[$last])) {
+            return $tldMap[$last];
+        }
+    }
+
+    return $tldMap[$tld] ?? 'generic';
+}
