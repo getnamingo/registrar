@@ -2,7 +2,7 @@
 /**
  * Namingo Registrar
  *
- * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2026 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
@@ -33,16 +33,16 @@ try {
 }
 
 // Define function to send renewal reminder emails
-function sendRenewalReminderEmail($to_email, $days_until_expiry, $config, $log) {
+function sendRenewalReminderEmail($to_email, $domainName, $days_until_expiry, $config, $log) {
     // Send email with appropriate subject and message based on days until expiry
     if ($days_until_expiry == 30) {
-        $subject = "Renewal Reminder: Your domain name will expire in 30 days";
+        $subject = "Renewal Reminder: Your domain name {$domainName} will expire in 30 days";
         $message = "Dear registrant,\n\nYour domain name will expire in 30 days. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     } elseif ($days_until_expiry == 7) {
-        $subject = "Renewal Reminder: Your domain name will expire in 7 days";
+        $subject = "Renewal Reminder: Your domain name {$domainName} will expire in 7 days";
         $message = "Dear registrant,\n\nYour domain name will expire in 7 days. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     } elseif ($days_until_expiry == 1) {
-        $subject = "Renewal Reminder: Your domain name will expire tomorrow";
+        $subject = "Renewal Reminder: Your domain name {$domainName} will expire tomorrow";
         $message = "Dear registrant,\n\nYour domain name will expire tomorrow. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     }
 
@@ -56,7 +56,18 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
     if ($backend === 'FOSS') {
         $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
     } elseif ($backend === 'WHMCS') {
-        $sql = "SELECT * FROM namingo_domain WHERE NOW() <= exdate AND exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+        $sql = "
+            SELECT 
+                nd.*,
+                c.email
+            FROM namingo_domain nd
+            INNER JOIN tbldomains d 
+                ON d.domain = nd.name
+            INNER JOIN tblclients c 
+                ON c.id = d.userid
+            WHERE NOW() <= nd.exdate 
+              AND nd.exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)
+        ";
     } elseif ($backend === 'LOOM') {
         $sql = "SELECT * FROM services
                 WHERE type = 'domain'
@@ -79,6 +90,7 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
                 $domainName = $domain['sld'] . '.' . $domain['tld'];
             } elseif ($backend === 'WHMCS') {
                 $domainExpiration = $domain['exdate'];
+                $domainEmail = $domain['email'];
                 $domainName = $domain['name'];
             } elseif ($backend === 'LOOM') {
                 $domainExpiration = $domain['expires_at'];
@@ -95,15 +107,8 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
 
             // Send renewal reminder emails 30 days, 7 days, and 1 day before expiry
             if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1) {
-                if ($backend === 'WHMCS') {
-                    $sql = "SELECT email FROM namingo_contact WHERE id = :id";
-                    $stmt = $pdo->prepare($sql);
-                    $stmt->bindParam(':id', $domain['registrant'], PDO::PARAM_INT);
-                    $stmt->execute();
-                    $domainEmail = $stmt->fetchColumn();
-                }
                 if (!empty($domainEmail) && filter_var($domainEmail, FILTER_VALIDATE_EMAIL)) {
-                    sendRenewalReminderEmail($domainEmail, $days_until_expiry, $config, $log);
+                    sendRenewalReminderEmail($domainEmail, $domainName, $days_until_expiry, $config, $log);
                 } else {
                     $log->warning("Skipping {$domainName}: no valid email found for reminder ({$days_until_expiry}d).");
                 }
