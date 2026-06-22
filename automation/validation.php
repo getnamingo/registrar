@@ -33,100 +33,6 @@ try {
     exit(1);
 }
 
-if ($backend === 'FOSS') {
-    require_once '/var/www/load.php';
-    $di = include '/var/www/di.php';
-
-    $dbConfig = \FOSSBilling\Config::getProperty('db', []);
-	$registrar = getRegistryExtensionByTld('.'.$domainData[0]['tld']);
-    ////TODO strtoUpper
-
-    try
-    {
-        $dsn = 'mysql' . ":host=" . $dbConfig["host"] . ";port=" . $dbConfig["port"] . ";dbname=" . $dbConfig["name"];
-        $pdo = new PDO($dsn, $dbConfig["user"], $dbConfig["password"]);
-        $stmt = $pdo->prepare("SELECT id, config FROM tld_registrar WHERE registrar = :registrar LIMIT 1");
-        $stmt->bindValue(":registrar", $registrar);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            $log->error("Registrar not found: {$registrar}");
-            exit(1);
-        }
-
-        $config = json_decode($row['config'] ?? '', true);
-
-        if (!is_array($config)) {
-            $err = json_last_error_msg();
-            $log->error("Registrar config is empty/invalid JSON ({$err})");
-            exit(1);
-        }
-
-        $registrar_id = (int)$row['id'];
-
-        if (empty($config))
-        {
-            $log->error('Database connection error: ' . $e->getMessage());
-            exit(1);
-        }
-
-    } catch(PDOException $e) {
-        $log->error('Database connection error: ' . $e->getMessage());
-        exit(1);
-    } catch(Exception $e) {
-        $log->error('General error: ' . $e->getMessage());
-        exit(1);
-    }
-} elseif ($backend === 'WHMCS') {
-    require_once '/var/www/whmcs/init.php';
-
-    $registrar = 'epp'; // module folder/name in /modules/registrars/epp/
-
-    try {
-        $rows = \WHMCS\Database\Capsule::table('tblregistrars')
-            ->where('registrar', $registrar)
-            ->pluck('value', 'setting');
-
-        if ($rows->isEmpty()) {
-            $log->error("Registrar not found or not configured in WHMCS: {$registrar}");
-            exit(1);
-        }
-
-        $config = [];
-
-        foreach ($rows as $setting => $value) {
-            $config[$setting] = $value !== '' ? decrypt($value) : '';
-        }
-
-        if (empty($config)) {
-            $log->error("Registrar config is empty for WHMCS registrar: {$registrar}");
-            exit(1);
-        }
-
-        $hostname = $config['Hostname'] ?? $config['hostname'] ?? null;
-        $port     = $config['Port'] ?? $config['port'] ?? 700;
-        $username = $config['Username'] ?? $config['username'] ?? null;
-        $password = $config['Password'] ?? $config['password'] ?? null;
-
-        if (empty($hostname) || empty($username) || empty($password)) {
-            $log->error("WHMCS EPP registrar config missing hostname, username, or password.");
-            exit(1);
-        }
-
-        $registrar_id = 0;
-
-    } catch (\Throwable $e) {
-        $log->error('WHMCS registrar config error: ' . $e->getMessage());
-        exit(1);
-    }
-} elseif ($backend === 'LOOM') {
-    $log->warning("LOOM");
-} else {
-    $log->error("Unknown backend: $backend");
-    exit(1);
-}
-
 // Get all contacts/clients with domains registered more than 15 days ago and pending contact validation.
 $date = new DateTime();
 $date->sub(new DateInterval('P15D'));
@@ -179,8 +85,6 @@ try {
 
 // Loop through domains and send reminder email and EPP command to update nameservers
 try {
-    $epp = epp_client($config);
-
     foreach ($rows as $row) {
         if ($backend === 'FOSS') {
             $validationRow = (int) ($row['validation'] ?? $row['custom_2'] ?? 0);
@@ -238,37 +142,58 @@ try {
 
         updateLocalNameservers($pdo, $backend, $row, $ns1, $ns2);
 
-        $domainUpdateNS = $epp->domainUpdateNS([
-            'domainname' => $domain_name,
-            'ns1' => $ns1,
-            'ns2' => $ns2,
-        ]);
+        // Get EPP configuration
+        if ($backend === 'FOSS') {
+            require_once '/var/www/load.php';
+            $di = include '/var/www/di.php';
 
-        if (array_key_exists('error', $domainUpdateNS)) {
-            $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
-        } else {
-            $log->info("Validation cron nameserver update completed for {$domain_name}.");
+            $dbConfig = \FOSSBilling\Config::getProperty('db', []);
+
+            $dsn = 'mysql' . ":host=" . $dbConfig["host"] . ";port=" . $dbConfig["port"] . ";dbname=" . $dbConfig["name"];
+            $pdo_foss = new PDO($dsn, $dbConfig["user"], $dbConfig["password"]);
+        } elseif ($backend === 'WHMCS') {
+            require_once '/var/www/whmcs/init.php';
+            $pdo_foss = null;
         }
 
-        $domainUpdateStatus = $epp->domainUpdateStatus([
-            'domainname' => $domain_name,
-            'command' => 'add',
-            'status' => 'clientHold',
-        ]);
+        $eppConfig = getEppConfiguration($backend, $pdo_foss, $domain_name, $log);
+        //$hostname = $eppConfig['hostname'] ?? null;
+        
+        // Send EPP update to registry
+        try {
+            $epp = epp_client($eppConfig);
 
-        if (array_key_exists('error', $domainUpdateStatus)) {
-            $log->error('DomainUpdateStatus Error: ' . $domainUpdateStatus['error']);
-        } else {
-            $log->info("Validation cron clientHold update completed for {$domain_name}.");
+            $domainUpdateNS = $epp->domainUpdateNS([
+                'domainname' => $domain_name,
+                'ns1' => $ns1,
+                'ns2' => $ns2,
+            ]);
+
+            if (array_key_exists('error', $domainUpdateNS)) {
+                $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+            } else {
+                $log->info("Validation cron nameserver update completed for {$domain_name}.");
+            }
+
+            $domainUpdateStatus = $epp->domainUpdateStatus([
+                'domainname' => $domain_name,
+                'command' => 'add',
+                'status' => 'clientHold',
+            ]);
+
+            if (array_key_exists('error', $domainUpdateStatus)) {
+                $log->error('DomainUpdateStatus Error: ' . $domainUpdateStatus['error']);
+            } else {
+                $log->info("Validation cron clientHold update completed for {$domain_name}.");
+            }
+        } catch(EppException $e) {
+            exit("Error: " . $e->getMessage().PHP_EOL);
+        } finally {
+            epp_client_logout($epp);
         }
 
         markValidationReminderSent($pdo, $backend, $row, $domainUpdateStatus);
     }
-
 } catch (PDOException $e) {
     exit("Database error: " . $e->getMessage().PHP_EOL);
-} catch(EppException $e) {
-    exit("Error: " . $e->getMessage().PHP_EOL);
-} finally {
-    epp_client_logout($epp);
 }

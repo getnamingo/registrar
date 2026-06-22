@@ -530,6 +530,130 @@ function markValidationReminderSent(PDO $pdo, string $backend, array $row, mixed
     throw new RuntimeException("Unknown backend: $backend");
 }
 
+function getLastTldFromDomain(string $domain): string
+{
+    $domain = strtolower(trim($domain));
+    $domain = rtrim($domain, '.');
+
+    $parts = explode('.', $domain);
+    $last = end($parts);
+
+    if (empty($last)) {
+        throw new InvalidArgumentException("Invalid domain: {$domain}");
+    }
+
+    return '.' . $last;
+}
+
+function getEppConfiguration(string $backend, ?PDO $pdo, string $domain, $log): array
+{
+    if ($backend === 'FOSS') {
+        $tld = getLastTldFromDomain($domain);
+        $registrar = strtoupper(getRegistryExtensionByTld($tld));
+
+        try {
+            $stmt = $pdo->prepare("SELECT id, config FROM tld_registrar WHERE registrar = :registrar LIMIT 1");
+            $stmt->bindValue(":registrar", $registrar);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                $log->error("Registrar not found: {$registrar}");
+                exit(1);
+            }
+
+            $config = json_decode($row['config'] ?? '', true);
+
+            if (!is_array($config)) {
+                $err = json_last_error_msg();
+                $log->error("Registrar config is empty/invalid JSON ({$err})");
+                exit(1);
+            }
+
+            $registrar_id = (int)$row['id'];
+
+            if (empty($config)) {
+                $log->error("Registrar config is empty: {$registrar}");
+                exit(1);
+            }
+
+            return [
+                'backend' => $backend,
+                'registrar' => $registrar,
+                'registrar_id' => $registrar_id,
+                'config' => $config,
+            ];
+
+        } catch (PDOException $e) {
+            $log->error('Database connection error: ' . $e->getMessage());
+            exit(1);
+        } catch (Exception $e) {
+            $log->error('General error: ' . $e->getMessage());
+            exit(1);
+        }
+
+    } elseif ($backend === 'WHMCS') {
+        $tld = getLastTldFromDomain($domain);
+        $registrar = getRegistryExtensionByTld($tld);
+
+        try {
+            $rows = \WHMCS\Database\Capsule::table('tblregistrars')
+                ->where('registrar', $registrar)
+                ->pluck('value', 'setting');
+
+            if ($rows->isEmpty()) {
+                $log->error("Registrar not found or not configured in WHMCS: {$registrar}");
+                exit(1);
+            }
+
+            $config = [];
+
+            foreach ($rows as $setting => $value) {
+                $config[$setting] = $value !== '' ? decrypt($value) : '';
+            }
+
+            if (empty($config)) {
+                $log->error("Registrar config is empty for WHMCS registrar: {$registrar}");
+                exit(1);
+            }
+
+            $hostname = $config['Hostname'] ?? $config['hostname'] ?? null;
+            $port     = $config['Port'] ?? $config['port'] ?? 700;
+            $username = $config['Username'] ?? $config['username'] ?? null;
+            $password = $config['Password'] ?? $config['password'] ?? null;
+
+            if (empty($hostname) || empty($username) || empty($password)) {
+                $log->error("WHMCS EPP registrar config missing hostname, username, or password.");
+                exit(1);
+            }
+
+            $registrar_id = 0;
+
+            return [
+                'backend' => $backend,
+                'registrar' => $registrar,
+                'registrar_id' => $registrar_id,
+                'config' => $config,
+                'hostname' => $hostname,
+                'port' => $port,
+                'username' => $username,
+                'password' => $password,
+            ];
+
+        } catch (Throwable $e) {
+            $log->error('WHMCS registrar config error: ' . $e->getMessage());
+            exit(1);
+        }
+
+    } elseif ($backend === 'LOOM') {
+        $log->warning("LOOM");
+        exit(1);
+    } else {
+        $log->error("Unknown backend: $backend");
+        exit(1);
+    }
+}
+
 function getRegistryExtensionByTld(string $tld): string
 {
     static $tldMap = [
