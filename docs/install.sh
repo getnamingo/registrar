@@ -741,21 +741,23 @@ echo "Please follow these steps carefully to complete your installation and conf
 
         case "$whmcs_choice" in
             1)
-echo "Before continuing, ensure that you have the following domains pointing to this server:"
-echo "1. example.com or panel.example.com"
-echo "2. whois.example.com"
-echo "3. rdap.example.com"
+echo "Before continuing, make sure the required domains already point to this server:"
 echo
-echo "Before continuing, please ensure you have downloaded the latest WHMCS and placed it at: /tmp/whmcs.zip"
+echo "1. Your panel domain, for example: example.com or cp.example.com"
+echo "2. WHOIS service domain, for example: whois.example.com"
+echo "3. RDAP service domain, for example: rdap.example.com"
 echo
-read -p "Do you want to continue? (Y/N): " continue_install
+echo "Also make sure you have downloaded the latest WHMCS release and placed it here:"
+echo "/tmp/whmcs.zip"
+echo
+read -p "Do these domains already point to this server and is WHMCS available at /tmp/whmcs.zip? (Y/N): " continue_install
 
 if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
-    echo "Installation aborted."
+    echo "Installation aborted. Please update DNS first and/or upload WHMCS, then run the installer again."
     exit 1
 fi
 
-read -p "Enter the domain where the system will live (e.g., example.com or cp.example.com): " panel_domain_name
+read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
 
 # normalize
 panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
@@ -973,9 +975,9 @@ PHP_BIN="php"
 read -rp "Enter WHMCS License Key: " LICENSE_KEY
 read -rp "Admin First Name: " ADMIN_FIRST
 read -rp "Admin Last Name: " ADMIN_LAST
-read -rp "Admin Email: " ADMIN_EMAIL
-read -rp "Admin Username: " ADMIN_USER
-read -rsp "Admin Password: " ADMIN_PASS
+read -rp "Enter registrar admin email: " ADMIN_EMAIL
+read -rp "Enter registrar admin username: " ADMIN_USER
+read -rsp "Enter registrar admin password: " ADMIN_PASS
 echo
 read -rp "Security Question (e.g., What is your favorite color?): " ADMIN_SECQ
 read -rp "Security Answer: " ADMIN_SECA
@@ -1192,10 +1194,24 @@ detect_ips
 # ---------- Ask user inputs ----------
 log "Basic configuration"
 
+echo "Before continuing, make sure the required domains already point to this server:"
+echo
+echo "1. Your panel domain, for example: example.com or cp.example.com"
+echo "2. WHOIS service domain, for example: whois.example.com"
+echo "3. RDAP service domain, for example: rdap.example.com"
+
+echo
+read -p "Do these domains already point to this server? (Y/N): " continue_install
+
+if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
+    echo "Installation aborted. Please update DNS first, then run the installer again."
+    exit 1
+fi
+
 DEFAULT_HOST="loom.local"
-prompt HOSTNAME "Enter the domain where the system will live (e.g., example.com or cp.example.com): " "$DEFAULT_HOST"
-prompt TLS_EMAIL "Enter email for Caddy TLS/Cert notifications: " "admin@$HOSTNAME"
-prompt INSTALL_PATH "Install path for Loom: " "/var/www/loom"
+prompt HOSTNAME "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " "$DEFAULT_HOST"
+TLS_EMAIL="admin@$HOSTNAME"
+INSTALL_PATH="/var/www/loom"
 
 # DB credentials
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
@@ -1206,8 +1222,8 @@ DB_PASS="$(generate_password)"
 # Admin user for Loom
 echo
 log "Admin user for Loom"
-prompt ADMIN_USER "Choose an admin email" "admin@example.com"
-prompt ADMIN_PASS "Choose an admin password" "" "secret"
+prompt ADMIN_USER "Enter registrar admin email: " "admin@example.com"
+prompt ADMIN_PASS "Enter registrar admin password: " "" "secret"
 
 # Optional custom bind IPs for Caddy
 USE_BIND="n"
