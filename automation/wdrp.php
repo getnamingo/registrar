@@ -37,7 +37,17 @@ try {
     if ($backend === 'FOSS') {
         $query = "SELECT sld, tld, expires_at, contact_email FROM service_domain WHERE expires_at BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
     } elseif ($backend === 'WHMCS') {
-        $query = "SELECT registrant, name, exdate FROM namingo_domain WHERE exdate BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
+        $query = "
+            SELECT 
+                nd.name,
+                nd.exdate,
+                c.email
+            FROM namingo_domain nd
+            INNER JOIN tbldomains d 
+                ON d.domain = nd.name
+            INNER JOIN tblclients c 
+                ON c.id = d.userid
+            WHERE nd.exdate BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
     } elseif ($backend === 'LOOM') {
         $query = 'SELECT
                     service_name,
@@ -65,11 +75,7 @@ try {
                 $domainName = $domain['sld'].'.'.$domain['tld'];
                 $message = sprintf($config['email']['message'], $domainName, $domain['expires_at']);
             } elseif ($backend === 'WHMCS') {
-                $sql = "SELECT email FROM namingo_contact WHERE id = :id";
-                $stmt = $pdo->prepare($sql);
-                $stmt->bindParam(':id', $domain['registrant'], PDO::PARAM_INT);
-                $stmt->execute();
-                $to = $stmt->fetchColumn();
+                $to = $domain['email'];
                 $domainName = $domain['name'];
                 $message = sprintf($config['email']['message'], $domainName, $domain['exdate']);
             } elseif ($backend === 'LOOM') {
