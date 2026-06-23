@@ -1214,7 +1214,7 @@ TLS_EMAIL="admin@$HOSTNAME"
 INSTALL_PATH="/var/www/loom"
 
 # DB credentials
-db_name="loom_registrar"
+db_name="registrar"
 db_user="$(generate_db_username)"
 db_pass="$(generate_password)"
 
@@ -1322,7 +1322,7 @@ sed -i "s|^APP_URL=.*|APP_URL=https://${HOSTNAME//\//\\/}|" .env
 sed -i "s/^DB_DRIVER=.*/DB_DRIVER=mysql/" .env
 sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
 sed -i "s/^DB_PORT=.*/DB_PORT=3306/" .env
-sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
+sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${db_name}/" .env
 ESCAPED_DB_USER=$(printf '%s\n' "$db_user" | sed -e 's/[&/\]/\\&/g')
 ESCAPED_DB_PASS=$(printf '%s\n' "$db_pass" | sed -e 's/[&/\]/\\&/g')
 sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
