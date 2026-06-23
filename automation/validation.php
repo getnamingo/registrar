@@ -134,7 +134,7 @@ try {
             . "Sincerely,\n"
             . "The Registrar";
 
-        send_email($registrant_email, $subject, $message, $config);
+        send_email($registrant_email, $subject, $message, $config, $log);
 
         $ns1 = $config['ns1'];
         $ns2 = $config['ns2'];

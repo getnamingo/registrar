@@ -93,7 +93,7 @@ try {
                 continue;
             }
 
-            send_email($to, $subject, $message, $config);
+            send_email($to, $subject, $message, $config, $log);
         }
     }
 

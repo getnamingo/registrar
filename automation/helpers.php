@@ -113,7 +113,7 @@ function epp_client_logout($epp)
     try { $epp->logout(); } catch (\Throwable $e) {}
 }
 
-function send_email($to, $subject, $message, $config) {
+function send_email($to, $subject, $message, $config, $log) {
     $mail = new PHPMailer(true);
 
     try {
@@ -138,7 +138,7 @@ function send_email($to, $subject, $message, $config) {
 
         $mail->send();
     } catch (PHPMailerException $e) {
-        error_log('Email error: ' . $e->getMessage());
+        $log->error($e->getMessage());
     }
 }
 

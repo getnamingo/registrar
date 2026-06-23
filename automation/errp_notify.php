@@ -46,7 +46,7 @@ function sendRenewalReminderEmail($to_email, $domainName, $days_until_expiry, $c
         $message = "Dear registrant,\n\nYour domain name will expire tomorrow. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     }
 
-    send_email($to_email, $subject, $message, $config);
+    send_email($to_email, $subject, $message, $config, $log);
     $log->info("Sent email to $to_email with subject '$subject'");
 }
 
