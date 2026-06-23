@@ -231,7 +231,7 @@ install_rdap_and_whois_services() {
         chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
         chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
     else
-        echo "LOOM selected, skipping FOSSBilling modules."
+        echo "LOOM selected, no modules."
     fi
 
     mkdir /opt/registrar/escrow
@@ -1214,10 +1214,11 @@ TLS_EMAIL="admin@$HOSTNAME"
 INSTALL_PATH="/var/www/loom"
 
 # DB credentials
+db_name="loom_registrar"
+db_user="$(generate_db_username)"
+db_pass="$(generate_password)"
+
 read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-DB_NAME="loom_registrar"
-DB_USER="$(generate_db_username)"
-DB_PASS="$(generate_password)"
 
 # Admin user for Loom
 log "Admin user for Loom"
@@ -1294,10 +1295,10 @@ mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # Create user and grant privileges
-echo "Creating user $DB_NAME and setting privileges..."
-mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-mariadb -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
-mariadb -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+echo "Creating user $db_name and setting privileges..."
+mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${db_name};"
+mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
+mariadb -u root -e "GRANT ALL PRIVILEGES ON ${db_name}.* TO '${db_user}'@'localhost';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # ---------- Create Loom project ----------
@@ -1322,8 +1323,8 @@ sed -i "s/^DB_DRIVER=.*/DB_DRIVER=mysql/" .env
 sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
 sed -i "s/^DB_PORT=.*/DB_PORT=3306/" .env
 sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_NAME}/" .env
-ESCAPED_DB_USER=$(printf '%s\n' "$DB_USER" | sed -e 's/[&/\]/\\&/g')
-ESCAPED_DB_PASS=$(printf '%s\n' "$DB_PASS" | sed -e 's/[&/\]/\\&/g')
+ESCAPED_DB_USER=$(printf '%s\n' "$db_user" | sed -e 's/[&/\]/\\&/g')
+ESCAPED_DB_PASS=$(printf '%s\n' "$db_pass" | sed -e 's/[&/\]/\\&/g')
 sed -i "s/^DB_USERNAME=.*/DB_USERNAME=\"$ESCAPED_DB_USER\"/" .env
 sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=\"$ESCAPED_DB_PASS\"/" .env
 
@@ -1454,7 +1455,7 @@ cat <<SUM
 • Hostname:          https://$HOSTNAME
 • Adminer URL:       https://$HOSTNAME/${ADMINER_SLUG}
 
-• DB Name/User:     $DB_NAME / $DB_USER
+• DB Name/User:     $db_name / $db_user
 • MySQL Tuning:     Run MySQLTuner later: perl mysqltuner.pl
 
 • Admin user:        $ADMIN_USER  (created best-effort)
