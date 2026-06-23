@@ -15,7 +15,6 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
-use Pinga\Tembo\EppRegistryFactory;
 
 $logFilePath = '/var/log/namingo/validation.log';
 $log = setupLogger($logFilePath, 'Validation');
@@ -157,7 +156,6 @@ try {
         }
 
         $eppConfig = getEppConfiguration($backend, $pdo_foss, $domain_name, $log);
-        //$hostname = $eppConfig['hostname'] ?? null;
         
         // Send EPP update to registry
         try {
@@ -170,7 +168,7 @@ try {
             ]);
 
             if (array_key_exists('error', $domainUpdateNS)) {
-                $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+                $log->error($domainUpdateNS['error'] . ' (' . $domain_name . ')');
             } else {
                 $log->info("Validation cron nameserver update completed for {$domain_name}.");
             }
@@ -182,7 +180,7 @@ try {
             ]);
 
             if (array_key_exists('error', $domainUpdateStatus)) {
-                $log->error('DomainUpdateStatus Error: ' . $domainUpdateStatus['error']);
+                $log->error($domainUpdateStatus['error'] . ' (' . $domain_name . ')');
             } else {
                 $log->info("Validation cron clientHold update completed for {$domain_name}.");
             }
@@ -197,3 +195,5 @@ try {
 } catch (PDOException $e) {
     exit("Database error: " . $e->getMessage().PHP_EOL);
 }
+
+$log->info('job completed.');

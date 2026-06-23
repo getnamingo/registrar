@@ -206,4 +206,4 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $log->info("Validation token set and email sent for contact ID {$contact_id}");
 }
 
-$log->info('Job completed successfully.');
+$log->info('job completed.');

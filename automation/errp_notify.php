@@ -114,7 +114,7 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
                 }
             }
         }
-        $log->info('ERRP Notify job completed.');
+        $log->info('job completed.');
     } catch (PDOException $e) {
         $log->error('Database error: ' . $e->getMessage());
         exit(1);

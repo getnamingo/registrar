@@ -15,7 +15,6 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
-use Pinga\Tembo\EppRegistryFactory;
 
 $logFilePath = '/var/log/namingo/errp_dns.log';
 $log = setupLogger($logFilePath, 'ERRP_DNS');
@@ -86,7 +85,6 @@ try {
         }
 
         $eppConfig = getEppConfiguration($backend, $pdo_foss, $domainName, $log);
-        //$hostname = $eppConfig['hostname'] ?? null;
 
         // Send EPP update to registry
         try {
@@ -100,12 +98,13 @@ try {
             $domainUpdateNS = $epp->domainUpdateNS($params);
 
             if (array_key_exists('error', $domainUpdateNS)) {
-                $log->error('DomainUpdateNS Error: ' . $domainUpdateNS['error']);
+                $log->error($domainUpdateNS['error'] . ' (' . $domainName . ')');
             } else {
-                $log->info('ERRP DNS update job completed.');
+                $log->info('job completed.');
             }
         } catch(EppException $e) {
-            exit("Error: " . $e->getMessage().PHP_EOL);
+            $log->error('Error: ' . $e->getMessage());
+            exit(1);
         } finally {
             epp_client_logout($epp);
         }

@@ -6,28 +6,37 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Formatter\LineFormatter;
+use Pinga\Tembo\EppRegistryFactory;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 function epp_client($config)
 {
-    $profile = $config['registry_profile'] ?? 'generic';
+    $profile = $config['registrar'] ?? 'namingo';
+
+    if (strcasecmp($profile, 'namingo') === 0) {
+        $profile = 'generic';
+    }
+
+    $epp = EppRegistryFactory::create($profile);
 
     $epp = EppRegistryFactory::create($profile);
     $epp->disableLogging();
 
     $tls_version = '1.2';
-    if (!empty($config['tls_version'])) {
+    if (!empty($config['config']['tls_version']) && $config['config']['tls_version'] !== '0') {
         $tls_version = '1.3';
     }
         
     $verify_peer = false;
-    if ($config['verify_peer'] == 'on') {
+    if (!empty($config['config']['verify_peer']) && $config['config']['verify_peer'] !== '0') {
         $verify_peer = true;
     }
 
     $moduleDir = __DIR__;
 
-    $certPath = trim($config['local_cert'] ?? '');
-    $keyPath  = trim($config['local_pk'] ?? '');
+    $certPath = trim($config['config']['local_cert'] ?? '');
+    $keyPath  = trim($config['config']['local_pk'] ?? '');
 
     if ($certPath === '' || $keyPath === '') {
         echo 'Client certificate and private key are required.';
@@ -49,22 +58,22 @@ function epp_client($config)
     }
 
     $info = [
-        'host'    => $config['host'] ?? '',
-        'port'    => (int)($config['port'] ?? 700),
+        'host'    => $config['config']['host'] ?? '',
+        'port'    => (int)($config['config']['port'] ?? 700),
         'timeout' => 30,
         'tls'     => $tls_version ?? '1.2',
         'bind'    => false,
         'bindip'  => '1.2.3.4:0',
         'verify_peer'      => !empty($verify_peer),
         'verify_peer_name' => false,
-        'cafile'           => $config['cafile'] ?? '',
+        'cafile'           => $config['config']['cafile'] ?? '',
         'local_cert' => $certPath,
         'local_pk' => $keyPath,
-        'passphrase'       => $config['passphrase'] ?? '',
+        'passphrase'       => $config['config']['passphrase'] ?? '',
         'allow_self_signed'=> true,
     ];
     if ($profile === 'generic') {
-        $raw = $config['login_extensions'] ?? '';
+        $raw = $config['config']['login_extensions'] ?? '';
 
         if (is_array($raw)) {
             $info['loginExtensions'] = array_values(array_filter(array_map('trim', $raw)));
@@ -87,9 +96,9 @@ function epp_client($config)
     $epp->connect($info);
 
     $login = $epp->login([
-        'clID'   => $config['clid'] ?? '',
-        'pw'     => $config['pw'] ?? '',
-        'prefix' => $config['registrarprefix'] ?? 'epp',
+        'clID'   => $config['config']['clid'] ?? '',
+        'pw'     => $config['config']['pw'] ?? '',
+        'prefix' => $config['config']['registrarprefix'] ?? 'epp',
     ]);
 
     if (isset($login['error'])) {
@@ -467,24 +476,15 @@ function markValidationReminderSent(PDO $pdo, string $backend, array $row, mixed
             $stmt = $pdo->prepare("
                 UPDATE domain_contact_validation
                 SET validation_checked_at = NOW(),
-                    validation_method = 'email'
+                    validation_method = 'email',
+                    validation_log = :validation_log
                 WHERE id = :id
             ");
             $stmt->execute([
+                'validation_log' => $eppResultValue,
                 'id' => $row['validation_id'],
             ]);
         }
-
-        $stmt = $pdo->prepare("
-            UPDATE service_domain
-            SET validation_reminder_sent_date = NOW(),
-                epp_result = :epp_result
-            WHERE id = :id
-        ");
-        $stmt->execute([
-            'epp_result' => $eppResultValue,
-            'id' => $row['id'],
-        ]);
 
         return;
     }
@@ -697,5 +697,5 @@ function getRegistryExtensionByTld(string $tld): string
         }
     }
 
-    return $tldMap[$tld] ?? 'generic';
+    return $tldMap[$tld] ?? 'namingo';
 }
