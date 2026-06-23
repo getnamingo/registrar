@@ -1490,6 +1490,13 @@ $CADDY_BIND_LINE
     }
 }
 EOF
+
+touch /var/log/loom/rdap.log
+chown caddy:caddy /var/log/loom/rdap.log
+chmod 664 /var/log/loom/rdap.log
+
+systemctl restart caddy
+
 fi
 
 # ---------- Firewall ----------
