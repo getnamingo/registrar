@@ -1210,7 +1210,59 @@ fi
 
 DEFAULT_HOST="loom.local"
 prompt HOSTNAME "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " "$DEFAULT_HOST"
-TLS_EMAIL="admin@$HOSTNAME"
+
+# split into labels
+IFS='.' read -r -a parts <<< "$HOSTNAME"
+n=${#parts[@]}
+
+if (( n < 2 )); then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a domain like example.com"
+  echo ""
+  exit 1
+fi
+
+tld="${parts[n-1]}"
+sld="${parts[n-2]}"
+
+case "$sld" in
+  co|com|net|org|gov|edu|ac|mil|int|go|gob|nic|id|sch|school|k12|or)
+    if (( ${#tld} == 2 )) && (( n >= 3 )); then
+      registrable="${parts[n-3]}.${parts[n-2]}.${parts[n-1]}"
+      suffix_len=3
+    else
+      registrable="${parts[n-2]}.${parts[n-1]}"
+      suffix_len=2
+    fi
+    ;;
+  *)
+    registrable="${parts[n-2]}.${parts[n-1]}"
+    suffix_len=2
+    ;;
+esac
+
+# allow only:
+# - registrable domain itself (no subdomain)
+# - exactly one label before registrable (one subdomain)
+sub_labels=$(( n - suffix_len ))
+if (( sub_labels > 1 )); then
+  echo ""
+  echo "   Unsupported domain format."
+  echo "   Please use a simple domain like:"
+  echo "     - example.com"
+  echo "     - cp.example.com"
+  echo "     - cp.example.co.uk"
+  echo ""
+  echo "   Domains with multiple nested subdomains are not supported."
+  echo "   (e.g. cp.eu.example.com)"
+  echo ""
+  exit 1
+fi
+
+domain_name="$registrable"
+
+TLS_EMAIL="admin@$domain_name"
 INSTALL_PATH="/var/www/loom"
 
 # DB credentials
@@ -1404,11 +1456,11 @@ systemctl restart caddy
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
   install_rdap_and_whois_services "loom"
 
-  echo "Adding RDAP host to Caddyfile for rdap.${$HOSTNAME} …"
+  echo "Adding RDAP host to Caddyfile for rdap.${domain_name} …"
 
   cat >> /etc/caddy/Caddyfile <<EOF
 
-rdap.${$HOSTNAME} {
+rdap.${domain_name} {
 $CADDY_BIND_LINE
     reverse_proxy 127.0.0.1:7500
     encode gzip
