@@ -1220,7 +1220,6 @@ DB_USER="$(generate_db_username)"
 DB_PASS="$(generate_password)"
 
 # Admin user for Loom
-echo
 log "Admin user for Loom"
 prompt ADMIN_USER "Enter registrar admin email: " "admin@example.com"
 prompt ADMIN_PASS "Enter registrar admin password: " "" "secret"
@@ -1295,7 +1294,7 @@ mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # Create user and grant privileges
-echo "Creating user $db_user and setting privileges..."
+echo "Creating user $DB_NAME and setting privileges..."
 mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 mariadb -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
 mariadb -u root -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
