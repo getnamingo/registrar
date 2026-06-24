@@ -127,13 +127,13 @@ class LOOM implements EscrowInterface {
         ];
         fputcsv($file, $header);
 
-        // Fetch all domains with service_type 'domain'
+        // Fetch all domains with type 'domain'
         $stmt = $this->pdo->prepare("
             SELECT service_name, 
                    DATE_FORMAT(expires_at, '%Y-%m-%dT%H:%i:%sZ') AS expire,
                    config
             FROM services
-            WHERE service_type = 'domain'
+            WHERE type = 'domain'
         ");
         $stmt->execute();
         $domains = $stmt->fetchAll(\PDO::FETCH_ASSOC);

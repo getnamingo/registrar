@@ -2,7 +2,7 @@
 /**
  * Namingo Registrar URS
  *
- * Written in 2024-2025 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2024-2026 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
@@ -29,9 +29,19 @@ try {
     exit(1);
 }
 
+if (
+    empty($config['urs_imap_host']) ||
+    empty($config['urs_imap_username']) ||
+    empty($config['urs_imap_password']) ||
+    str_contains($config['urs_imap_host'], 'your_imap_server')
+) {
+    $log->info('job skipped. IMAP mailbox is not configured.');
+    exit(0);
+}
+
 // Connect to mailbox
 try {
-    $inbox = imap_open($config['urs_imap_host'], $config['urs_imap_username'], $config['urs_imap_password']);
+    $inbox = @imap_open($config['urs_imap_host'], $config['urs_imap_username'], $config['urs_imap_password']);
     if (!$inbox) {
         $log->error('Cannot connect to mailbox: ' . imap_last_error());
         exit(1);
@@ -47,6 +57,12 @@ try {
         $emailsFromProviderB ?: [],
         $emailsFromProviderC ?: []
     );
+
+    if (empty($allEmails)) {
+        $log->info('job completed. No new URS notices found.');
+        imap_close($inbox);
+        exit(0);
+    }
 
     foreach ($allEmails as $emailId) {
         $header = imap_headerinfo($inbox, $emailId);
@@ -196,7 +212,7 @@ try {
         }
     }
 
-    $log->info('URS job completed.');
+    $log->info('job completed. No new URS notices found.');
     imap_close($inbox);
 } catch (Exception $e) {
     $log->error('Error: ' . $e->getMessage());

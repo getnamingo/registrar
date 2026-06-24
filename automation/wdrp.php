@@ -1,8 +1,8 @@
 <?php
 /**
- * Namingo Registrar WDRP
+ * Namingo Registrar RDRP
  *
- * Written in 2023-2025 by Taras Kondratyuk (https://namingo.org/)
+ * Written in 2023-2026 by Taras Kondratyuk (https://namingo.org/)
  *
  * @license MIT
  */
@@ -20,7 +20,7 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 $backend = $config['escrow']['backend'] ?? 'FOSS';
 
 $logFilePath = '/var/log/namingo/wdrp.log';
-$log = setupLogger($logFilePath, 'WDRP');
+$log = setupLogger($logFilePath, 'RDRP');
 $log->info('job started.');
 
 // Database connection
@@ -95,9 +95,11 @@ try {
 
             send_email($to, $subject, $message, $config, $log);
         }
+    } else {
+        $log->info('no eligible domains found.');
     }
 
-    $log->info('WDRP job completed.');
+    $log->info('job completed.');
 } catch (PDOException $e) {
     $log->error('Database error: ' . $e->getMessage());
     exit(1);
