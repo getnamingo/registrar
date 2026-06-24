@@ -468,7 +468,81 @@ function updateLocalNameservers(PDO $pdo, string $backend, array $row, string $n
         return;
     }
 
-    // Loom is intentionally left unchanged here.
+    if ($backend === 'LOOM') {
+        $config = json_decode($row['config'] ?? '', true);
+
+        if (!is_array($config)) {
+            $config = [];
+        }
+
+        $config['nameservers'] = array_values(array_filter([
+            trim($ns1),
+            trim($ns2),
+        ]));
+
+        $stmt = $pdo->prepare("
+            UPDATE services
+            SET config = :config
+            WHERE id = :id
+        ");
+
+        $stmt->execute([
+            'config' => json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            'id' => $row['id'],
+        ]);
+
+        return;
+    }
+}
+
+function updateLocalStatus(PDO $pdo, string $backend, array $row): void
+{
+    if ($backend === 'FOSS') {
+        $stmt = $pdo->prepare("
+            UPDATE service_domain
+            SET locked = 1,
+                updated_at = NOW()
+            WHERE id = :id
+        ");
+
+        $stmt->execute([
+            'id' => $row['id'],
+        ]);
+
+        return;
+    }
+
+    if ($backend === 'WHMCS') {
+        // WHMCS tbldomains has no reliable native EPP clientHold field.
+        // Leave local WHMCS status unchanged.
+        return;
+    }
+
+    if ($backend === 'LOOM') {
+        $config = json_decode($row['config'] ?? '', true);
+
+        if (!is_array($config)) {
+            $config = [];
+        }
+
+        $config['status'] = [
+            '1' => 'clientHold',
+        ];
+
+        $stmt = $pdo->prepare("
+            UPDATE services
+            SET config = :config,
+                updated_at = NOW()
+            WHERE id = :id
+        ");
+
+        $stmt->execute([
+            'config' => json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            'id' => $row['id'],
+        ]);
+
+        return;
+    }
 }
 
 function markValidationReminderSent(PDO $pdo, string $backend, array $row, mixed $eppResult): void

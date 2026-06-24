@@ -50,7 +50,7 @@ try {
                 s.id             AS id,
                 s.service_name   AS service_name,
                 s.config         AS config,
-                s.created_at     AS created_at,
+                s.registered_at     AS registered_at,
                 u.id             AS user_id,
                 u.validation     AS validation,
                 u.validation_log AS validation_log,
@@ -61,10 +61,12 @@ try {
               ON uc.user_id = u.id AND uc.type = 'owner'
             WHERE s.type = 'domain'
               AND s.status = 'active'
-              AND s.created_at < :registered_at
-              AND u.validation = 0
+              AND s.registered_at <= :registered_at
+              AND (u.validation = 0 OR u.validation IS NULL)
         ");
-        $stmt->execute(['registered_at' => $registration_date]);
+        $stmt->execute([
+            'registered_at' => $registration_date,
+        ]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
         $log->error("Unknown backend: $backend");
@@ -140,6 +142,7 @@ try {
         $ns2 = $config['ns2'];
 
         updateLocalNameservers($pdo, $backend, $row, $ns1, $ns2);
+        updateLocalStatus($pdo, $backend, $row);
 
         // Get EPP configuration
         if ($backend === 'FOSS') {
@@ -153,6 +156,8 @@ try {
         } elseif ($backend === 'WHMCS') {
             require_once '/var/www/whmcs/init.php';
             $pdo_foss = null;
+        } elseif ($backend === 'LOOM') {
+            $pdo_foss = $pdo;
         }
 
         $eppConfig = getEppConfiguration($backend, $pdo_foss, $domain_name, $log);
@@ -185,7 +190,8 @@ try {
                 $log->info("Validation cron clientHold update completed for {$domain_name}.");
             }
         } catch(EppException $e) {
-            exit("Error: " . $e->getMessage().PHP_EOL);
+            $log->error('Error: ' . $e->getMessage());
+            exit(1);
         } finally {
             epp_client_logout($epp);
         }
@@ -193,7 +199,14 @@ try {
         markValidationReminderSent($pdo, $backend, $row, $domainUpdateStatus);
     }
 } catch (PDOException $e) {
-    exit("Database error: " . $e->getMessage().PHP_EOL);
+    $log->error('Database error: ' . $e->getMessage());
+    exit(1);
+} catch (Exception $e) {
+    $log->error('Error: ' . $e->getMessage());
+    exit(1);
+} catch (Throwable $e) {
+    $log->error('Error: ' . $e->getMessage());
+    exit(1);
 }
 
 $log->info('job completed.');
