@@ -82,6 +82,8 @@ try {
         } elseif ($backend === 'WHMCS') {
             require_once '/var/www/whmcs/init.php';
             $pdo_foss = null;
+        } elseif ($backend === 'LOOM') {
+            $pdo_foss = $pdo;
         }
 
         $eppConfig = getEppConfiguration($backend, $pdo_foss, $domainName, $log);

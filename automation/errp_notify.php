@@ -44,36 +44,50 @@ function sendRenewalReminderEmail($to_email, $domainName, $days_until_expiry, $c
     } elseif ($days_until_expiry == 1) {
         $subject = "Renewal Reminder: Your domain name {$domainName} will expire tomorrow";
         $message = "Dear registrant,\n\nYour domain name will expire tomorrow. Please visit our website to renew your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
+    } elseif ($days_until_expiry == -5) {
+        $subject = "Expired Domain Notice: Your domain name {$domainName} has expired";
+        $message = "Dear registrant,\n\nYour domain name has expired. Please visit our website to renew or restore your domain name as soon as possible.\n\nBest regards,\nThe Domain Registrar";
     }
 
-    send_email($to_email, $subject, $message, $config, $log);
-    $log->info("Sent email to $to_email with subject '$subject'");
+    if (send_email($to_email, $subject, $message, $config, $log)) {
+        $log->info("ERRP notice sent for domain $domainName.");
+    } else {
+        $log->error("ERRP notice delivery failed for domain $domainName.");
+    }
 }
 
 // Define function to check for expiring domain names and send renewal reminder emails
 function sendRenewalReminders($pdo, $backend, $log, $config) {
     // Get all domain names that will expire in the next 30 days
     if ($backend === 'FOSS') {
-        $sql = "SELECT * FROM service_domain WHERE NOW() <= expires_at AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+        $sql = "
+            SELECT *
+            FROM service_domain
+            WHERE DATE(expires_at) BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+                                      AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        ";
     } elseif ($backend === 'WHMCS') {
         $sql = "
-            SELECT 
+            SELECT
                 nd.*,
                 c.email
             FROM namingo_domain nd
-            INNER JOIN tbldomains d 
+            INNER JOIN tbldomains d
                 ON d.domain = nd.name
-            INNER JOIN tblclients c 
+            INNER JOIN tblclients c
                 ON c.id = d.userid
-            WHERE NOW() <= nd.exdate 
-              AND nd.exdate BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)
+            WHERE DATE(nd.exdate) BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+                                      AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
         ";
     } elseif ($backend === 'LOOM') {
-        $sql = "SELECT * FROM services
-                WHERE type = 'domain'
-                  AND status = 'active'
-                  AND NOW() <= expires_at
-                  AND expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)";
+        $sql = "
+            SELECT *
+            FROM services
+            WHERE type = 'domain'
+              AND status IN ('active', 'expired')
+              AND DATE(expires_at) BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+                                      AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        ";
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);
@@ -83,7 +97,6 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
         $stmt->execute();
         $expiring_domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($expiring_domains as $domain) {
-            // Calculate days until expiry
             if ($backend === 'FOSS') {
                 $domainExpiration = $domain['expires_at'];
                 $domainEmail = $domain['contact_email'];
@@ -101,12 +114,12 @@ function sendRenewalReminders($pdo, $backend, $log, $config) {
                 $log->error("Unknown backend: $backend");
                 exit(1);
             }
-            $expiry_date = new DateTime($domainExpiration);
-            $now = new DateTime();
-            $days_until_expiry = $expiry_date->diff($now)->days;
+            $expiry_date = (new DateTime($domainExpiration))->setTime(0, 0, 0);
+            $now = (new DateTime())->setTime(0, 0, 0);
+            $days_until_expiry = (int)$now->diff($expiry_date)->format('%r%a');
 
-            // Send renewal reminder emails 30 days, 7 days, and 1 day before expiry
-            if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1) {
+            // Send ERRP notices 30, 7, and 1 day before expiry, plus 5 days after expiry
+            if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1 || $days_until_expiry == -5) {
                 if (!empty($domainEmail) && filter_var($domainEmail, FILTER_VALIDATE_EMAIL)) {
                     sendRenewalReminderEmail($domainEmail, $domainName, $days_until_expiry, $config, $log);
                 } else {

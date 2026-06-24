@@ -137,8 +137,14 @@ function send_email($to, $subject, $message, $config, $log) {
         $mail->Body    = $message;
 
         $mail->send();
+
+        return true;
     } catch (PHPMailerException $e) {
-        $log->error($e->getMessage());
+        $log->error('Email delivery failed: ' . $e->getMessage());
+        return false;
+    } catch (Throwable $e) {
+        $log->error('Email delivery failed: ' . $e->getMessage());
+        return false;
     }
 }
 
@@ -646,8 +652,97 @@ function getEppConfiguration(string $backend, ?PDO $pdo, string $domain, $log): 
         }
 
     } elseif ($backend === 'LOOM') {
-        $log->warning("LOOM");
-        exit(1);
+        if (!$pdo) {
+            $log->error('LOOM database connection is missing.');
+            exit(1);
+        }
+
+        $tld = getLastTldFromDomain($domain);
+        $registrar = getRegistryExtensionByTld($tld);
+        $tldKey = '.' . ltrim(strtolower($tld), '.');
+
+        try {
+            $stmt = $pdo->prepare("
+                SELECT id, name, api_endpoint, credentials
+                FROM providers
+                WHERE type = 'domain'
+                  AND status IN ('active', 'testing')
+                  AND (
+                        tld = :tld_plain
+                     OR tld = :tld_dot
+                     OR pricing LIKE :pricing_tld
+                  )
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                ':tld_plain'   => ltrim($tldKey, '.'),
+                ':tld_dot'     => $tldKey,
+                ':pricing_tld' => '%' . $tldKey . '%',
+            ]);
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                $log->error("LOOM provider not found for TLD: {$tldKey}");
+                exit(1);
+            }
+
+            $credentials = json_decode($row['credentials'] ?? '', true);
+
+            if (!is_array($credentials)) {
+                $err = json_last_error_msg();
+                $log->error("LOOM provider credentials are empty/invalid JSON ({$err})");
+                exit(1);
+            }
+
+            $endpoint = trim($row['api_endpoint'] ?? '');
+
+            if ($endpoint === '') {
+                $log->error("LOOM provider API endpoint is empty for TLD: {$tldKey}");
+                exit(1);
+            }
+
+            if (!str_contains($endpoint, '://')) {
+                $endpoint = 'ssl://' . $endpoint;
+            }
+
+            $parts = parse_url($endpoint);
+
+            $host = $parts['host'] ?? '';
+            $port = (int)($parts['port'] ?? 700);
+
+            if ($host === '') {
+                $log->error("LOOM provider API endpoint is invalid: {$row['api_endpoint']}");
+                exit(1);
+            }
+
+            $config = [
+                'host'             => $host,
+                'port'             => $port,
+                'tls_version'      => !empty($credentials['ssl']) ? '1' : '0',
+                'verify_peer'      => !empty($credentials['verify_peer']) ? '1' : '0',
+                'local_cert'       => $credentials['cert_file'] ?? '',
+                'local_pk'         => $credentials['key_file'] ?? '',
+                'cafile'           => $credentials['cafile'] ?? '',
+                'passphrase'       => $credentials['passphrase'] ?? '',
+                'clid'             => $credentials['auth']['username'] ?? '',
+                'pw'               => $credentials['auth']['password'] ?? '',
+                'registrarprefix'  => $credentials['prefix'] ?? 'epp',
+                'login_extensions' => $credentials['login_extensions'] ?? '',
+            ];
+
+            return [
+                'backend'      => $backend,
+                'registrar'    => $registrar,
+                'registrar_id' => (int)$row['id'],
+                'config'       => $config,
+            ];
+
+        } catch (Throwable $e) {
+            $log->error('LOOM provider config error: ' . $e->getMessage());
+            exit(1);
+        }
     } else {
         $log->error("Unknown backend: $backend");
         exit(1);
