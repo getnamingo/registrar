@@ -428,7 +428,24 @@ function getOrCreateValidationToken(PDO $pdo, string $backend, array $row): stri
     }
 
     if ($backend === 'LOOM') {
-        return (string) $row['validation_log'];
+        if (empty($row['user_id'])) {
+            throw new RuntimeException('LOOM user_id is missing for validation token creation.');
+        }
+
+        $stmt = $pdo->prepare("
+            UPDATE users
+            SET validation = 0,
+                validation_stamp = NOW(3),
+                validation_log = :token
+            WHERE id = :user_id
+        ");
+
+        $stmt->execute([
+            'token' => $token,
+            'user_id' => $row['user_id'],
+        ]);
+
+        return $token;
     }
 
     throw new RuntimeException("Unknown backend: $backend");

@@ -71,7 +71,7 @@ try {
             FROM users u
             LEFT JOIN users_contact uc 
                 ON uc.user_id = u.id AND uc.type = 'owner'
-            WHERE u.validation = 0
+            WHERE (u.validation = 0 OR u.validation IS NULL)
               AND u.validation_log IS NULL
         ");
     } else {
@@ -116,7 +116,9 @@ try {
     }
 }
 
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($rows as $row) {
     $contact_id = (int) $row['contact_id'];
 
     $to = trim((string) ($row['email'] ?? ''));
@@ -177,7 +179,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             UPDATE users
             SET validation_log = :token
             WHERE id = :id
-              AND validation = 0
+              AND (validation = 0 OR validation IS NULL)
         ");
         $updateId = $contact_id;
 
