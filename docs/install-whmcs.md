@@ -175,7 +175,9 @@ a2enmod rewrite
 a2enmod proxy
 a2enmod proxy_http
 a2enmod headers
+a2enmod proxy_fcgi
 a2enconf php8.3-fpm
+systemctl restart php8.3-fpm
 systemctl restart apache2
 ```
 

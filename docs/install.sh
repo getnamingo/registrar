@@ -892,6 +892,7 @@ echo "== Enabling modules =="
 a2ensite whmcs.conf
 a2enmod rewrite
 a2enmod headers
+a2enmod proxy_fcgi
 a2enconf php8.3-fpm
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
@@ -934,6 +935,7 @@ a2enmod proxy_http
 fi
 
 echo "== Restarting Apache =="
+systemctl restart php8.3-fpm
 systemctl restart apache2
 
 echo "Apache configured on $panel_domain_name"
@@ -1021,7 +1023,8 @@ EOF
 
 # === RUN INSTALLER ===
 echo "Running WHMCS CLI installer..."
-$PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c "$INSTALL_PATH/install/install_config.json"
+tr -d '\n' < "$INSTALL_PATH/install/install_config.json" | \
+$PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c
 
 # === CLEANUP ===
 echo "Cleaning up..."
