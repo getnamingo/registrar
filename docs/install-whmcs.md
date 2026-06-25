@@ -1,8 +1,8 @@
 # Namingo Registrar: Installation Guide (WHMCS)
 
-This guide is for setting up **WHMCS 8.13** with **PHP 8.3** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
+This guide is for setting up **WHMCS 9.0.5** with **PHP 8.3** on Ubuntu 22.04 / 24.04 or Debian 12 / 13.
 
-> **Important:** If **WHMCS 8.13** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
+> **Important:** If **WHMCS 9.0.5** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
@@ -117,10 +117,10 @@ Add the following configuration, edit `ServerAdmin` and `ServerName` at least:
 ```bash
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/html/whmcs
+    DocumentRoot /var/www/whmcs
     ServerName yourdomain.com
 
-    <Directory /var/www/html/whmcs/>
+    <Directory /var/www/whmcs/>
         Options +FollowSymlinks
         AllowOverride All
         Require all granted
@@ -276,10 +276,10 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 ## 4. Download and Extract WHMCS:
 
-Download WHMCS from their official site. After downloading, upload it to your VPS via SFTP or SCP. Place the zip file in `/var/www/html` and extract:
+Download WHMCS from their official site. After downloading, upload it to your VPS via SFTP or SCP. Place the zip file in `/var/www` and extract:
 
 ```bash
-cd /var/www/html
+cd /var/www
 unzip whmcs.zip -d .
 cd whmcs
 mv configuration.sample.php configuration.php
@@ -301,8 +301,8 @@ certbot --apache -d yourdomain.com -d www.yourdomain.com
 ## 5. Make Directories Writable:
 
 ```bash
-chown -R www-data:www-data /var/www/html/whmcs
-chmod -R 755 /var/www/html/whmcs
+chown -R www-data:www-data /var/www/whmcs
+chmod -R 755 /var/www/whmcs
 ```
 
 ## 6. WHMCS Installation:
@@ -314,7 +314,7 @@ Open your web browser and navigate to http://yourdomain.com/install to run the W
 After completing the installation, remove the `install` directory:
 
 ```bash
-rm -rf /var/www/html/whmcs/install
+rm -rf /var/www/whmcs/install
 ```
 
 ## 8. Add the WHMCS cron job:
@@ -326,7 +326,7 @@ crontab -e
 Add the following line to schedule the WHMCS cron job:
 
 ```bash
-*/5 * * * * /usr/bin/php -q /var/www/html/whmcs/crons/cron.php
+*/5 * * * * /usr/bin/php -q /var/www/whmcs/crons/cron.php
 ```
 
 ## 9. Additional Tools:
@@ -451,9 +451,9 @@ Once you have successfully configured all automation scripts, you are ready to i
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-namingo-registrar
-mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
-chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
+mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
+chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
+chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
 ```
 
 - Go to Settings > Apps & Integrations in the admin panel, search for "Namingo Registrar" and then activate it.
@@ -466,20 +466,20 @@ To configure a TLD using the Namingo WHMCS EPP module, follow these steps:
 
 1. Generate a Customized Module. Use the [module customizer](https://namingo.org/whmcs-module/) to generate the appropriate EPP module for your target registry.
 
-2. Download the generated .zip file and extract its contents to the following path `/var/www/html/whmcs/modules/registrars/NAME`, **replacing NAME** with the module name.
+2. Download the generated .zip file and extract its contents to the following path `/var/www/whmcs/modules/registrars/NAME`, **replacing NAME** with the module name.
 
 3. Copy the registry-specific `key.pem` and `cert.pem` files into the same **NAME** directory:
 
 ```bash
-cp /path/to/key.pem /var/www/html/whmcs/modules/registrars/NAME/
-cp /path/to/cert.pem /var/www/html/whmcs/modules/registrars/NAME/
+cp /path/to/key.pem /var/www/whmcs/modules/registrars/NAME/
+cp /path/to/cert.pem /var/www/whmcs/modules/registrars/NAME/
 ```
 
 4. Set the correct permissions. Ensure the files and directory have the proper ownership and access rights:
 
 ```bash
-chown -R www-data:www-data /var/www/html/whmcs/modules/registrars/NAME
-chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
+chown -R www-data:www-data /var/www/whmcs/modules/registrars/NAME
+chmod -R 755 /var/www/whmcs/modules/registrars/NAME
 ```
 
 5. Go to Settings > Apps & Integrations in the admin panel, search for [MODULE] and then activate.
@@ -488,7 +488,7 @@ chmod -R 755 /var/www/html/whmcs/modules/registrars/NAME
 
 7. Add a new TLD using Configuration -> System Settings -> Domain Pricing.
 
-8. Create a `whois.json` file in `/var/www/html/whmcs/resources/domains` and add the following:
+8. Create a `whois.json` file in `/var/www/whmcs/resources/domains` and add the following:
 
 ```bash
 [
@@ -576,9 +576,9 @@ Click **Save Changes** to apply the configuration.
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-mosapi-monitor
-mv whmcs-mosapi-monitor/mosapi_monitor /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/mosapi_monitor
-chmod -R 755 /var/www/html/whmcs/modules/addons/mosapi_monitor
+mv whmcs-mosapi-monitor/mosapi_monitor /var/www/whmcs/modules/addons
+chown -R www-data:www-data /var/www/whmcs/modules/addons/mosapi_monitor
+chmod -R 755 /var/www/whmcs/modules/addons/mosapi_monitor
 ```
 
 - Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **"ICANN MoSAPI"**, activate the module, and then configure it from its respective configuration menu.

@@ -227,9 +227,9 @@ install_rdap_and_whois_services() {
         mv fossbilling-registrar/Registrar /var/www/modules/
     elif [ "$panel" = "whmcs" ]; then
         git clone https://github.com/getnamingo/whmcs-namingo-registrar
-        mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons
-        chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
-        chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
+        mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
+        chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
+        chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
     else
         echo "LOOM selected, no modules."
     fi
@@ -861,7 +861,7 @@ systemctl restart php8.3-fpm
 echo "ionCube Loader installed successfully"
 
 #Configure apache
-whmcs_docroot="/var/www/html"
+whmcs_docroot="/var/www/whmcs"
 whmcs_conf="/etc/apache2/sites-available/whmcs.conf"
 rdap_conf="/etc/apache2/sites-available/rdap.conf"
 
@@ -959,7 +959,7 @@ mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localho
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
 # Install Adminer
-wget "http://www.adminer.org/latest.php" -O /var/www/html/adm.php
+wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
 
 # Install WHMCS
 DB_NAME="registrar"
@@ -967,7 +967,7 @@ DB_USER="${db_user}"
 DB_PASS="${db_pass}"
 DB_HOST="localhost"
 DB_PORT=3306
-INSTALL_PATH="/var/www/html"
+INSTALL_PATH="/var/www/whmcs"
 WHMCS_ZIP="/tmp/whmcs.zip"
 PHP_BIN="php"
 
@@ -1000,7 +1000,7 @@ chmod -R 755 "$INSTALL_PATH"
 # === CREATE CONFIG JSON ===
 ENCRYPTION_HASH=$(openssl rand -hex 16)
 
-cat <<EOF > "$INSTALL_PATH/install_config.json"
+cat <<EOF > "$INSTALL_PATH/install/install_config.json"
 {
   "db_host": "$DB_HOST",
   "db_port": $DB_PORT,
@@ -1023,12 +1023,12 @@ EOF
 
 # === RUN INSTALLER ===
 echo "Running WHMCS CLI installer..."
-$PHP_BIN -f "$INSTALL_PATH/bin/installer.php" -- -i -n -c "$INSTALL_PATH/install_config.json"
+$PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c "$INSTALL_PATH/install/install_config.json"
 
 # === CLEANUP ===
 echo "Cleaning up..."
 rm -rf "$INSTALL_PATH/install"
-rm -f "$INSTALL_PATH/install_config.json"
+rm -f "$INSTALL_PATH/install/install_config.json"
 ufw disable
 
 echo "== Requesting SSL certificates for $panel_domain_name and rdap.$domain_name =="
@@ -1049,7 +1049,7 @@ echo "== Adding WHMCS cron job to crontab =="
 command -v crontab >/dev/null 2>&1 || apt install -y cron
 systemctl enable --now cron 2>/dev/null || true
 
-cron_line="*/5 * * * * /usr/bin/php -q /var/www/html/crons/cron.php"
+cron_line="*/5 * * * * /usr/bin/php -q /var/www/whmcs/crons/cron.php"
 
 tmp_cron="$(mktemp 2>/dev/null)" || exit 1
 
@@ -1079,8 +1079,8 @@ echo "Generated database password: $db_pass"
 echo
 echo "1. Open your browser and visit https://$panel_domain_name/admin to complete the installation."
 echo
-echo "2. For security reasons, please delete the /var/www/html/install directory:"
-echo "   sudo rm -rf /var/www/html/install"
+echo "2. For security reasons, please delete the /var/www/whmcs/install directory:"
+echo "   sudo rm -rf /var/www/whmcs/install"
 echo
 echo "3. Ensure all contact details/profile fields are mandatory for your users within the WHMCS settings or configuration."
 echo
