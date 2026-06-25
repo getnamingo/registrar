@@ -268,13 +268,7 @@ Replace `registraruser` with your desired username and `RANDOM_STRONG_PASSWORD` 
 
 [Tune your MariaDB](https://github.com/major/MySQLTuner-perl)
 
-## 3. Install Adminer:
-
-```bash
-wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
-```
-
-## 4. Download and Extract WHMCS:
+## 3. Download and Extract WHMCS:
 
 Download WHMCS from their official site. After downloading, upload it to your VPS via SFTP or SCP. Place the zip file in `/var/www` and extract:
 
@@ -285,7 +279,7 @@ cd whmcs
 mv configuration.sample.php configuration.php
 ```
 
-### 4.1. Obtain an SSL certificate:
+### 3.1. Obtain an SSL certificate:
 
 ```bash
 certbot --apache -d yourdomain.com
@@ -298,11 +292,17 @@ If you have a `www` subdomain, include it like this:
 certbot --apache -d yourdomain.com -d www.yourdomain.com
 ```
 
-## 5. Make Directories Writable:
+## 4. Make Directories Writable:
 
 ```bash
 chown -R www-data:www-data /var/www/whmcs
 chmod -R 755 /var/www/whmcs
+```
+
+## 5. Install Adminer:
+
+```bash
+wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
 ```
 
 ## 6. WHMCS Installation:

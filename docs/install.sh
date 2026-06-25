@@ -958,9 +958,6 @@ mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIE
 mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
-# Install Adminer
-wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
-
 # Install WHMCS
 DB_NAME="registrar"
 DB_USER="${db_user}"
@@ -996,6 +993,9 @@ unzip -q "$WHMCS_ZIP" -d "$INSTALL_PATH"
 # === SET PERMISSIONS ===
 chown -R www-data:www-data "$INSTALL_PATH"
 chmod -R 755 "$INSTALL_PATH"
+
+# Install Adminer
+wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
 
 # === CREATE CONFIG JSON ===
 ENCRYPTION_HASH=$(openssl rand -hex 16)
