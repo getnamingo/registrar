@@ -465,6 +465,18 @@ chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
 
 - Go to Settings > Apps & Integrations in the admin panel, search for "Namingo Registrar" and then activate it.
 
+- Add the following rules to the **very top** of your WHMCS `.htaccess` file (before the WHMCS-managed section):  
+
+```bash
+<IfModule mod_rewrite.c>
+RewriteCond %{REQUEST_URI} ^/lookup [NC]
+RewriteRule ^lookup$ ./index.php?m=namingo_registrar&page=whois [L,QSA]
+
+RewriteCond %{REQUEST_URI} ^/claims [NC]
+RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
+</IfModule>
+```
+
 ## 14. Installing WHMCS EPP Registrar Modules:
 
 For every registry backend your registrar wants to support, you need a separate installation of the WHMCS EPP Registrar module. Each module can handle one or more TLDs that share the same configuration details.

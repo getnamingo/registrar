@@ -230,6 +230,20 @@ install_rdap_and_whois_services() {
         mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
         chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
         chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
+
+        HTACCESS="/var/www/whmcs/.htaccess"
+
+        if ! grep -q 'page=whois' "$HTACCESS"; then
+            sed -i '/^### BEGIN - WHMCS managed rules/ i\
+        <IfModule mod_rewrite.c>\
+        RewriteCond %{REQUEST_URI} ^/lookup [NC]\
+        RewriteRule ^lookup$ ./index.php?m=namingo_registrar&page=whois [L,QSA]\
+        \
+        RewriteCond %{REQUEST_URI} ^/claims [NC]\
+        RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]\
+        </IfModule>\
+        ' "$HTACCESS"
+        fi
     else
         echo "LOOM selected, no modules."
     fi
