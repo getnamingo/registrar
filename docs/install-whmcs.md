@@ -181,6 +181,7 @@ a2enmod proxy_http
 a2enmod headers
 a2enmod proxy_fcgi
 a2enconf php8.3-fpm
+echo 'opcache.enable=0' > /etc/php/8.3/fpm/conf.d/99-disable-opcache.ini
 systemctl restart php8.3-fpm
 systemctl restart apache2
 ```

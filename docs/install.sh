@@ -939,6 +939,7 @@ a2enmod proxy_http
 fi
 
 echo "== Restarting Apache =="
+echo 'opcache.enable=0' > /etc/php/8.3/fpm/conf.d/99-disable-opcache.ini
 systemctl restart php8.3-fpm
 systemctl restart apache2
 
@@ -1081,31 +1082,28 @@ echo
 echo "Generated database user: $db_user"
 echo "Generated database password: $db_pass"
 echo
-echo "1. Open your browser and visit https://$panel_domain_name/admin to complete the installation."
+echo "1. Open your browser and visit https://$panel_domain_name/admin to complete the initial setup."
 echo
-echo "2. For security reasons, please delete the /var/www/whmcs/install directory:"
-echo "   sudo rm -rf /var/www/whmcs/install"
+echo "2. In WHMCS admin, make sure all required client and contact profile fields are set as mandatory before accepting registrations."
 echo
-echo "3. Ensure all contact details/profile fields are mandatory for your users within the WHMCS settings or configuration."
-echo
-echo "4. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15 of install-whmcs.md."
+echo "3. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15 of install-whmcs.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "5. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "4. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the Namingo Registrar extension."
+    echo
+    echo "5. Add the following cron job to ensure automation runs smoothly:"
+    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
+    echo "6. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "6. Add the following cron job to ensure automation runs smoothly:"
-    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-    echo
-    echo "7. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the Namingo Registrar extension."
-    echo
-    echo "8. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
+    echo "7. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
     echo "   On your contact page, list all company details, including registration number and the name of the CEO."
     echo
-    echo "9. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 16)."
+    echo "8. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 16)."
     echo
 fi
 
@@ -1113,69 +1111,21 @@ echo "Please follow these steps carefully to complete your installation and conf
                 ;;
             2)
                 read -rp "Enter full path to the existing WHMCS installation: " whmcs_path
+
                 if [[ -d "$whmcs_path" && -f "$whmcs_path/configuration.php" ]]; then
-                    echo "Valid WHMCS installation found at $whmcs_path"
                     echo
-                    echo "Before proceeding, please make sure to back up your entire WHMCS directory and database."
-                    echo "This will help prevent any data loss in case something goes wrong during the installation."
+                    echo "Existing WHMCS installation detected at: $whmcs_path"
+                    echo "Automatic installation into an existing WHMCS instance is not supported."
                     echo
-                    read -p "Do you want to continue with the installation? (Y/N): " confirm_continue
-                    if [[ ! "$confirm_continue" =~ ^[Yy]$ ]]; then
-                        echo "Installation aborted."
-                        exit 1
-                    fi
-                    read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
-
-                    read -p "Enter the main domain name of the system (e.g., example.com): " domain_name
-
-                    config_file="$whmcs_path/configuration.php"
-
-                    db_user=$(grep "^\$db_username" "$config_file" | sed -E "s/^\$db_username\s*=\s*\"(.*)\";/\1/")
-                    db_pass=$(grep "^\$db_password" "$config_file" | sed -E "s/^\$db_password\s*=\s*\"(.*)\";/\1/")
-                    db_name=$(grep "^\$db_name" "$config_file" | sed -E "s/^\$db_name\s*=\s*\"(.*)\";/\1/")
-
-                    if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-                        install_rdap_and_whois_services "whmcs"
-            
-if systemctl is-active --quiet apache2; then            
-echo "== Creating RDAP VirtualHost config =="
-
-cat > "$rdap_conf" <<EOF
-<VirtualHost *:443>
-    ServerName rdap.$domain_name
-
-    # Reverse Proxy to localhost:7500
-    ProxyPass / http://localhost:7500/
-    ProxyPassReverse / http://localhost:7500/
-
-    # Gzip Encoding
-    AddOutputFilterByType DEFLATE text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript
-
-    # Security Headers
-    Header always set Referrer-Policy "no-referrer"
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "DENY"
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
-    Header unset Server
-    Header always set Access-Control-Allow-Origin "*"
-    Header always set Access-Control-Allow-Methods "GET, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type"
-
-    # Log configuration
-    CustomLog /var/log/apache2/rdap_access.log combined
-    ErrorLog /var/log/apache2/rdap_error.log
-</VirtualHost>
-EOF
-
-echo "== Enabling RDAP modules =="
-a2ensite rdap.conf
-a2enmod proxy
-a2enmod proxy_http
-systemctl restart apache2
-fi
-                    fi
+                    echo "Please install Namingo Registrar manually by following:"
+                    echo "  install-whmcs.md"
+                    echo
+                    echo "For WHMCS 9.0.5 already installed on a VPS/server with root access,"
+                    echo "review Section 1.3, Section 4.1, and Section 9 onwards."
+                    echo
+                    echo "Note: Shared hosting is not supported."
+                    echo
+                    exit 0
                 else
                     echo "Error: Invalid WHMCS path or configuration.php not found."
                     exit 1
