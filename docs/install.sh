@@ -970,14 +970,9 @@ PHP_BIN="php"
 
 # === PROMPT FOR REQUIRED VALUES ===
 read -rp "Enter WHMCS License Key: " LICENSE_KEY
-read -rp "Admin First Name: " ADMIN_FIRST
-read -rp "Admin Last Name: " ADMIN_LAST
-read -rp "Enter registrar admin email: " ADMIN_EMAIL
 read -rp "Enter registrar admin username: " ADMIN_USER
 read -rsp "Enter registrar admin password: " ADMIN_PASS
 echo
-read -rp "Security Question (e.g., What is your favorite color?): " ADMIN_SECQ
-read -rp "Security Answer: " ADMIN_SECA
 
 # === CHECK FILE EXISTS ===
 if [ ! -f "$WHMCS_ZIP" ]; then
@@ -988,7 +983,13 @@ fi
 # === CLEAN INSTALL PATH ===
 echo "[*] Extracting WHMCS to $INSTALL_PATH..."
 rm -rf "${INSTALL_PATH:?}/"*
-unzip -q "$WHMCS_ZIP" -d "$INSTALL_PATH"
+
+unzip -q "$WHMCS_ZIP" -d "$(dirname "$INSTALL_PATH")"
+
+if [ ! -d "$INSTALL_PATH" ]; then
+    echo "[!] WHMCS was not extracted to $INSTALL_PATH"
+    exit 1
+fi
 
 # === SET PERMISSIONS ===
 chown -R www-data:www-data "$INSTALL_PATH"
@@ -998,26 +999,23 @@ chmod -R 755 "$INSTALL_PATH"
 wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
 
 # === CREATE CONFIG JSON ===
-ENCRYPTION_HASH=$(openssl rand -hex 16)
+ENCRYPTION_HASH=$(openssl rand -base64 128 | tr -d '\n\/+=' | cut -c 1-64)
 
 cat <<EOF > "$INSTALL_PATH/install/install_config.json"
 {
-  "db_host": "$DB_HOST",
-  "db_port": $DB_PORT,
-  "db_name": "$DB_NAME",
-  "db_username": "$DB_USER",
-  "db_password": "$DB_PASS",
-  "license_key": "$LICENSE_KEY",
   "admin": {
-    "firstname": "$ADMIN_FIRST",
-    "lastname": "$ADMIN_LAST",
-    "email": "$ADMIN_EMAIL",
     "username": "$ADMIN_USER",
-    "password": "$ADMIN_PASS",
-    "securityq": "$ADMIN_SECQ",
-    "securitya": "$ADMIN_SECA"
+    "password": "$ADMIN_PASS"
   },
-  "encryption_hash": "$ENCRYPTION_HASH"
+  "configuration": {
+    "license": "$LICENSE_KEY",
+    "db_host": "$DB_HOST",
+    "db_username": "$DB_USER",
+    "db_password": "$DB_PASS",
+    "db_name": "$DB_NAME",
+    "cc_encryption_hash": "$ENCRYPTION_HASH",
+    "mysql_charset": "utf8"
+  }
 }
 EOF
 
@@ -1028,7 +1026,6 @@ $PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c "$INSTALL_PATH
 # === CLEANUP ===
 echo "Cleaning up..."
 rm -rf "$INSTALL_PATH/install"
-rm -f "$INSTALL_PATH/install/install_config.json"
 ufw disable
 
 echo "== Requesting SSL certificates for $panel_domain_name and rdap.$domain_name =="
