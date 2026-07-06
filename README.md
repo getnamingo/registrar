@@ -30,7 +30,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 - **Expired Registration Recovery Policy (ERRP)**: Implements ICANN-compliant expiration, redemption, and deletion workflows.
 
-- **Contact Validation**: Performs ICANN-required registrant contact validation and verification workflows.
+- **Contact Validation**: Performs ICANN-required and NIS2-compliant registrant contact validation and verification workflows.
 
 - **Transfer Management (IRTP/ITRP)**: Handles inter-registrar domain transfers with secure authorization and policy-compliant workflows.
 
