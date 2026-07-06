@@ -19,8 +19,6 @@ function epp_client($config)
     }
 
     $epp = EppRegistryFactory::create($profile);
-
-    $epp = EppRegistryFactory::create($profile);
     $epp->disableLogging();
 
     $tls_version = '1.2';
@@ -470,18 +468,6 @@ function updateLocalNameservers(PDO $pdo, string $backend, array $row, string $n
     }
 
     if ($backend === 'WHMCS') {
-        $stmt = $pdo->prepare("
-            UPDATE tbldomains
-            SET ns1 = :ns1,
-                ns2 = :ns2
-            WHERE id = :id
-        ");
-        $stmt->execute([
-            'ns1' => $ns1,
-            'ns2' => $ns2,
-            'id' => $row['id'],
-        ]);
-
         return;
     }
 
@@ -714,10 +700,10 @@ function getEppConfiguration(string $backend, ?PDO $pdo, string $domain, $log): 
                 exit(1);
             }
 
-            $hostname = $config['Hostname'] ?? $config['hostname'] ?? null;
-            $port     = $config['Port'] ?? $config['port'] ?? 700;
-            $username = $config['Username'] ?? $config['username'] ?? null;
-            $password = $config['Password'] ?? $config['password'] ?? null;
+            $hostname = $config['host'] ?? null;
+            $port     = $config['port'] ?? 700;
+            $username = $config['clid'] ?? null;
+            $password = $config['pw'] ?? null;
 
             if (empty($hostname) || empty($username) || empty($password)) {
                 $log->error("WHMCS EPP registrar config missing hostname, username, or password.");

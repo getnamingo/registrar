@@ -12,9 +12,14 @@ date_default_timezone_set('UTC');
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/helpers.php';
-require_once __DIR__ . '/vendor/autoload.php';
 
 $backend = $config['escrow']['backend'] ?? 'FOSS';
+
+if ($backend === 'WHMCS') {
+    require_once '/var/www/whmcs/init.php';
+}
+
+require_once __DIR__ . '/vendor/autoload.php';
 
 $logFilePath = '/var/log/namingo/validation.log';
 $log = setupLogger($logFilePath, 'Validation');
@@ -154,7 +159,6 @@ try {
             $dsn = 'mysql' . ":host=" . $dbConfig["host"] . ";port=" . $dbConfig["port"] . ";dbname=" . $dbConfig["name"];
             $pdo_foss = new PDO($dsn, $dbConfig["user"], $dbConfig["password"]);
         } elseif ($backend === 'WHMCS') {
-            require_once '/var/www/whmcs/init.php';
             $pdo_foss = null;
         } elseif ($backend === 'LOOM') {
             $pdo_foss = $pdo;
