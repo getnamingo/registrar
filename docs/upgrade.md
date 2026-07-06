@@ -153,3 +153,85 @@ After all upgrades are complete:
 5. Review your web server and PHP logs for any warnings.
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
+
+## Upgrade to Namingo Registrar v1.2.0
+
+This section describes the required application upgrades before and after deploying **Namingo Registrar v1.2.0**.
+
+### WHMCS
+
+#### Step 1: Upgrade WHMCS
+
+Ensure your installation is upgraded to **WHMCS v9.0.5** before continuing.
+
+Follow the official WHMCS upgrade documentation if required.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.0
+
+Download and run the **v1.2.0** upgrade script:
+
+```bash
+./update120.sh
+```
+
+#### Step 3: Upgrade the Namingo Registrar Module
+
+Upgrade to the latest version of the Namingo Registrar module by following the instructions in:
+
+https://github.com/getnamingo/whmcs-namingo-registrar
+
+---
+
+### FOSSBilling
+
+#### Step 1: Upgrade FOSSBilling
+
+Ensure your installation is upgraded to **FOSSBilling v0.8.3** before continuing.
+
+If you are upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above before proceeding.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.0
+
+Download and run the **v1.2.0** upgrade script:
+
+```bash
+./update120.sh
+```
+
+#### Step 3: Upgrade the Namingo Registrar Module
+
+Upgrade to the latest version of the Namingo Registrar module by following the instructions in:
+
+https://github.com/getnamingo/fossbilling-registrar
+
+#### Step 4: Upgrade Namingo Modules
+
+After upgrading the registrar module, ensure the following modules are also upgraded to their latest versions by following the instructions in each repository:
+
+- Validation Module  
+  https://github.com/getnamingo/fossbilling-validation
+
+- TMCH Module  
+  https://github.com/getnamingo/fossbilling-tmch
+
+- Whois Module  
+  https://github.com/getnamingo/fossbilling-whois
+
+- Contact Module  
+  https://github.com/getnamingo/fossbilling-contact
+
+---
+
+### Loom
+
+#### Step 1: Upgrade Loom
+
+Ensure your installation is upgraded to the **latest available version of Loom** before continuing.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.0
+
+Download and run the **v1.2.0** upgrade script:
+
+```bash
+./update120.sh
+```

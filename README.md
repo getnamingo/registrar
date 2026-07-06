@@ -70,7 +70,9 @@ For detailed installation steps, see:
 > [!WARNING]
 > Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
 >
-> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.3**, please refer to the **FOSSBilling Upgrade Path** in [`docs/upgrade.md`](docs/upgrade.md).
+> If you are upgrading to **Namingo Registrar v1.2.0**, please refer to the **[Upgrade to Namingo Registrar v1.2.0](docs/upgrade.md#upgrade-to-namingo-registrar-v120)** section.
+>
+> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.3**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
 
 - **v1.1.6 → v1.1.7**  
   Download and run the [`update117.sh`](docs/update117.sh) script.
