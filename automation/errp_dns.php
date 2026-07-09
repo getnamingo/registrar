@@ -95,9 +95,12 @@ try {
         // Send EPP update to registry
         try {
             $epp = epp_client($eppConfig);
+            $domainPuny = function_exists('idn_to_ascii')
+                ? (idn_to_ascii($domainName, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domainName)
+                : $domainName;
 
             $params = array(
-                'domainname' => $domainName,
+                'domainname' => $domainPuny,
                 'ns1' => $ns1,
                 'ns2' => $ns2
             );

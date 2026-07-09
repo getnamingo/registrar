@@ -169,9 +169,12 @@ try {
         // Send EPP update to registry
         try {
             $epp = epp_client($eppConfig);
+            $domainPuny = function_exists('idn_to_ascii')
+                ? (idn_to_ascii($domain_name, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain_name)
+                : $domain_name;
 
             $domainUpdateNS = $epp->domainUpdateNS([
-                'domainname' => $domain_name,
+                'domainname' => $domainPuny,
                 'ns1' => $ns1,
                 'ns2' => $ns2,
             ]);
@@ -183,7 +186,7 @@ try {
             }
 
             $domainUpdateStatus = $epp->domainUpdateStatus([
-                'domainname' => $domain_name,
+                'domainname' => $domainPuny,
                 'command' => 'add',
                 'status' => 'clientHold',
             ]);
