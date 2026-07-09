@@ -454,7 +454,9 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 13. Namingo Registrar for WHMCS Module:
+## 13. Namingo Registrar for WHMCS:
+
+### 13.1. Core Module
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-namingo-registrar
@@ -476,6 +478,17 @@ RewriteCond %{REQUEST_URI} ^/claims [NC]
 RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 </IfModule>
 ```
+
+### 13.2. Contact Validation Module
+
+```bash
+git clone https://github.com/getnamingo/whmcs-contact-validation
+mv whmcs-contact-validation/namingo_contact_validation /var/www/whmcs/modules/addons
+chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_contact_validation
+chmod -R 755 /var/www/whmcs/modules/addons/namingo_contact_validation
+```
+
+- Go to Settings > Apps & Integrations in the admin panel, search for "Contact Validation" and then activate it.
 
 ## 14. Installing WHMCS EPP Registrar Modules:
 

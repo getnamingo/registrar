@@ -484,7 +484,18 @@ mv fossbilling-registrar/Registrar /var/www/modules/
 
 - Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation".
 
-## 14. Domain Contact Verification:
+## 14. Domain Contact Validation:
+
+### 14.1. Administrator Interface
+
+```bash
+git clone https://github.com/getnamingo/fossbilling-contact-validation
+mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
+```
+
+- Go to Extensions > Overview in the admin panel and activate "Domain Contact Validation".
+
+### 14.2. Client Interface
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-validation

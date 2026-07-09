@@ -225,11 +225,19 @@ install_rdap_and_whois_services() {
 
         git clone https://github.com/getnamingo/fossbilling-registrar
         mv fossbilling-registrar/Registrar /var/www/modules/
+
+        git clone https://github.com/getnamingo/fossbilling-contact-validation
+        mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
     elif [ "$panel" = "whmcs" ]; then
         git clone https://github.com/getnamingo/whmcs-namingo-registrar
         mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
         chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
         chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
+
+        git clone https://github.com/getnamingo/whmcs-contact-validation
+        mv whmcs-contact-validation/namingo_contact_validation /var/www/whmcs/modules/addons
+        chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_contact_validation
+        chmod -R 755 /var/www/whmcs/modules/addons/namingo_contact_validation
 
         HTACCESS="/var/www/whmcs/.htaccess"
 

@@ -182,7 +182,13 @@ Upgrade to the latest version of the Namingo Registrar module by following the i
 
 https://github.com/getnamingo/whmcs-namingo-registrar
 
-#### Step 4: Upgrade the Namingo EPP Module(s)
+#### Step 4: Install and Configure the Contact Validation Module
+
+Install and configure the Contact Validation module by following the instructions in https://github.com/getnamingo/whmcs-contact-validation
+
+Verify that registrant contact validation is functioning correctly before proceeding.
+
+#### Step 5: Upgrade the Namingo EPP Module(s)
 
 Upgrade the Namingo EPP module(s) to the latest available version by following the instructions at:
 
@@ -212,13 +218,19 @@ Upgrade to the latest version of the Namingo Registrar module by following the i
 
 https://github.com/getnamingo/fossbilling-registrar
 
-#### Step 4: Upgrade the Namingo EPP Module(s)
+#### Step 4: Install and Configure the Contact Validation Module
+
+Install and configure the Contact Validation module by following the instructions in https://github.com/getnamingo/fossbilling-contact-validation
+
+Verify that registrant contact validation is functioning correctly before proceeding.
+
+#### Step 5: Upgrade the Namingo EPP Module(s)
 
 Upgrade the Namingo EPP module(s) to the latest available version by following the instructions at:
 
 https://namingo.org/foss-module/
 
-#### Step 5: Upgrade Namingo Modules
+#### Step 6: Upgrade Namingo Modules
 
 After upgrading the registrar module, ensure the following modules are also upgraded to their latest versions by following the instructions in each repository:
 
