@@ -72,7 +72,7 @@ For detailed installation steps, see:
 >
 > If you are upgrading to **Namingo Registrar v1.2.0**, please refer to the **[Upgrade to Namingo Registrar v1.2.0](docs/upgrade.md#upgrade-to-namingo-registrar-v120)** section.
 >
-> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.3**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
+> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.4**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
 
 - **v1.1.7 → v1.2.0**  
   Download and run the [`update120.sh`](docs/update120.sh) script.

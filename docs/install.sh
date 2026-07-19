@@ -597,7 +597,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 # Download and Extract FOSSBilling
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.3/FOSSBilling-0.8.3.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.4/FOSSBilling-0.8.4.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
@@ -648,6 +648,9 @@ rm -f "$tmp_cron" /tmp/crontab.err
 # Import SQL files into the database
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
+
+echo "Configuring required client fields."
+php /tmp/configure-client-fields.php
 
 echo ""
 echo "=================================================="
@@ -724,30 +727,26 @@ echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
 echo
-echo "3. Ensure all contact details/profile fields are mandatory for your users within the FOSSBilling settings or configuration."
-echo
-echo "4. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
+echo "3. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "5. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "4. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "6. Add the following cron job to ensure automation runs smoothly:"
+    echo "5. Add the following cron job to ensure automation runs smoothly:"
     echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
+    echo "6. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
     echo "   - Domain Contact Verification"
     echo "   - TMCH Claims Notice Support"
     echo "   - WHOIS & RDAP Client"
     echo "   - Domain Registrant Contact"
     echo "   - ICANN Registrar Accreditation"
     echo
-    echo "8. Update your Contact page with all required company details, including the company registration number and responsible person."
-    echo
-    echo "9. Complete the escrow, website content, and compliance configuration described in install-fossbilling.md (sections 12.1 and 20) to meet ICANN requirements."
+    echo "7. Update your Contact page with all required company details, including the company registration number and responsible person. Complete the escrow, website content, and compliance configuration described in install-fossbilling.md (sections 12.1 and 20) to meet ICANN requirements."
     echo
 fi
 
