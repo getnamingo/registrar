@@ -649,8 +649,11 @@ rm -f "$tmp_cron" /tmp/crontab.err
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
 
+wget https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
+
 echo "Configuring required client fields."
 php /tmp/configure-client-fields.php
+rm -f /tmp/configure-client-fields.php
 
 echo ""
 echo "=================================================="
