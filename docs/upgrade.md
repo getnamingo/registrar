@@ -200,7 +200,7 @@ https://namingo.org/whmcs-module
 
 #### Step 1: Upgrade FOSSBilling
 
-Ensure your installation is upgraded to **FOSSBilling v0.8.4** before continuing.
+Ensure your installation is upgraded to **FOSSBilling v0.8.5** before continuing.
 
 If you are upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above before proceeding.
 
