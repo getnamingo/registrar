@@ -9,8 +9,6 @@ class WHMCS implements WhoisInterface
     public function handleDomainQuery(string $domain, PDOProxy $pdo, \Swoole\Server $server, int $fd, $log, $c, $privacy): void
     {
         // Handle domain query
-        $domain = $queryData;
-        
         if (!$domain) {
             $server->send($fd, "please enter a domain name");
             $server->close($fd);
