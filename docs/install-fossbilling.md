@@ -326,13 +326,12 @@ unzip fossbilling.zip -d /var/www
 chmod -R 755 /var/www/config-sample.php
 chmod -R 755 /var/www/data/cache
 mkdir -p /var/www/data/log/event
-chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
-chown www-data:www-data /var/www/data/log
-chown www-data:www-data /var/www/data/log/event
 chmod -R 755 /var/www/data/uploads
-chown www-data:www-data /var/www/data/uploads
 chown -R www-data:www-data /var/www
+chown -R www-data:www-data /var/www/data
+find /var/www/data -type d -exec chmod 755 {} \;
+find /var/www/data -type f -exec chmod 644 {} \;
 ```
 
 ## 6. FOSSBilling Installation:

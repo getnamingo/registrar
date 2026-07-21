@@ -605,12 +605,8 @@ rm fossbilling.zip
 chmod -R 755 /var/www/config-sample.php
 chmod -R 755 /var/www/data/cache
 mkdir -p /var/www/data/log/event
-chown www-data:www-data /var/www/data/cache
 chmod -R 755 /var/www/data/log
-chown www-data:www-data /var/www/data/log
-chown www-data:www-data /var/www/data/log/event
 chmod -R 755 /var/www/data/uploads
-chown www-data:www-data /var/www/data/uploads
 chown -R www-data:www-data /var/www
 
 # Rename config file
@@ -669,16 +665,28 @@ echo ""
 hash=$(php -r "echo password_hash('$password', PASSWORD_BCRYPT, ['cost' => 12]);")
 
 # Build SQL
-sql="INSERT INTO admin (email, pass, status) VALUES ('$email', '$hash', 'active');"
+sql="
+INSERT INTO admin (email, pass, status)
+VALUES ('$email', '$hash', 'active');
+
+SET @admin_id = LAST_INSERT_ID();
+
+INSERT INTO admin_group_member (admin_id, admin_group_id, created_at)
+VALUES (@admin_id, 1, NOW());
+"
 db_name="registrar"
 
 # Execute SQL
-mariadb -u $db_user -p$db_pass registrar -e "$sql"
+mariadb -u "$db_user" -p"$db_pass" "$db_name" -e "$sql"
 
 echo "Admin user created: $email"
 
 rm -rfv /var/www/install
 chmod 644 /var/www/config.php
+chown www-data:www-data /var/www/config.php
+chown -R www-data:www-data /var/www/data
+find /var/www/data -type d -exec chmod 755 {} \;
+find /var/www/data -type f -exec chmod 644 {} \;
 
 # Clone the Tide theme repository
 git clone https://github.com/getpinga/tide /var/www/themes/tide
