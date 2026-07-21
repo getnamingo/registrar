@@ -603,10 +603,7 @@ rm fossbilling.zip
 
 # Make Directories Writable
 chmod -R 755 /var/www/config-sample.php
-chmod -R 755 /var/www/data/cache
 mkdir -p /var/www/data/log/event
-chmod -R 755 /var/www/data/log
-chmod -R 755 /var/www/data/uploads
 chown -R www-data:www-data /var/www
 
 # Rename config file

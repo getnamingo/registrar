@@ -324,10 +324,7 @@ unzip fossbilling.zip -d /var/www
 
 ```bash
 chmod -R 755 /var/www/config-sample.php
-chmod -R 755 /var/www/data/cache
 mkdir -p /var/www/data/log/event
-chmod -R 755 /var/www/data/log
-chmod -R 755 /var/www/data/uploads
 chown -R www-data:www-data /var/www
 chown -R www-data:www-data /var/www/data
 find /var/www/data -type d -exec chmod 755 {} \;
