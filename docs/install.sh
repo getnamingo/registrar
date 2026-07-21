@@ -669,7 +669,7 @@ echo ""
 hash=$(php -r "echo password_hash('$password', PASSWORD_BCRYPT, ['cost' => 12]);")
 
 # Build SQL
-sql="INSERT INTO admin (email, pass, admin_group_id, role, status) VALUES ('$email', '$hash', 1, 'admin', 'active');"
+sql="INSERT INTO admin (email, pass, role, status) VALUES ('$email', '$hash', 'admin', 'active');"
 db_name="registrar"
 
 # Execute SQL
