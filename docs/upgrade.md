@@ -1,10 +1,12 @@
 # Namingo Registrar Upgrade Guide
 
-## v1.0.0 to v1.2.0
+## v1.0.0 to v1.2.1
 
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.1.6** to **v1.2.0**, first run the **v1.1.7** upgrade, then the **v1.2.0** upgrade.
+> For example, to upgrade from **v1.1.7** to **v1.2.1**, first run the **v1.2.0** upgrade, then the **v1.2.1** upgrade.
+
+- v1.2.0 to v1.2.1 - download and run the [update121.sh](update121.sh) script.
 
 - v1.1.7 to v1.2.0 - download and run the [update120.sh](update120.sh) script.
 
@@ -155,6 +157,72 @@ After all upgrades are complete:
 5. Review your web server and PHP logs for any warnings.
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
+
+## Upgrade to Namingo Registrar v1.2.1
+
+This section describes the required application upgrades before and after deploying **Namingo Registrar v1.2.1**.
+
+### WHMCS
+
+#### Step 1: Upgrade WHMCS
+
+Ensure your installation is upgraded to **WHMCS v9.0.5** before continuing.
+
+Follow the official WHMCS upgrade documentation if required.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.1
+
+Download and run the **v1.2.1** upgrade script:
+
+```bash
+./update121.sh
+```
+
+#### Step 3: Upgrade the Namingo Registrar Module
+
+Upgrade to the latest version of the Namingo Registrar module by following the instructions in:
+
+https://github.com/getnamingo/whmcs-namingo-registrar
+
+---
+
+### FOSSBilling
+
+#### Step 1: Upgrade FOSSBilling
+
+Ensure your installation is upgraded to **FOSSBilling v0.8.5** before continuing.
+
+If you are upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above before proceeding.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.1
+
+Download and run the **v1.2.1** upgrade script:
+
+```bash
+./update121.sh
+```
+
+#### Step 3: Upgrade the Namingo Registrar Module
+
+Upgrade to the latest version of the Namingo Registrar module by following the instructions in:
+
+https://github.com/getnamingo/fossbilling-registrar
+
+---
+
+### Loom
+
+#### Step 1: Upgrade Loom
+
+Ensure your installation is upgraded to the **latest available version of Loom** before continuing.
+
+#### Step 2: Upgrade to Namingo Registrar v1.2.1
+
+Download and run the **v1.2.1** upgrade script:
+
+```bash
+./update121.sh
+```
 
 ## Upgrade to Namingo Registrar v1.2.0
 

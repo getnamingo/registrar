@@ -65,23 +65,25 @@ For detailed installation steps, see:
 > [!IMPORTANT]
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.1.6** to **v1.2.0**, first run the **v1.1.7** upgrade, then the **v1.2.0** upgrade.
+> For example, to upgrade from **v1.1.7** to **v1.2.1**, first run the **v1.2.0** upgrade, then the **v1.2.1** upgrade.
 >
 > If you are upgrading to **Namingo Registrar v1.2.0**, please refer to the **[Upgrade to Namingo Registrar v1.2.0](docs/upgrade.md#upgrade-to-namingo-registrar-v120)** section.
+>
+> After completing the **v1.2.0** upgrade, proceed with **[Upgrade to Namingo Registrar v1.2.1](docs/upgrade.md#upgrade-to-namingo-registrar-v121)** section.
 
 > [!WARNING]
 > Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
 >
 > If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.5**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
 
+- **v1.2.0 → v1.2.1**  
+  Download and run the [`update121.sh`](docs/update121.sh) script.
+
 - **v1.1.7 → v1.2.0**  
   Download and run the [`update120.sh`](docs/update120.sh) script.
 
 - **v1.1.6 → v1.1.7**  
   Download and run the [`update117.sh`](docs/update117.sh) script.
-  
-- **v1.1.5 → v1.1.6**  
-  Download and run the [`update116.sh`](docs/update116.sh) script.
 
 For **older versions**, please refer to [`upgrade.md`](docs/upgrade.md).
 
