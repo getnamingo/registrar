@@ -265,6 +265,7 @@ Replace `registraruser` with your desired username and `RANDOM_STRONG_PASSWORD` 
 ## 3. Install Adminer:
 
 ```bash
+mkdir -p /var/www
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 ```
 

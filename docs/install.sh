@@ -537,6 +537,8 @@ mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIE
 mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
+mkdir -p /var/www
+
 # Install Adminer
 wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
