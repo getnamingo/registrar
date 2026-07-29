@@ -395,8 +395,12 @@ Components: ${MARIADB_COMPONENTS}
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
+# Caddy setup
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+
 apt update -y
-apt install -y mariadb-client mariadb-server nginx python3-certbot-nginx php8.5-cli php8.5-common php8.5-curl php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-gmp php8.5-imagick php8.5-imap php8.5-intl php8.5-mbstring php8.5-readline php8.5-soap php8.5-swoole php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
+apt install -y mariadb-client mariadb-server caddy php8.5-cli php8.5-common php8.5-curl php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-gmp php8.5-imagick php8.5-imap php8.5-intl php8.5-mbstring php8.5-readline php8.5-soap php8.5-swoole php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
 curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
 php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
 rm /tmp/composer-setup.php
@@ -410,173 +414,114 @@ set_php_ini_value "/etc/php/8.5/fpm/php.ini" "expose_php" "0"
 
 systemctl restart php8.5-fpm
 
-# Configure Nginx
+# Configure Caddy
 ufw disable
-systemctl stop nginx
-nginx_conf_fossbilling="/etc/nginx/sites-available/fossbilling.conf"
-cat <<EOL > $nginx_conf_fossbilling
-server {
-    listen 80;
-    server_name $panel_domain_name;
-    return 301 https://\$host\$request_uri;
+systemctl stop caddy
+cat > /etc/caddy/Caddyfile << EOF
+$panel_domain_name {
+    # Directory containing FOSSBilling's index.php
+    root * /var/www
+
+    # Response compression
+    encode zstd gzip
+
+    # Block protected FOSSBilling paths
+    @blockedPaths path \
+        /vendor \
+        /vendor/* \
+        /data \
+        /data/* \
+        /config.php
+
+    # Block sensitive file extensions
+    @blockedExtensions path_regexp blockedExtensions (?i)\.(ini|sh|inc|bak|twig|sql)$
+
+    # Block hidden files and directories, except ACME files
+    @hiddenFiles {
+        path_regexp hiddenFiles (^|/)\.[^/]+
+        not path /.well-known /.well-known/*
+    }
+
+    # FOSSBilling root route
+    @rootRoute path /
+
+    # FOSSBilling custom-page route
+    @customPageRoute {
+        path_regexp customPage ^/page/(.*)$
+        not file {path} {path}/
+    }
+
+    # All other routes that are not real files or directories
+    @frontController {
+        not file {path} {path}/
+    }
+
+    route {
+        respond @blockedPaths 403
+        respond @blockedExtensions 403
+        respond @hiddenFiles 403
+
+        # FOSSBilling URL rewriting
+        rewrite @rootRoute /index.php?{query}&_url=/
+        rewrite @customPageRoute /index.php?{query}&_url=/custompages/{re.customPage.1}
+        rewrite @frontController /index.php?{query}&_url={path}
+
+        # Change this socket to match your installed PHP version
+        php_fastcgi unix//run/php/php8.5-fpm.sock {
+            capture_stderr
+        }
+
+        file_server
+    }
+
+    header * {
+        Referrer-Policy "same-origin"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Feature-Policy "accelerometer 'none'; autoplay 'none'; camera 'none'; encrypted-media 'none'; fullscreen 'self'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'self'; usb 'none';"
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
+    }
 }
-
-server {
-    listen 443 ssl http2;
-    ssl_certificate      /etc/letsencrypt/live/$panel_domain_name/fullchain.pem;
-    ssl_certificate_key  /etc/letsencrypt/live/$panel_domain_name/privkey.pem;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-
-    set \$root_path '/var/www';
-    server_name $panel_domain_name;
-
-    index index.php;
-    root \$root_path;
-    try_files \$uri \$uri/ @rewrite;
-    sendfile off;
-    include /etc/nginx/mime.types;
-
-    location ~* \.(ini|sh|inc|bak|twig|sql)\$ {
-        return 403;
-    }
-
-    location ^~ /vendor/ {
-        return 403;
-    }
-
-    location = /config.php {
-        return 403;
-    }
-
-    location ~ /\.(?!well-known/) {
-        return 403;
-    }
-
-    location ^~ /data/ {
-        return 403;
-    }
-
-    location @rewrite {
-        rewrite ^/page/(.*)\$ /index.php?_url=/custompages/\$1;
-        rewrite ^/(.*)\$ /index.php?_url=/\$1;
-    }
-
-    location ~ \.php {
-        fastcgi_split_path_info ^(.+\.php)(/.*)\$;
-        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
-        fastcgi_param PATH_INFO \$fastcgi_path_info;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        fastcgi_intercept_errors on;
-        include fastcgi_params;
-    }
-
-    location ~* ^/(css|img|js|flv|swf|download)/(.+)\$ {
-        root \$root_path;
-        expires off;
-    }
-}
-EOL
+EOF
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    # Add RDAP configuration to Nginx
-    nginx_conf_rdap="/etc/nginx/sites-available/rdap.conf"
-    cat <<EOL > $nginx_conf_rdap
-server {
-    listen 80;
-    listen [::]:80;
-    server_name rdap.$domain_name;
+    # Add RDAP configuration to Caddy
+    cat >> /etc/caddy/Caddyfile <<EOF
 
-    return 301 https://\$host\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name rdap.$domain_name;
-
-    ssl_certificate /etc/letsencrypt/live/rdap.$domain_name/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/rdap.$domain_name/privkey.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-
-        # Add CORS headers
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type";
-
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-        # Enable Gzip compression
-        gzip on;
-        gzip_vary on;
-        gzip_proxied any;
-        gzip_comp_level 6;
-        gzip_min_length 512;
-        gzip_types
-            application/json
-            application/rdap+json
-            text/plain
-            text/css
-            application/javascript
-            application/xml;
+    rdap.${panel_domain_name} {
+        reverse_proxy localhost:7500
+        encode zstd gzip
+        file_server
+        header -Server
+        header * {
+            Referrer-Policy "no-referrer"
+            Strict-Transport-Security max-age=31536000;
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            X-XSS-Protection "1; mode=block"
+            Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+            Feature-Policy "accelerometer 'none'; autoplay 'none'; camera 'none'; encrypted-media 'none'; fullscreen 'self'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'self'; usb 'none';"
+            Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
+            # CORS Headers
+            Access-Control-Allow-Origin *
+            Access-Control-Allow-Methods "GET, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type"
+        }
     }
-}
-EOL
-
-    # Create symbolic links for RDAP Nginx configuration
-    ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
-    
-    # Step 1: Stop Nginx to free up port 80 and 443
-    systemctl stop nginx
-
-    # Step 2: Obtain SSL certificate using Certbot in standalone mode
-    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
-    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
-
-    # Step 3: Start Nginx again with the newly obtained certificates
-    systemctl start nginx
-
-    # Step 4: Run Certbot again with the Nginx plugin to set up automatic renewals
-    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
-    certbot --nginx --non-interactive --agree-tos --email admin@$domain_name -d rdap.$domain_name --redirect
-else
-    # Step 1: Stop Nginx to free up port 80 and 443
-    systemctl stop nginx
-    
-    # Step 2: Obtain SSL certificate using Certbot in standalone mode
-    certbot certonly --standalone --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
-
-    # Step 3: Start Nginx again with the newly obtained certificates
-    systemctl start nginx
-    
-    # Obtain SSL certificate for only the main domain using the Nginx plugin
-    certbot certonly --nginx --non-interactive --agree-tos --email admin@$domain_name -d $panel_domain_name --redirect
+EOF
 fi
 
-ln -sfn /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/fossbilling.conf
-rm -f /etc/nginx/sites-enabled/default
-
-# Enable and restart Nginx
+# Enable and restart Caddy
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 43/tcp
 ufw allow 22/tcp
 ufw --force enable
-systemctl enable nginx
-systemctl restart nginx
-
-echo "#\!/bin/bash" | tee /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
-echo "systemctl stop nginx" | tee -a /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
-chmod +x /etc/letsencrypt/renewal-hooks/pre/stop_nginx.sh
-
-echo "#\!/bin/bash" | tee /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
-echo "systemctl start nginx" | tee -a /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
-chmod +x /etc/letsencrypt/renewal-hooks/post/start_nginx.sh
+systemctl enable caddy
+systemctl restart caddy
 
 echo "Applying MariaDB hardening..."
 mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"

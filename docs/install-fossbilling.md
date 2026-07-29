@@ -6,6 +6,11 @@ This guide is for setting up **FOSSBilling 0.8.5** with **PHP 8.5** on Ubuntu 22
 
 Follow the instructions for your operating system.
 
+```bash
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+```
+
 ### Ubuntu 22.04 / 24.04
 
 ```bash
@@ -15,7 +20,7 @@ apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
-  nginx python3-certbot-nginx \
+  caddy \
   php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
   php8.5-bcmath php8.5-bz2 php8.5-gmp php8.5-intl \
   php8.5-mbstring php8.5-xml php8.5-zip php8.5-imap \
@@ -39,7 +44,7 @@ apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
-  nginx python3-certbot-nginx \
+  caddy \
   php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
   php8.5-bcmath php8.5-bz2 php8.5-gmp php8.5-intl \
   php8.5-mbstring php8.5-xml php8.5-zip php8.5-imap \
@@ -68,161 +73,112 @@ session.cookie_samesite = "Strict"
 systemctl restart php8.5-fpm
 ```
 
-### 1.2. Configure Nginx:
+### 1.2. Configure Caddy:
 
 **Replace `%%DOMAIN%%` with your actual domain.**
 
-1. Edit and save the provided configuration as `/etc/nginx/sites-available/fossbilling.conf`:
+1. Replace `/etc/caddy/Caddyfile` with the following contents:
 
 ```bash
-server {
-    listen 80;
-    server_name %%DOMAIN%%;
-    return 301 https://$host$request_uri;
-}
+%%DOMAIN%% {
+    # Directory containing FOSSBilling's index.php
+    root * /var/www
 
-server {
-    listen 443 ssl http2;
-    ssl_certificate      /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
-    ssl_certificate_key  /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
-    ssl_stapling on;
-    ssl_stapling_verify on;
+    # Response compression
+    encode zstd gzip
 
-    set $root_path '%%SOURCE_PATH%%';
-    server_name %%DOMAIN%%;
+    # Block protected FOSSBilling paths
+    @blockedPaths path \
+        /vendor \
+        /vendor/* \
+        /data \
+        /data/* \
+        /config.php
 
-    index index.php;
-    root $root_path;
-    try_files $uri $uri/ @rewrite;
-    sendfile off;
-    include /etc/nginx/mime.types;
+    # Block sensitive file extensions
+    @blockedExtensions path_regexp blockedExtensions (?i)\.(ini|sh|inc|bak|twig|sql)$
 
-    # Block access to sensitive files
-    location ~* .(ini|sh|inc|bak|twig|sql)$ {
-        return 403;
+    # Block hidden files and directories, except ACME files
+    @hiddenFiles {
+        path_regexp hiddenFiles (^|/)\.[^/]+
+        not path /.well-known /.well-known/*
     }
 
-    # Block /vendor completely
-    location ^~ /vendor/ {
-        return 403;
+    # FOSSBilling root route
+    @rootRoute path /
+
+    # FOSSBilling custom-page route
+    @customPageRoute {
+        path_regexp customPage ^/page/(.*)$
+        not file {path} {path}/
     }
 
-    # Block direct access to config.php
-    location = /config.php {
-        return 403;
+    # All other routes that are not real files or directories
+    @frontController {
+        not file {path} {path}/
     }
 
-    # Block access to hidden files except .well-known
-    location ~ /\.(?!well-known\/) {
-        return 403;
+    route {
+        respond @blockedPaths 403
+        respond @blockedExtensions 403
+        respond @hiddenFiles 403
+
+        # FOSSBilling URL rewriting
+        rewrite @rootRoute /index.php?{query}&_url=/
+        rewrite @customPageRoute /index.php?{query}&_url=/custompages/{re.customPage.1}
+        rewrite @frontController /index.php?{query}&_url={path}
+
+        # Change this socket to match your installed PHP version
+        php_fastcgi unix//run/php/php8.5-fpm.sock {
+            capture_stderr
+        }
+
+        file_server
     }
 
-    # Deny access to runtime data
-    location ^~ /data/ {
-        return 403;
-    }
-
-    location @rewrite {
-        rewrite ^/page/(.*)$ /index.php?_url=/custompages/$1;
-        rewrite ^/(.*)$ /index.php?_url=/$1;
-    }
-
-    location ~ \.php {
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
-            fastcgi_param PATH_INFO       $fastcgi_path_info;
-            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-            fastcgi_intercept_errors on;
-            include fastcgi_params;
-    }
-
-    location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
-        root $root_path;
-        expires off;
-    }
-}
-```
-
-2. Edit and save the provided configuration as `/etc/nginx/sites-available/rdap.conf`:
-
-```bash
-server {
-    listen 80;
-    listen [::]:80;
-    server_name rdap.%%DOMAIN%%;
-
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name rdap.%%DOMAIN%%;
-
-    ssl_certificate /etc/letsencrypt/live/%%DOMAIN%%/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/%%DOMAIN%%/privkey.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:7500;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-        # Add CORS headers
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type";
-
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-        
-        # Enable Gzip compression
-        gzip on;
-        gzip_vary on;
-        gzip_proxied any;
-        gzip_comp_level 6;
-        gzip_min_length 512;
-        gzip_types
-            application/json
-            application/rdap+json
-            text/plain
-            text/css
-            application/javascript
-            application/xml;
+    header * {
+        Referrer-Policy "same-origin"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Feature-Policy "accelerometer 'none'; autoplay 'none'; camera 'none'; encrypted-media 'none'; fullscreen 'self'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'self'; usb 'none';"
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
     }
 }
 ```
 
-3. Create symbolic links:
+2. If running RDAP, append the following to `/etc/caddy/Caddyfile`:
 
 ```bash
-ln -s /etc/nginx/sites-available/fossbilling.conf /etc/nginx/sites-enabled/
-ln -s /etc/nginx/sites-available/rdap.conf /etc/nginx/sites-enabled/
+rdap.%%DOMAIN%% {
+    reverse_proxy localhost:7500
+    encode zstd gzip
+    file_server
+    header -Server
+    header * {
+        Referrer-Policy "no-referrer"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Feature-Policy "accelerometer 'none'; autoplay 'none'; camera 'none'; encrypted-media 'none'; fullscreen 'self'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'self'; usb 'none';"
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
+        # CORS Headers
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type"
+    }
+}
 ```
 
-4. Remove the default configuration if exists:
+3. Enable and restart Caddy:
 
 ```bash
-rm /etc/nginx/sites-enabled/default
-```
-
-5. Obtain SSL certificate with Certbot:
-
-Replace `%%DOMAIN%%` with your actual domain:
-
-```bash
-ufw disable
-systemctl stop nginx
-certbot certonly -d %%DOMAIN%% -d rdap.%%DOMAIN%%
-certbot --nginx -d %%DOMAIN%% -d rdap.%%DOMAIN%%
-```
-
-Choose reinstall on the last option.
-
-6. Enable and restart Nginx:
-
-```bash
-systemctl enable nginx
-systemctl restart nginx
+systemctl enable caddy
+systemctl restart caddy
 ```
 
 ## 2. Install and configure MariaDB:
