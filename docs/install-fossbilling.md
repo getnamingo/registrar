@@ -16,7 +16,6 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /
 ```bash
 apt install -y curl software-properties-common ufw
 add-apt-repository -y ppa:ondrej/php
-apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \

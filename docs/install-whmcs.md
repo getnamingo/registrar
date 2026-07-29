@@ -12,11 +12,9 @@ Follow the instructions for your operating system.
 ### Ubuntu 22.04 / 24.04
 
 ```bash
-apt update
 apt install -y curl software-properties-common ufw
 
 add-apt-repository -y ppa:ondrej/php
-apt update
 
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
