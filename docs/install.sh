@@ -1239,27 +1239,27 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 EOF
 
 apt update -y
-apt install -y caddy mariadb-client mariadb-server php8.3 php8.3-cli php8.3-common php8.3-fpm php8.3-bcmath php8.3-bz2 php8.3-curl php8.3-ds php8.3-gd php8.3-gmp php8.3-igbinary php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-opcache php8.3-readline php8.3-redis php8.3-soap php8.3-swoole php8.3-uuid php8.3-xml php8.3-yaml php8.3-zip
+apt install -y caddy mariadb-client mariadb-server php8.5 php8.5-cli php8.5-common php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-curl php8.5-ds php8.5-gd php8.5-gmp php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring php8.5-mysql php8.5-readline php8.5-redis php8.5-soap php8.5-swoole php8.5-uuid php8.5-xml php8.5-yaml php8.5-zip
 curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.3 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
 rm /tmp/composer-setup.php
 
 # Update php.ini (FPM)
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_httponly" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
 
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable" "1"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.enable_cli" "1"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit_buffer_size" "100M"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.jit" "1255"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.memory_consumption" "128"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.interned_strings_buffer" "16"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.max_accelerated_files" "10000"
-set_php_ini_value "/etc/php/8.3/mods-available/opcache.ini" "opcache.validate_timestamps" "0"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.enable" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.enable_cli" "1"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.jit_buffer_size" "100M"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.jit" "1255"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.memory_consumption" "128"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.interned_strings_buffer" "16"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.max_accelerated_files" "10000"
+set_php_ini_value "/etc/php/8.5/fpm/php.ini" "opcache.validate_timestamps" "0"
 
-systemctl restart php8.3-fpm
+systemctl restart php8.5-fpm
 
 # ---------- Adminer (randomized path) ----------
 log "Installing Adminer…"
@@ -1354,7 +1354,7 @@ cat > /etc/caddy/Caddyfile <<EOF
 $HOSTNAME {
 $CADDY_BIND_LINE
     root * $INSTALL_PATH/public
-    php_fastcgi unix//run/php/php8.3-fpm.sock
+    php_fastcgi unix//run/php/php8.5-fpm.sock
     encode zstd gzip
     file_server
     header -Server
@@ -1364,7 +1364,7 @@ $CADDY_BIND_LINE
     # Adminer (randomized path)
     route /${ADMINER_SLUG}* {
         root * /usr/share/adminer
-        php_fastcgi unix//run/php/php8.3-fpm.sock
+        php_fastcgi unix//run/php/php8.5-fpm.sock
     }
     header * {
         Referrer-Policy "same-origin"
@@ -1461,7 +1461,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "   - /opt/registrar/automation/config.php"
     echo
     echo "2. Add the following cron job to ensure automation runs smoothly:"
-    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
     echo "3. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
     echo "   On your contact page, list all company details, including registration number and the name of the CEO."
