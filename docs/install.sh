@@ -1192,7 +1192,6 @@ fi
 
 domain_name="$registrable"
 
-TLS_EMAIL="admin@$domain_name"
 INSTALL_PATH="/var/www/loom"
 
 # DB credentials
@@ -1358,7 +1357,6 @@ $CADDY_BIND_LINE
     php_fastcgi unix//run/php/php8.3-fpm.sock
     encode zstd gzip
     file_server
-    tls $TLS_EMAIL
     header -Server
     log {
         output file /var/log/loom/caddy.log
@@ -1374,8 +1372,8 @@ $CADDY_BIND_LINE
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
-        Content-Security-Policy: default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https: data:; font-src 'self' data:; style-src 'self' 'unsafe-inline' https://rsms.me; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/; form-action 'self'; worker-src 'none'; frame-src 'none';
-        Permissions-Policy: accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self'; img-src https: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
     }
 }
 EOF
@@ -1394,7 +1392,6 @@ rdap.${domain_name} {
 $CADDY_BIND_LINE
     reverse_proxy 127.0.0.1:7500
     encode gzip
-    tls $TLS_EMAIL
     header -Server
 
     log {
@@ -1412,7 +1409,7 @@ $CADDY_BIND_LINE
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
         Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
-        Permissions-Policy: accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
 
         Access-Control-Allow-Origin *
         Access-Control-Allow-Methods "GET, OPTIONS"
