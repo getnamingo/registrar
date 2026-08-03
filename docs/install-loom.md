@@ -291,8 +291,6 @@ composer install
 mv config.php.dist config.php
 ```
 
-Edit the `config.php` with the appropriate preferences as required.
-
 Download and initiate the escrow RDE client setup:
 
 ```bash
@@ -302,48 +300,9 @@ mv escrow-rde-client-v2.3.1-linux_x86_64 escrow-rde-client
 rm escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
 ```
 
-### 11.1. Submitting the Header Mapping File:
+Review and update `config.php` with the appropriate settings for your environment. Make sure you also complete all steps described in [configuration.md](configuration.md) before running the automation.
 
-To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit your Header Mapping File to both DENIC (your DEA) and ICANN.
-
-#### Step 1: Upload to DENIC
-
-1. Visit the DENIC escrow portal:  
-   [https://escrow.denic-services.de/icann-header-mapping](https://escrow.denic-services.de/icann-header-mapping)
-
-2. Log in with your credentials.
-
-3. Upload your Header Mapping File in CSV format.  
-   Use the structure below:
-
-    ```csv
-    ICANN RDE Spec,Field Name,Abbreviation
-    8.1.1,domain,domainname
-    8.1.2,expiration-date,expire
-    8.1.3,iana,ianaid
-    8.1.4,rt-name,rt-name
-    8.1.5,rt-street,rt-street
-    8.1.6,rt-city,rt-city
-    8.1.7,rt-state,rt-state
-    8.1.8,rt-zip,rt-zip
-    8.1.9,rt-country,rt-country
-    8.1.10,rt-phone,rt-phone
-    8.1.11,rt-email,rt-mail
-    3.4.1.3,bc-name,bc-name
-    ```
-
-4. Confirm the upload was successful.
-
-#### Step 2: Send to ICANN
-
-Email the same file to ICANN at:  
-📧 **registrar@icann.org**
-
-Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
-
-After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
-
-### 11.2. Running the Automation System:
+### Running the Automation System:
 
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 

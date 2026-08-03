@@ -60,6 +60,8 @@ For detailed installation steps, see:
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 - [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
 
+- [configuration.md](docs/configuration.md) – configuration
+
 ### Upgrade
 
 > [!IMPORTANT]
