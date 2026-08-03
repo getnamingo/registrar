@@ -5,6 +5,7 @@ namespace Registrar\WHOIS;
 use Registrar\WHOIS\FOSS;
 use Registrar\WHOIS\WHMCS;
 use Registrar\WHOIS\LOOM;
+use Registrar\WHOIS\CUSTOM;
 use RuntimeException;
 
 class PlatformFactory
@@ -15,6 +16,7 @@ class PlatformFactory
             'foss', 'fossbilling' => new FOSS(),
             'whmcs'               => new WHMCS(),
             'loom'                => new LOOM(),
+            'custom'              => new CUSTOM(),
             default               => throw new RuntimeException("Unsupported WHOIS backend: $backend")
         };
     }

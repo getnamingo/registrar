@@ -5,6 +5,7 @@ namespace Registrar\RDAP;
 use Registrar\RDAP\FOSS;
 use Registrar\RDAP\WHMCS;
 use Registrar\RDAP\LOOM;
+use Registrar\RDAP\CUSTOM;
 use RuntimeException;
 
 class PlatformFactory
@@ -15,6 +16,7 @@ class PlatformFactory
             'foss', 'fossbilling' => new FOSS(),
             'whmcs'               => new WHMCS(),
             'loom'                => new LOOM(),
+            'custom'              => new CUSTOM(),
             default               => throw new RuntimeException("Unsupported RDAP backend: $backend")
         };
     }
