@@ -73,7 +73,7 @@ $configArray = [
     'useFileSystemCache' => $config['escrow']['useFileSystemCache'],
     'gpg' => [
         'gpgPrivateKeyPath'     => $config['escrow']['gpgPrivateKeyPath'],
-        'gpgPrivateKeyPass'     => $config['escrow']['gpgPrivateKeyPass'],
+        'gpgPrivateKeyPass'     => $config['escrow']['gpgPrivateKeyPass'] ?? null,
         'gpgReceiverPubKeyPath' => $config['escrow']['gpgReceiverPubKeyPath'],
     ],
     'sftp' => [
@@ -81,7 +81,7 @@ $configArray = [
         'sshPort'               => $config['escrow']['sshPort'],
         'sshUsername'           => $config['escrow']['sshUsername'],
         'sshPrivateKeyPath'     => $config['escrow']['sshPrivateKeyPath'],
-        'sshPrivateKeyPassword' => $config['escrow']['sshPrivateKeyPassword'],
+        'sshPrivateKeyPassword' => $config['escrow']['sshPrivateKeyPassword'] ?? null,
         'sshHostPublicKeyPath' => $config['escrow']['sshHostPublicKeyPath'] ?? null,
     ],
 ];
