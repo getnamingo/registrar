@@ -171,20 +171,18 @@ sq --version
 apt update && apt install -y \
     build-essential \
     ca-certificates \
-    capnproto \
     clang \
     curl \
-    libclang-dev \
-    libsqlite3-dev \
-    libssl-dev \
+    nettle-dev \
     pkg-config \
+    libssl-dev \
+    capnproto \
+    libsqlite3-dev \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
         | sh -s -- -y \
     && . "$HOME/.cargo/env" \
-    && cargo install sequoia-sq \
-        --locked \
-        --no-default-features \
-        --features crypto-rust \
+    && rustup default stable \
+    && cargo install --locked sequoia-sq \
     && install -m 755 "$HOME/.cargo/bin/sq" /usr/local/bin/sq
 ```
 
