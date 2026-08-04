@@ -195,7 +195,7 @@ ufw allow 443/tcp
 ## 2. Install and configure MariaDB:
 
 ```bash
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+curl -fsSL -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
 ```
 
 Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.

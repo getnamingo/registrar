@@ -133,7 +133,7 @@ ln -s /usr/share/adminer/latest.php /usr/share/adminer/adminer.php
 ## 3. Install MariaDB:
 
 ```bash
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+curl -fsSL -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
 ```
 
 Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.
