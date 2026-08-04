@@ -152,7 +152,7 @@ From **21 January 2027**, DENIC escrow deposits must use RFC 9580-compliant Open
 
 ### Install Sequoia PGP
 
-On Debian 13, install the packaged `sq` command with:
+On Ubuntu 26.04 or Debian 13, install the packaged `sq` command with:
 
 ```bash
 apt update && apt install -y sq
