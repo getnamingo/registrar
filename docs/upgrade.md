@@ -160,50 +160,13 @@ After all upgrades are complete:
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Upgrade to Namingo Registrar v1.2.2
 
 ### Step 1: Billing Platform Requirements
 
 Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
 
-- **WHMCS:** v9.0.5 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
+- **WHMCS:** v9.0.6 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
 - **FOSSBilling:** v0.8.5 or later
 - **Loom:** latest available version
 
@@ -223,7 +186,7 @@ Download and run the **v1.2.2** upgrade script:
 
 Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
 
-- **WHMCS:** v9.0.5 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
+- **WHMCS:** v9.0.6 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
 - **FOSSBilling:** v0.8.5 or later
 - **Loom:** latest available version
 
@@ -252,7 +215,7 @@ Follow the installation and upgrade instructions provided in the relevant reposi
 
 Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
 
-- **WHMCS:** v9.0.5 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
+- **WHMCS:** v9.0.6 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
 - **FOSSBilling:** v0.8.5 or later
 - **Loom:** latest available version
 

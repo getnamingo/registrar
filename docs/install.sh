@@ -1095,7 +1095,7 @@ echo "Please follow these steps carefully to complete your installation and conf
                     echo "Please install Namingo Registrar manually by following:"
                     echo "  install-whmcs.md"
                     echo
-                    echo "For WHMCS 9.0.5 already installed on a VPS/server with root access,"
+                    echo "For WHMCS 9.0.6 already installed on a VPS/server with root access,"
                     echo "review Section 1.3, Section 4.1, and Section 9 onwards."
                     echo
                     echo "Note: Shared hosting is not supported."
