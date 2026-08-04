@@ -133,7 +133,8 @@ ln -s /usr/share/adminer/latest.php /usr/share/adminer/adminer.php
 ## 3. Install MariaDB:
 
 ```bash
-curl -fsSL -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
+mkdir -p /etc/apt/keyrings
+curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
 ```
 
 Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.
@@ -143,10 +144,10 @@ Create `/etc/apt/sources.list.d/mariadb.sources` according to your system.
 ```ini
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/ubuntu
 Suites: jammy
 Components: main
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 ```
 
 ### Ubuntu 24.04 (Noble)
@@ -154,10 +155,10 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```ini
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/ubuntu
 Suites: noble
 Components: main
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 ```
 
 ### Ubuntu 26.04 (Resolute)
@@ -165,10 +166,10 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```ini
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/ubuntu
 Suites: resolute
 Components: main
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 ```
 
 ### Debian 12 (Bookworm)
@@ -176,10 +177,10 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```ini
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/debian
 Suites: bookworm
 Components: main
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 ```
 
 ### Debian 13 (Trixie)
@@ -187,10 +188,10 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```ini
 X-Repolib-Name: MariaDB
 Types: deb
-URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/debian
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.8/debian
 Suites: trixie
 Components: main
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 ```
 
 ## 4. Configure MariaDB:
