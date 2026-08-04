@@ -46,7 +46,7 @@ We're on a mission to make **Namingo** the best it can be, and we need your expe
 
 ### Installation
 
-**Minimum requirement:** a VPS running Ubuntu 22.04 / 24.04 or Debian 12 / 13, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
+**Minimum requirement:** a VPS running Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
 
 To get started, copy the command below and paste it into your server terminal:
 
@@ -59,6 +59,7 @@ For detailed installation steps, see:
 - [install-fossbilling.md](docs/install-fossbilling.md) – for FOSSBilling setup  
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 - [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
+- [install-custom.md](docs/install-custom.md) – for Custom Billing Platform setup ***(beta)***
 
 - [configuration.md](docs/configuration.md) – configuration
 
@@ -68,10 +69,6 @@ For detailed installation steps, see:
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
 > For example, to upgrade from **v1.1.7** to **v1.2.1**, first run the **v1.2.0** upgrade, then the **v1.2.1** upgrade.
->
-> If you are upgrading to **Namingo Registrar v1.2.0**, please refer to the **[Upgrade to Namingo Registrar v1.2.0](docs/upgrade.md#upgrade-to-namingo-registrar-v120)** section.
->
-> After completing the **v1.2.0** upgrade, proceed with **[Upgrade to Namingo Registrar v1.2.1](docs/upgrade.md#upgrade-to-namingo-registrar-v121)** section.
 
 > [!WARNING]
 > Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
@@ -79,10 +76,10 @@ For detailed installation steps, see:
 > If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.5**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
 
 - **v1.2.0 → v1.2.1**  
-  Download and run the [`update121.sh`](docs/update121.sh) script.
+  Download and run the [`update121.sh`](docs/update121.sh) script. Please also refer to the **[Upgrade to Namingo Registrar v1.2.1](docs/upgrade.md#upgrade-to-namingo-registrar-v121)**.
 
 - **v1.1.7 → v1.2.0**  
-  Download and run the [`update120.sh`](docs/update120.sh) script.
+  Download and run the [`update120.sh`](docs/update120.sh) script. Please also refer to the **[Upgrade to Namingo Registrar v1.2.0](docs/upgrade.md#upgrade-to-namingo-registrar-v120)**.
 
 - **v1.1.6 → v1.1.7**  
   Download and run the [`update117.sh`](docs/update117.sh) script.
