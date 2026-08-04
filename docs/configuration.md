@@ -158,12 +158,6 @@ On Ubuntu 26.04 or Debian 13, install the packaged `sq` command with:
 apt update && apt install -y sq
 ```
 
-Verify the installed version:
-
-```bash
-sq --version
-```
-
 > [!IMPORTANT]
 > The `sq` package included with Ubuntu 22.04, Ubuntu 24.04, and Debian 12 is too old to support the required RFC 9580 key profile. For the new DENIC key, use a current Sequoia PGP release.
 
@@ -186,12 +180,6 @@ apt update && apt install -y \
     && install -m 755 "$HOME/.cargo/bin/sq" /usr/local/bin/sq
 ```
 
-Verify the installed version:
-
-```bash
-sq --version
-```
-
 ### Generate an RFC 9580 key
 
 Make sure that Sequoia PGP `sq` version 1.3.0 or later is installed:
@@ -208,7 +196,8 @@ sq key generate \
     --shared-key \
     --name "Registrar Name" \
     --email "registrar@example.com" \
-    --output /opt/registrar/escrow/YourPrivateKey.asc
+    --output /opt/registrar/escrow/YourPrivateKey.asc \
+    --rev-cert /opt/registrar/escrow/YourPrivateKey.rev
 ```
 
 Enter a strong passphrase when prompted. Replace the example registrar name and email address with the appropriate values.
@@ -221,23 +210,15 @@ chmod 600 /opt/registrar/escrow/YourPrivateKey.asc
 
 ### Export and upload the public key
 
-Display the generated key fingerprint:
+Create a public-only certificate from the generated private key:
 
 ```bash
-sq inspect /opt/registrar/escrow/YourPrivateKey.asc
+sq key delete --cert-file /opt/registrar/escrow/YourPrivateKey.asc --output /opt/registrar/escrow/YourPublicKey.asc
 ```
 
-Replace `<KEY_FINGERPRINT>` with the displayed fingerprint and export the public key:
+Upload `YourPublicKey.asc` to the DENIC Services Escrow Control Center.
 
-```bash
-sq cert export \
-    --cert <KEY_FINGERPRINT> \
-    --output /opt/registrar/escrow/YourPublicKey.asc
-```
-
-Upload the ASCII-armored public key to the DENIC Services Escrow Control Center.
-
-Do not upload or send `YourPrivateKey.asc`.
+Do not upload or send `YourPrivateKey.asc` or `YourPrivateKey.rev`.
 
 ### Download the RFC 9580 DENIC public key
 
