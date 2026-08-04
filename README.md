@@ -60,8 +60,9 @@ For detailed installation steps, see:
 - [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
 - [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
 - [install-custom.md](docs/install-custom.md) – for Custom Billing Platform setup ***(beta)***
-
 - [configuration.md](docs/configuration.md) – configuration
+
+Need help migrating between **FOSSBilling, WHMCS, Loom, or a custom billing platform**? Contact us at [help@namingo.org](mailto:help@namingo.org) to discuss your migration options.
 
 ### Upgrade
 
