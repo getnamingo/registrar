@@ -1,5 +1,7 @@
 # Namingo Registrar: Installation Guide (Loom)
 
+This guide is for setting up **Loom Current Beta** with **PHP 8.5** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
+
 ## 1. Install the required packages:
 
 Follow the instructions for your operating system.
@@ -20,7 +22,7 @@ apt install -y \
   php8.5-swoole php8.5-uuid php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
 ```
 
-### Debian 12 / 13
+### Debian 12 / 13 and Ubuntu 26.04
 
 ```bash
 apt update

@@ -262,15 +262,19 @@ install_rdap_and_whois_services() {
 }
 
 install_php_repo() {
-  if [[ "$OS_ID" == "ubuntu" ]]; then
+  if [[ "$OS_ID" == "ubuntu" && "$CODENAME" != "resolute" ]]; then
     apt install -y software-properties-common
     add-apt-repository -y ppa:ondrej/php
-  elif [[ "$OS_ID" == "debian" ]]; then
-    # PHP (SURY)
+
+  elif [[ "$OS_ID" == "debian" || \
+          ( "$OS_ID" == "ubuntu" && "$CODENAME" == "resolute" ) ]]; then
+    # PHP (SURY) - Debian and Ubuntu 26.04+
     curl -fsSL https://packages.sury.org/php/apt.gpg \
-      | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
-    echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+      | gpg --dearmor --yes -o /usr/share/keyrings/sury-php.gpg
+
+    echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ ${CODENAME} main" \
       > /etc/apt/sources.list.d/sury-php.list
+
   else
     echo "Unsupported OS: ${OS_ID:-unknown} ${VER:-unknown}"
     exit 1
