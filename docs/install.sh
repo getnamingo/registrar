@@ -379,7 +379,7 @@ db_pass="$(generate_password)"
 
 # Install necessary packages
 apt update -y
-apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
+apt install -y ufw bzip2 ca-certificates curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
 
 mkdir -p /etc/apt/keyrings
@@ -1221,7 +1221,7 @@ fi
 
 log "Install necessary packages…"
 apt update -y
-apt install -y apt-transport-https ufw bzip2 ca-certificates certbot curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
+apt install -y apt-transport-https ufw bzip2 ca-certificates curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
 
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
