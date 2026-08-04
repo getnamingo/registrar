@@ -1,10 +1,12 @@
 # Namingo Registrar Upgrade Guide
 
-## v1.0.0 to v1.2.1
+## v1.0.0 to v1.2.2
 
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.1.7** to **v1.2.1**, first run the **v1.2.0** upgrade, then the **v1.2.1** upgrade.
+> For example, to upgrade from **v1.2.0** to **v1.2.2**, first run the **v1.2.1** upgrade, then the **v1.2.2** upgrade.
+
+- v1.2.1 to v1.2.2 - download and run the [update122.sh](update122.sh) script.
 
 - v1.2.0 to v1.2.1 - download and run the [update121.sh](update121.sh) script.
 

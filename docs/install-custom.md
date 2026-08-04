@@ -197,7 +197,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.1 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.2 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
