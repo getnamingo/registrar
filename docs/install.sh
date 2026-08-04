@@ -382,14 +382,15 @@ apt update -y
 apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
 
-curl -fsSL -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
+mkdir -p /etc/apt/keyrings
+curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
 URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
 Suites: ${MARIADB_SUITE}
 Components: ${MARIADB_COMPONENTS}
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 # Caddy setup
@@ -770,14 +771,15 @@ apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release open
 install_php_repo
 
 # Install and configure MariaDB
-curl -o /etc/apt/keyrings/mariadb-keyring.pgp 'https://mariadb.org/mariadb_release_signing_key.pgp'
+mkdir -p /etc/apt/keyrings
+curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
 cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
 X-Repolib-Name: MariaDB
 Types: deb
 URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
 Suites: ${MARIADB_SUITE}
 Components: ${MARIADB_COMPONENTS}
-Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
