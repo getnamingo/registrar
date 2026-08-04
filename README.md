@@ -119,3 +119,27 @@ If you find Namingo Registry useful, consider donating:
 ## Licensing
 
 Namingo Registrar is licensed under the MIT License.
+
+### Third-Party Software Notices
+
+#### escrow-rde-client
+
+Namingo Registrar can invoke the separately installed `escrow-rde-client`
+command-line application for validation, encryption and submission of
+Registration Data Escrow deposits.
+
+Project:
+https://gitlab.com/team-escrow/escrow-rde-client
+
+Copyright:
+DENIC eG and the escrow-rde-client contributors
+
+Licence:
+GNU Lesser General Public License version 3.0
+
+Namingo Registrar does not incorporate or link against escrow-rde-client.
+The client is executed as an independent command-line program and remains
+subject to its own licence terms.
+
+A copy of the LGPLv3 licence is available from:
+https://www.gnu.org/licenses/lgpl-3.0.html
