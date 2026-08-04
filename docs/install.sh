@@ -26,33 +26,26 @@ fi
 
 case "${OS_ID}:${VER}" in
     ubuntu:22.04)
-        OS_NAME="Ubuntu"
-        DISTRO_CODENAME="jammy"
-        PHP_REPO_TYPE="ondrej"
         MARIADB_DISTRO="ubuntu"
         MARIADB_SUITE="jammy"
         MARIADB_COMPONENTS="main main/debug"
         ;;
     ubuntu:24.04)
-        OS_NAME="Ubuntu"
-        DISTRO_CODENAME="noble"
-        PHP_REPO_TYPE="ondrej"
         MARIADB_DISTRO="ubuntu"
         MARIADB_SUITE="noble"
         MARIADB_COMPONENTS="main main/debug"
         ;;
+    ubuntu:26.04)
+        MARIADB_DISTRO="ubuntu"
+        MARIADB_SUITE="resolute"
+        MARIADB_COMPONENTS="main main/debug"
+        ;;
     debian:12)
-        OS_NAME="Debian"
-        DISTRO_CODENAME="bookworm"
-        PHP_REPO_TYPE="sury"
         MARIADB_DISTRO="debian"
         MARIADB_SUITE="bookworm"
         MARIADB_COMPONENTS="main"
         ;;
     debian:13)
-        OS_NAME="Debian"
-        DISTRO_CODENAME="trixie"
-        PHP_REPO_TYPE="sury"
         MARIADB_DISTRO="debian"
         MARIADB_SUITE="trixie"
         MARIADB_COMPONENTS="main"

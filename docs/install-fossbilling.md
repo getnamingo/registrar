@@ -210,6 +210,17 @@ Components: main
 Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
 ```
 
+### Ubuntu 26.04 (Resolute)
+
+```ini
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://mirror.nextlayer.at/mariadb/repo/11.rolling/ubuntu
+Suites: resolute
+Components: main
+Signed-By: /etc/apt/keyrings/mariadb-keyring.pgp
+```
+
 ### Debian 12 (Bookworm)
 
 ```ini
