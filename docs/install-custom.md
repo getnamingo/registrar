@@ -197,7 +197,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.2 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
@@ -253,10 +253,10 @@ mv config.php.dist config.php
 Download and initiate the escrow RDE client setup:
 
 ```bash
-wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
-tar -xzf escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
-mv escrow-rde-client-v2.3.1-linux_x86_64 escrow-rde-client
-rm escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
+wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
+tar -xzf escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
+mv escrow-rde-client-v2.4.0-linux_x86_64 escrow-rde-client
+rm escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
 ```
 
 Review and update `config.php` with the appropriate settings for your environment. Make sure you also complete all steps described in [configuration.md](configuration.md) before running the automation.

@@ -140,7 +140,7 @@ install_rdap_and_whois_services() {
     echo "Installing RDAP & WHOIS services..."
 
     # Clone the registrar repository
-    git clone --branch v1.2.2 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+    git clone --branch v1.2.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 
     # Setup for WHOIS service
     cd /opt/registrar/whois
@@ -192,10 +192,10 @@ install_rdap_and_whois_services() {
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
-    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
-    tar -xzf escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
-    mv escrow-rde-client-v2.3.1-linux_x86_64 escrow-rde-client
-    rm escrow-rde-client-v2.3.1-linux_x86_64.tar.gz
+    wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
+    tar -xzf escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
+    mv escrow-rde-client-v2.4.0-linux_x86_64 escrow-rde-client
+    rm escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
 
     if [ "$panel" = "foss" ]; then
         # Clone and move FOSSBilling modules
@@ -274,7 +274,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.2 ===="
+echo "==== Namingo Registrar v1.2.3 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
