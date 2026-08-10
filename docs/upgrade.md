@@ -1,10 +1,12 @@
 # Namingo Registrar Upgrade Guide
 
-## v1.0.0 to v1.2.2
+## v1.0.0 to v1.2.3
 
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.2.0** to **v1.2.2**, first run the **v1.2.1** upgrade, then the **v1.2.2** upgrade.
+> For example, to upgrade from **v1.2.1** to **v1.2.3**, first run the **v1.2.2** upgrade, then the **v1.2.3** upgrade.
+
+- v1.2.2 to v1.2.3 - download and run the [update123.sh](update123.sh) script.
 
 - v1.2.1 to v1.2.2 - download and run the [update122.sh](update122.sh) script.
 
@@ -159,6 +161,18 @@ After all upgrades are complete:
 5. Review your web server and PHP logs for any warnings.
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
+
+## Upgrade to Namingo Registrar v1.2.3
+
+### Step 1: Billing Platform Requirements
+
+Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
+
+- **WHMCS:** v9.0.6 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
+- **FOSSBilling:** v0.8.5 or later
+- **Loom:** latest available version
+
+Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
 
 ## Upgrade to Namingo Registrar v1.2.2
 

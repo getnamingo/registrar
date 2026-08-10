@@ -69,12 +69,15 @@ Need help migrating between **FOSSBilling, WHMCS, Loom, or a custom billing plat
 > [!IMPORTANT]
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.2.0** to **v1.2.2**, first run the **v1.2.1** upgrade, then the **v1.2.2** upgrade.
+> For example, to upgrade from **v1.2.1** to **v1.2.3**, first run the **v1.2.2** upgrade, then the **v1.2.3** upgrade.
 
 > [!WARNING]
 > Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
 >
 > If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.5**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
+
+- **v1.2.2 → v1.2.3**  
+  Download and run the [`update123.sh`](docs/update123.sh) script, then review the **[v1.2.3 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v123)**.
 
 - **v1.2.1 → v1.2.2**  
   Download and run the [`update122.sh`](docs/update122.sh) script, then review the **[v1.2.2 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v122)**.
