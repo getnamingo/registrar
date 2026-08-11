@@ -389,8 +389,8 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                         ],
                         [
                             "rel" => "about",
-                            "href" => $c['rdap_url'] . '/',
-                            "value" => $c['registrar_url']
+                            "href" => $c['registrar_url'],
+                            "value" => $c['rdap_url'] . '/'
                         ]
                     ],
                     ],
