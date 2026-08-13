@@ -358,13 +358,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                             "type" => "IANA Registrar ID"
                         ]
                     ],
-                    "remarks" => [
-                        [
-                            "description" => ["This record contains only a summary. For detailed information, please submit a query specifically for this object."],
-                            "title" => "Incomplete Data",
-                            "type" => "object truncated due to authorization"
-                        ]
-                    ],
                     "roles" => ["registrar"],
                     "vcardArray" => [
                         "vcard",
@@ -374,13 +367,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                         ]
                     ],
                     "links" => [
-                        [
-                            "rel" => "self",
-                            "href" => $c['rdap_url'] . "/entity/" . $c['registrar_iana'],
-                            "value" => $c['rdap_url'] . "/entity/" . $c['registrar_iana'],
-                            "type" => "application/rdap+json",
-                            "title" => "Registrar Information"
-                        ],
                         [
                             "rel" => "service",
                             "href" => $c['rdap_url'],
@@ -422,24 +408,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
             'nameservers' => array_map(function ($ns) use ($c) {
                 return [
                     'objectClassName' => 'nameserver',
-                    'ldhName' => $ns['name'],
-                    'links' => [
-                        [
-                            'href' => $c['rdap_url'] . '/nameserver/' . $ns['name'],
-                            'value' => $c['rdap_url'] . '/nameserver/' . $ns['name'],
-                            'rel' => 'self',
-                            'type' => 'application/rdap+json',
-                        ],
-                    ],
-                    'remarks' => [
-                        [
-                            'title' => 'Incomplete Data',
-                            'type' => 'object truncated due to authorization',
-                            'description' => [
-                                'This record contains only a brief summary. To access the full details, please initiate a specific query targeting this entity.'
-                            ]
-                        ]
-                    ]
+                    'ldhName' => $ns['name']
                 ];
             }, $adapter->getNameservers($domainDetails)),
             'status' => $domainStatuses,
