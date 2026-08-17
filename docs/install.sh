@@ -478,7 +478,7 @@ $panel_domain_name {
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
-        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://*.revolut.com; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src https://*.revolut.com; form-action 'self'; worker-src 'none'; frame-src https://*.revolut.com;"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://*.revolut.com; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.revolut.com; form-action 'self'; worker-src 'none'; frame-src https://*.revolut.com;"
         Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
     }
 }
@@ -1370,7 +1370,7 @@ $CADDY_BIND_LINE
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
-        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://*.revolut.com; img-src https: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.revolut.com; form-action 'self'; worker-src 'none'; frame-src https://*.revolut.com;"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://*.revolut.com; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.revolut.com; form-action 'self'; worker-src 'none'; frame-src https://*.revolut.com;"
         Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
     }
 }
