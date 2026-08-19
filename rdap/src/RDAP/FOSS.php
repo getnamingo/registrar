@@ -115,7 +115,7 @@ class FOSS implements RdapInterface
                         rdapValue($contact['contact_address1'] ?? '', $config), // Extended address
                         rdapValue($contact['contact_address2'] ?? '', $config), // Street address
                         rdapValue($contact['contact_city'] ?? '', $config),     // Locality
-                        rdapValue($contact['contact_state'] ?? '', $config),    // Region
+                        $contact['contact_state'] ?? '',    // Region
                         rdapValue($contact['contact_postcode'] ?? '', $config), // Postal code
                         ""
                     ]],

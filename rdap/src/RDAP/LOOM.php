@@ -110,7 +110,7 @@ class LOOM implements RdapInterface
                         rdapValue($contact['street1'] ?? '', $config),
                         rdapValue($contact['street2'] ?? '', $config),
                         rdapValue($contact['city'] ?? '', $config),
-                        rdapValue($contact['sp'] ?? '', $config),
+                        $contact['sp'] ?? '',
                         rdapValue($contact['pc'] ?? '', $config),
                         ""
                     ]],

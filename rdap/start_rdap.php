@@ -219,32 +219,21 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     [
                         "title" => "Terms of Service",
                         "description" => [
-                            "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
-                            "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
+                            "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the registrar database operated by {$c['registrar_name']}.",
+                            "The data in this record is provided by {$c['registrar_name']} for informational purposes only, and {$c['registrar_name']} does not guarantee its accuracy.",
                             "This service is intended only for query-based access. You agree that you will use this data only for lawful purposes and that, under no circumstances will you use this data to: (a) allow,",
                             "enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or",
-                            "(b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or NIC except as reasonably necessary to register domain names or modify existing registrations.",
-                            "All rights reserved. The domain registrar reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
+                            "(b) enable high-volume, automated electronic processes that send queries or data to systems operated by {$c['registrar_name']}, except as reasonably necessary to register domain names or modify existing registrations.",
+                            "All rights reserved. {$c['registrar_name']} reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
                         ],
                         "links" => [
                             [
-                                "href" => $c['rdap_url'] . "/help",
+                                "href" => $c['registry_url'],
                                 "value" => $c['rdap_url'] . "/domain/" . $domain,
                                 "rel" => "terms-of-service",
-                                "type" => "application/rdap+json"
-                            ],
-                            [
-                                "href" => $c['registrar_url'],
-                                "value" => $c['registrar_url'],
-                                "rel" => "alternate",
                                 "type" => "text/html"
                             ],
                         ]
-                    ],
-                    [
-                    "description" => [
-                        "This response conforms to the RDAP Operational Profile for gTLD Registries and Registrars version 1.0"
-                    ]
                     ],
                     [
                     "description" => [
@@ -253,7 +242,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     "links" => [
                         [
                             "href" => "https://icann.org/epp",
-                            "value" => "https://icann.org/epp",
+                            "value" => $c['rdap_url'] . "/domain/" . $domain,
                             "rel" => "glossary",
                             "type" => "text/html"
                         ]
@@ -267,7 +256,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                         "links" => [
                         [
                             "href" => "https://icann.org/wicf",
-                            "value" => "https://icann.org/wicf",
+                            "value" => $c['rdap_url'] . "/domain/" . $domain,
                             "rel" => "help",
                             "type" => "text/html"
                         ]
@@ -304,6 +293,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
         // Define the basic events
         $events = [
             ['eventAction' => 'registration', 'eventDate' => $domainDetails['crdate']],
+            ['eventAction' => 'expiration', 'eventDate' => $domainDetails['exdate']],
             ['eventAction' => 'registrar expiration', 'eventDate' => $domainDetails['exdate']],
             ['eventAction' => 'last update of RDAP database', 'eventDate' => (new DateTime())->format('Y-m-d\TH:i:s.v\Z')],
         ];
@@ -339,7 +329,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     [
                         'objectClassName' => 'entity',
                         'roles' => ["abuse"],
-                        "status" => ["active"],
                         "vcardArray" => [
                             "vcard",
                             [
@@ -368,12 +357,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     ],
                     "links" => [
                         [
-                            "rel" => "service",
-                            "href" => $c['rdap_url'],
-                            "value" => $c['rdap_url'],
-                            "type" => "application/rdap+json"
-                        ],
-                        [
                             "rel" => "about",
                             "href" => $c['registrar_url'],
                             "value" => $c['rdap_url'] . '/'
@@ -397,12 +380,6 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     'value' => $c['rdap_url'] . '/domain/' . $domain,
                     'rel' => 'self',
                     'type' => 'application/rdap+json',
-                ],
-                [
-                    'href' => $c['rdap_url'] . '/domain/' . $domain,
-                    'value' => $c['rdap_url'] . '/domain/' . $domain,
-                    'rel' => 'related',
-                    'type' => 'application/rdap+json',
                 ]
             ],
             'nameservers' => array_map(function ($ns) use ($c) {
@@ -418,32 +395,21 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                 [
                     "title" => "Terms of Service",
                     "description" => [
-                        "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
-                        "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
+                        "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the registrar database operated by {$c['registrar_name']}.",
+                        "The data in this record is provided by {$c['registrar_name']} for informational purposes only, and {$c['registrar_name']} does not guarantee its accuracy.",
                         "This service is intended only for query-based access. You agree that you will use this data only for lawful purposes and that, under no circumstances will you use this data to: (a) allow,",
                         "enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or",
-                        "(b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or NIC except as reasonably necessary to register domain names or modify existing registrations.",
-                        "All rights reserved. The domain registrar reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
+                        "(b) enable high-volume, automated electronic processes that send queries or data to systems operated by {$c['registrar_name']}, except as reasonably necessary to register domain names or modify existing registrations.",
+                        "All rights reserved. {$c['registrar_name']} reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
                     ],
                     "links" => [
                         [
-                            "href" => $c['rdap_url'] . "/help",
+                            "href" => $c['registry_url'],
                             "value" => $c['rdap_url'] . "/domain/" . $domain,
                             "rel" => "terms-of-service",
-                            "type" => "application/rdap+json"
-                        ],
-                        [
-                            "href" => $c['registrar_url'],
-                            "value" => $c['registrar_url'],
-                            "rel" => "alternate",
                             "type" => "text/html"
                         ],
                     ]
-                ],
-                [
-                "description" => [
-                    "This response conforms to the RDAP Operational Profile for gTLD Registries and Registrars version 1.0"
-                ]
                 ],
                 [
                 "description" => [
@@ -452,7 +418,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                 "links" => [
                     [
                         "href" => "https://icann.org/epp",
-                        "value" => "https://icann.org/epp",
+                        "value" => $c['rdap_url'] . "/domain/" . $domain,
                         "rel" => "glossary",
                         "type" => "text/html"
                     ]
@@ -466,7 +432,7 @@ function handleDomainQuery($request, $response, $pdo, $domainName, $c, $log, $ad
                     "links" => [
                     [
                         "href" => "https://icann.org/wicf",
-                        "value" => "https://icann.org/wicf",
+                        "value" => $c['rdap_url'] . "/domain/" . $domain,
                         "rel" => "help",
                         "type" => "text/html"
                     ]
@@ -532,24 +498,18 @@ function handleHelpQuery($request, $response, $pdo, $c) {
     $termsOfService = [
         "title" => "Terms of Service",
         "description" => [
-            "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the domain registrar database.",
-            "The data in this record is provided by the domain registrar for informational purposes only, and the domain registrar does not guarantee its accuracy. ",
+            "Access to RDAP information is provided to assist persons in determining the contents of a domain name registration record in the registrar database operated by {$c['registrar_name']}.",
+            "The data in this record is provided by {$c['registrar_name']} for informational purposes only, and {$c['registrar_name']} does not guarantee its accuracy.",
             "This service is intended only for query-based access. You agree that you will use this data only for lawful purposes and that, under no circumstances will you use this data to: (a) allow,",
             "enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or",
-            "(b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or NIC except as reasonably necessary to register domain names or modify existing registrations.",
-            "All rights reserved. The domain registrar reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
+            "(b) enable high-volume, automated electronic processes that send queries or data to systems operated by {$c['registrar_name']}, except as reasonably necessary to register domain names or modify existing registrations.",
+            "All rights reserved. {$c['registrar_name']} reserves the right to modify these terms at any time. By submitting this query, you agree to abide by this policy."
         ],
         "links" => [
         [
-            "href" => $c['rdap_url'] . "/help",
+            "href" => $c['registry_url'],
             "value" => $c['rdap_url'] . "/help",
             "rel" => "terms-of-service",
-            "type" => "application/rdap+json"
-        ],
-        [
-            "href" => $c['registrar_url'],
-            "value" => $c['registrar_url'],
-            "rel" => "alternate",
             "type" => "text/html"
         ],
         ]

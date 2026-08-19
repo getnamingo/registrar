@@ -126,7 +126,7 @@ class WHMCS implements RdapInterface
                         rdapValue($contact['street1'] ?? '', $config), // Extended address
                         rdapValue($contact['street2'] ?? '', $config), // Street address
                         rdapValue($contact['city'] ?? '', $config),    // Locality
-                        rdapValue($contact['sp'] ?? '', $config),      // Region
+                        $contact['sp'] ?? '',      // Region
                         rdapValue($contact['pc'] ?? '', $config),      // Postal code
                         ""
                     ]],

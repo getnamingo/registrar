@@ -67,12 +67,6 @@ function getRdapRedactionMap(): array
             "method" => "emptyValue",
         ],
         [
-            "name" => ["type" => "Registrant Region"],
-            "postPath" => "$.entities[?(@.roles[0]=='registrant')].vcardArray[1][?(@[0]=='adr')][3][4]",
-            "pathLang" => "jsonpath",
-            "method" => "emptyValue"
-        ],
-        [
             "name" => ["type" => "Registrant Postal Code"],
             "postPath" => "$.entities[?(@.roles[0]=='registrant')].vcardArray[1][?(@[0]=='adr')][3][5]",
             "pathLang" => "jsonpath",
@@ -130,9 +124,23 @@ function rdapEmailOrContactUriProp(?string $email, array $c, string $domain): ar
         $backend = strtolower((string)($c['backend'] ?? 'foss'));
 
         $contactPath = match ($backend) {
-            'whmcs' => '/index.php?m=namingo_registrar&page=contact&domain='.$domain,
-            'loom'  => '/contact?domain='.$domain,
-            default => '/contact?domain='.$domain,
+            'whmcs' => '/index.php?' . http_build_query([
+                'm'      => 'namingo_registrar',
+                'page'   => 'contact',
+                'domain' => $domain,
+            ], '', '&', PHP_QUERY_RFC3986),
+
+            'loom', 'foss' => '/contact?' . http_build_query([
+                'domain' => $domain,
+            ], '', '&', PHP_QUERY_RFC3986),
+
+            'custom' => '/contact.php?' . http_build_query([
+                'domain' => $domain,
+            ], '', '&', PHP_QUERY_RFC3986),
+
+            default => '/contact?' . http_build_query([
+                'domain' => $domain,
+            ], '', '&', PHP_QUERY_RFC3986),
         };
 
         $contactUri = $registrarUrl !== '' ? $registrarUrl . $contactPath : '';
