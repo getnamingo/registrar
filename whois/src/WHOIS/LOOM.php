@@ -136,7 +136,7 @@ class LOOM implements WhoisInterface
                 ."\nRegistrant Postal Code: REDACTED FOR PRIVACY"
                 ."\nRegistrant Country: REDACTED FOR PRIVACY"
                 ."\nRegistrant Phone: REDACTED FOR PRIVACY"
-                ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                ."\nRegistrant Email: " . whoisContactUrl($c, $domain);
         } else {
             $res .= "\nRegistry Registrant ID: " . ($registrantRegistryId ?? '')
                 ."\nRegistrant Name: ".$config['contacts']['registrant']['name']
@@ -162,7 +162,7 @@ class LOOM implements WhoisInterface
                 ."\nAdmin Postal Code: REDACTED FOR PRIVACY"
                 ."\nAdmin Country: REDACTED FOR PRIVACY"
                 ."\nAdmin Phone: REDACTED FOR PRIVACY"
-                ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                ."\nAdmin Email: " . whoisContactUrl($c, $domain);
         } else {
             $res .= "\nRegistry Admin ID: " . ($adminRegistryId ?? '')
                 ."\nAdmin Name: ".$config['contacts']['admin']['name']
@@ -188,7 +188,7 @@ class LOOM implements WhoisInterface
                 ."\nBilling Postal Code: REDACTED FOR PRIVACY"
                 ."\nBilling Country: REDACTED FOR PRIVACY"
                 ."\nBilling Phone: REDACTED FOR PRIVACY"
-                ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                ."\nBilling Email: " . whoisContactUrl($c, $domain);
         } else {
             $res .= "\nRegistry Billing ID: " . ($billingRegistryId ?? '')
                 ."\nBilling Name: ".$config['contacts']['billing']['name']
@@ -214,7 +214,7 @@ class LOOM implements WhoisInterface
                 ."\nTech Postal Code: REDACTED FOR PRIVACY"
                 ."\nTech Country: REDACTED FOR PRIVACY"
                 ."\nTech Phone: REDACTED FOR PRIVACY"
-                ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                ."\nTech Email: " . whoisContactUrl($c, $domain);
         } else {
             $res .= "\nRegistry Tech ID: " . ($techRegistryId ?? '')
                 ."\nTech Name: ".$config['contacts']['tech']['name']

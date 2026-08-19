@@ -116,7 +116,7 @@ class WHMCS implements WhoisInterface
                     ."\nRegistrant Postal Code: REDACTED FOR PRIVACY"
                     ."\nRegistrant Country: REDACTED FOR PRIVACY"
                     ."\nRegistrant Phone: REDACTED FOR PRIVACY"
-                    ."\nRegistrant Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                    ."\nRegistrant Email: " . whoisContactUrl($c, $domain);
             } else {
                 $query5 = "SELECT id, identifier, name, org, street1, street2, street3, city, sp, pc, cc, voice, fax, email FROM namingo_contact WHERE id=:registrant";
                 $stmt5 = $pdo->prepare($query5);
@@ -151,7 +151,7 @@ class WHMCS implements WhoisInterface
                     ."\nAdmin Postal Code: REDACTED FOR PRIVACY"
                     ."\nAdmin Country: REDACTED FOR PRIVACY"
                     ."\nAdmin Phone: REDACTED FOR PRIVACY"
-                    ."\nAdmin Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                    ."\nAdmin Email: " . whoisContactUrl($c, $domain);
             } else {
                 $query6 = "SELECT id, identifier, name, org, street1, street2, street3, city, sp, pc, cc, voice, fax, email FROM namingo_contact WHERE id=:admin";
                 $stmt6 = $pdo->prepare($query6);
@@ -185,7 +185,7 @@ class WHMCS implements WhoisInterface
                     ."\nBilling Postal Code: REDACTED FOR PRIVACY"
                     ."\nBilling Country: REDACTED FOR PRIVACY"
                     ."\nBilling Phone: REDACTED FOR PRIVACY"
-                    ."\nBilling Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                    ."\nBilling Email: " . whoisContactUrl($c, $domain);
             } else {
                 $query7 = "SELECT id, identifier, name, org, street1, street2, street3, city, sp, pc, cc, voice, fax, email FROM namingo_contact WHERE id=:billing";
                 $stmt7 = $pdo->prepare($query7);
@@ -219,7 +219,7 @@ class WHMCS implements WhoisInterface
                     ."\nTech Postal Code: REDACTED FOR PRIVACY"
                     ."\nTech Country: REDACTED FOR PRIVACY"
                     ."\nTech Phone: REDACTED FOR PRIVACY"
-                    ."\nTech Email: Kindly refer to the RDDS server associated with the identified registrar in this output to obtain contact details for the Registrant, Admin, or Tech associated with the queried domain name.";
+                    ."\nTech Email: " . whoisContactUrl($c, $domain);
             } else {
                 $query8 = "SELECT id, identifier, name, org, street1, street2, street3, city, sp, pc, cc, voice, fax, email FROM namingo_contact WHERE id=:tech";
                 $stmt8 = $pdo->prepare($query8);
