@@ -117,7 +117,7 @@ function rdapEmailOrContactUriProp(?string $email, array $c, string $domain): ar
 {
     if (!empty($c['minimum_data'])) {
         if (!empty($c['contact_uri'])) {
-            return ["contact-uri", new stdClass(), "uri", $c['contact_uri'].'&domain='.$domain];
+            return ["contact-uri", new stdClass(), "uri", $c['contact_uri'].'?domain='.$domain];
         }
 
         $registrarUrl = rtrim((string)($c['registrar_url'] ?? ''), '/');
