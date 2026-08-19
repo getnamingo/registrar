@@ -234,10 +234,10 @@ Open the configuration file:
 nano /opt/registrar/automation/config.php
 ```
 
-Set the RDE specification to `2025` and update the key paths and passphrase:
+Set the RDE specification to `2024` and update the key paths and passphrase:
 
 ```php
-'specification' => '2025',
+'specification' => '2024',
 'gpgPrivateKeyPath' => '/opt/registrar/escrow/YourPrivateKey.asc',
 'gpgPrivateKeyPass' => 'your-private-key-passphrase',
 'gpgReceiverPubKeyPath' => '/opt/registrar/escrow/ProviderKey.asc',
