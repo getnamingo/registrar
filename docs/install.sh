@@ -1237,7 +1237,7 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
-apt install -y caddy mariadb-client mariadb-server php8.5 php8.5-cli php8.5-common php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-curl php8.5-ds php8.5-gd php8.5-gmp php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring php8.5-mysql php8.5-readline php8.5-redis php8.5-soap php8.5-swoole php8.5-uuid php8.5-xml php8.5-yaml php8.5-zip
+apt install -y caddy mariadb-client mariadb-server php8.5 php8.5-apcu php8.5-cli php8.5-common php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-curl php8.5-ds php8.5-gd php8.5-gmp php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring php8.5-mysql php8.5-readline php8.5-redis php8.5-soap php8.5-swoole php8.5-uuid php8.5-xml php8.5-yaml php8.5-zip
 curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
 php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
 rm /tmp/composer-setup.php

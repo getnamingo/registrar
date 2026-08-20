@@ -14,7 +14,7 @@ apt install -y curl software-properties-common ufw
 add-apt-repository -y ppa:ondrej/php
 
 apt install -y \
-  bzip2 composer git net-tools unzip wget whois \
+  bzip2 composer git net-tools unzip wget whois php8.5-apcu \
   php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
   php8.5-bcmath php8.5-bz2 php8.5-ds php8.5-gd php8.5-gmp \
   php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring \
@@ -38,7 +38,7 @@ echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org
 apt update
 
 apt install -y \
-  bzip2 composer git net-tools unzip wget whois \
+  bzip2 composer git net-tools unzip wget whois php8.5-apcu \
   php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
   php8.5-bcmath php8.5-bz2 php8.5-ds php8.5-gd php8.5-gmp \
   php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring \
