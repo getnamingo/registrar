@@ -178,6 +178,16 @@ systemctl enable caddy
 systemctl restart caddy
 ```
 
+### 1.3. Enable ports on firewall:
+
+```bash
+ufw enable
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
+```
+
 ## 2. Install and configure MariaDB:
 
 ```bash

@@ -129,6 +129,14 @@ wget "http://www.adminer.org/latest.php" -O /usr/share/adminer/latest.php
 ln -s /usr/share/adminer/latest.php /usr/share/adminer/adminer.php
 ```
 
+```bash
+ufw enable
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
+```
+
 ## 3. Install MariaDB:
 
 ```bash

@@ -190,6 +190,8 @@ systemctl restart apache2
 ufw enable
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 43/tcp
+ufw allow 22/tcp
 ```
 
 ## 2. Install and configure MariaDB:
