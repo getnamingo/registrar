@@ -1629,9 +1629,6 @@ EOF
         install_php_packages pnlcs
         install_composer php8.5
 
-        # Keep npm current within the installed Node.js 20.x runtime.
-        npm install -g npm@latest
-
         # PHP production defaults
         set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
         set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_httponly" "1"
