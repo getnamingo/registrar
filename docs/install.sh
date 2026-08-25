@@ -201,6 +201,7 @@ show_install_summary() {
   local url="$2"
   local admin="$3"
   local db_config="$4"
+  local adminer_url="${5:-}"
 
   echo
   echo "=================================================="
@@ -212,6 +213,7 @@ show_install_summary() {
   echo "Admin user:   $admin"
   echo "Database:     registrar"
   echo "DB settings:  $db_config"
+  [[ -n "$adminer_url" ]] && echo "Adminer:      $adminer_url"
 
   if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
       echo "Registrar mode: gTLD (WHOIS, RDAP and automation)"
@@ -851,10 +853,9 @@ show_install_summary \
     "FOSSBilling" \
     "https://$panel_domain_name" \
     "$email" \
-    "/var/www/config.php"
+    "/var/www/config.php" \
+    "https://$panel_domain_name/${ADMINER_SLUG}"
 
-echo "Adminer installed at: https://$panel_domain_name/${ADMINER_SLUG}"
-echo
 echo "1. Open the FOSSBilling admin page to complete the installation:"
 echo "   https://$panel_domain_name/admin"
 echo "   Complete the installation, then log in with your admin account."
@@ -1197,10 +1198,9 @@ show_install_summary \
     "WHMCS" \
     "https://$panel_domain_name" \
     "$ADMIN_USER" \
-    "/var/www/whmcs/configuration.php"
+    "/var/www/whmcs/configuration.php" \
+    "https://$panel_domain_name/${ADMINER_SLUG}"
 
-echo "Adminer installed at: https://$panel_domain_name/${ADMINER_SLUG}"
-echo
 echo "1. Log in to the WHMCS admin panel:"
 echo "   https://$panel_domain_name/admin"
 echo
@@ -1522,7 +1522,8 @@ show_install_summary \
     "Loom" \
     "https://$HOSTNAME" \
     "$ADMIN_USER" \
-    "$INSTALL_PATH/.env"
+    "$INSTALL_PATH/.env" \
+    "https://$HOSTNAME/${ADMINER_SLUG}"
 
 echo "1. Open the panel and verify that the administrator account works:"
 echo "   https://$HOSTNAME"
