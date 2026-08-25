@@ -10,24 +10,29 @@ die() { err "$*"; exit 1; }
 
 # ---------- Command-line options ----------
 REGISTRAR_SOURCE="release"
+ALPHA_FEATURES=0
 
-case "${1:-}" in
-  --main)
-    REGISTRAR_SOURCE="main"
-    ;;
-  -h|--help)
-    echo "Usage: $0 [--main]"
-    echo
-    echo "  --main   Install Namingo Registrar services from the current main branch"
-    echo "           instead of the bundled release version."
-    exit 0
-    ;;
-  "")
-    ;;
-  *)
-    die "Unknown option: $1. Use --help for available options."
-    ;;
-esac
+for arg in "$@"; do
+  case "$arg" in
+    --main)
+      REGISTRAR_SOURCE="main"
+      ;;
+    --alpha)
+      ALPHA_FEATURES=1
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--main] [--alpha]"
+      echo
+      echo "  --main    Install Namingo Registrar services from the current main branch"
+      echo "            instead of the bundled release version."
+      echo "  --alpha   Show experimental alpha billing systems in the installer menu."
+      exit 0
+      ;;
+    *)
+      die "Unknown option: $arg. Use --help for available options."
+      ;;
+  esac
+done
 
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
@@ -202,6 +207,7 @@ show_install_summary() {
   local admin="$3"
   local db_config="$4"
   local adminer_url="${5:-}"
+  local database="${6:-registrar}"
 
   echo
   echo "=================================================="
@@ -211,11 +217,13 @@ show_install_summary() {
   echo "Panel:        $panel"
   echo "URL:          $url"
   echo "Admin user:   $admin"
-  echo "Database:     registrar"
+  echo "Database:     $database"
   echo "DB settings:  $db_config"
   [[ -n "$adminer_url" ]] && echo "Adminer:      $adminer_url"
 
-  if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+  if [[ "$install_rdap_whois" == "unsupported" ]]; then
+      echo "Registrar mode: alpha (backend integration not enabled)"
+  elif [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
       echo "Registrar mode: gTLD (WHOIS, RDAP and automation)"
   else
       echo "Registrar mode: ccTLD (WHOIS, RDAP, and automation disabled)"
@@ -306,7 +314,7 @@ install_php_packages() {
   local package
 
   case "$panel" in
-    foss|loom)
+    foss|loom|pnlcs)
       version="8.5"
       extras=(apcu ds igbinary imagick redis uuid)
       ;;
@@ -549,9 +557,17 @@ echo
 echo "  1) FOSSBilling – free & open-source"
 echo "  2) WHMCS       – commercial billing platform"
 echo "  3) Loom        – lightweight panel (beta)"
+if [[ "$ALPHA_FEATURES" -eq 1 ]]; then
+  echo "  4) PNLCS       – open-source billing platform (alpha)"
+fi
 echo "  c) Cancel"
 echo
-read -rp "Enter your choice [1/2/3/c]: " choice
+
+if [[ "$ALPHA_FEATURES" -eq 1 ]]; then
+  read -rp "Enter your choice [1/2/3/4/c]: " choice
+else
+  read -rp "Enter your choice [1/2/3/c]: " choice
+fi
 
 case "$choice" in
     1)
@@ -1556,6 +1572,205 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 fi
 
 echo "Namingo Registrar is ready for final configuration."
+        ;;
+    4)
+        [[ "$ALPHA_FEATURES" -eq 1 ]] || die "PNLCS alpha installer is disabled. Re-run with --alpha."
+
+        echo "PNLCS selected (alpha)."
+        echo
+        echo "Before continuing, make sure your billing domain already points to this server:"
+        echo
+        echo "1. Your PNLCS billing domain, for example: billing.example.com"
+        echo
+        read -p "Does this domain already point to this server? (Y/N): " continue_install
+
+        if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
+            echo "Installation aborted. Please update DNS first, then run the installer again."
+            exit 1
+        fi
+
+        read -p "Enter the domain where PNLCS will be installed (e.g., billing.example.com): " panel_domain_name
+        parse_domain panel_domain_name
+
+        INSTALL_PATH="/var/www/pnlcs"
+        db_name="pnlcs"
+        db_user="pnlcs"
+        db_pass="$(generate_password)"
+
+        # PNLCS is available as an alpha billing-system installer only for now.
+        # Namingo does not yet ship a PNLCS backend/module for WHOIS/RDAP automation.
+        install_rdap_whois="unsupported"
+
+        # Install necessary packages and repositories
+        apt update -y
+        apt install -y ufw bzip2 ca-certificates curl git gnupg lsb-release openssl net-tools unzip wget whois
+        install_php_repo
+        configure_firewall
+
+        mkdir -p /etc/apt/keyrings
+        curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
+        cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
+Suites: ${MARIADB_SUITE}
+Components: ${MARIADB_COMPONENTS}
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
+EOF
+
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+
+        # Node.js 20.x and npm
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
+        apt update -y
+        apt install -y caddy mariadb-client mariadb-server nodejs supervisor cron
+        install_php_packages pnlcs
+        install_composer php8.5
+
+        # Keep npm current within the installed Node.js 20.x runtime.
+        npm install -g npm@latest
+
+        # PHP production defaults
+        set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
+        set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_httponly" "1"
+        set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+        set_php_ini_value "/etc/php/8.5/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+        set_php_ini_value "/etc/php/8.5/fpm/php.ini" "expose_php" "0"
+        systemctl restart php8.5-fpm
+
+        configure_mariadb "$db_name"
+
+        # Install PNLCS
+        mkdir -p /var/www
+        [[ ! -e "$INSTALL_PATH" ]] || die "$INSTALL_PATH already exists. Remove or move it before continuing."
+        git clone https://github.com/Panelica/pnlcs.git "$INSTALL_PATH"
+
+        cd "$INSTALL_PATH"
+        cp .env.example .env
+
+        sed -i "s|^APP_URL=.*|APP_URL=https://$panel_domain_name|" .env
+        sed -i "s|^DB_DATABASE=.*|DB_DATABASE=$db_name|" .env
+        sed -i "s|^DB_USERNAME=.*|DB_USERNAME=$db_user|" .env
+        sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$db_pass|" .env
+
+        COMPOSER_ALLOW_SUPERUSER=1 composer install \
+            --no-dev \
+            --optimize-autoloader \
+            --no-interaction
+
+        php8.5 artisan key:generate --force
+        php8.5 artisan migrate --force
+        php8.5 artisan db:seed --force
+
+        npm install
+        npm run build
+
+        php8.5 artisan storage:link
+        php8.5 artisan optimize
+
+        chmod -R 775 storage bootstrap/cache
+        chown -R www-data:www-data storage bootstrap/cache
+        chown root:www-data .env
+        chmod 640 .env
+
+        # Randomized Adminer endpoint
+        ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
+        wget -q "https://www.adminer.org/latest.php" -O "$INSTALL_PATH/public/${ADMINER_SLUG}"
+
+        # Caddy
+        mkdir -p /var/log/pnlcs
+        touch /var/log/pnlcs/caddy.log /var/log/pnlcs/worker.log
+        chown caddy:caddy /var/log/pnlcs/caddy.log
+
+        cat > /etc/caddy/Caddyfile <<EOF
+$panel_domain_name {
+    root * $INSTALL_PATH/public
+    encode zstd gzip
+
+    request_body {
+        max_size 64MB
+    }
+
+    @hiddenFiles {
+        path_regexp hiddenFiles (^|/)\.[^/]+
+        not path /.well-known /.well-known/*
+    }
+
+    route {
+        respond @hiddenFiles 403
+        php_fastcgi unix//run/php/php8.5-fpm.sock
+        file_server
+    }
+
+    header -Server
+    header * {
+        Referrer-Policy "same-origin"
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Permissions-Policy "camera=(), geolocation=(), microphone=()"
+    }
+
+    log {
+        output file /var/log/pnlcs/caddy.log {
+            roll_size 10MB
+            roll_keep 5
+        }
+        format json
+    }
+}
+EOF
+
+        systemctl enable caddy
+        systemctl restart caddy
+
+        # Laravel scheduler
+        cat > /etc/cron.d/pnlcs <<EOF
+* * * * * www-data cd $INSTALL_PATH && /usr/bin/php8.5 artisan schedule:run >> /dev/null 2>&1
+EOF
+        chmod 644 /etc/cron.d/pnlcs
+        systemctl enable --now cron
+
+        # Queue worker
+        cat > /etc/supervisor/conf.d/pnlcs-worker.conf <<EOF
+[program:pnlcs-worker]
+command=/usr/bin/php8.5 $INSTALL_PATH/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+directory=$INSTALL_PATH
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/pnlcs/worker.log
+stopwaitsecs=3600
+EOF
+
+        chown www-data:www-data /var/log/pnlcs/worker.log
+        systemctl enable --now supervisor
+        supervisorctl reread
+        supervisorctl update
+
+        # Final summary
+        show_install_summary \
+            "PNLCS (alpha)" \
+            "https://$panel_domain_name" \
+            "admin" \
+            "$INSTALL_PATH/.env" \
+            "https://$panel_domain_name/${ADMINER_SLUG}" \
+            "$db_name"
+
+        warn "PNLCS default admin credentials are public: admin / admin123"
+        echo "1. Log in immediately and change the default password:"
+        echo "   https://$panel_domain_name/admin/login"
+        echo
+        echo "2. Configure mail delivery and verify the queue worker:"
+        echo "   supervisorctl status pnlcs-worker"
+        echo
+        echo "3. Review the production configuration:"
+        echo "   $INSTALL_PATH/.env"
+        echo
+        echo "PNLCS alpha installation is complete."
         ;;
     c|C)
         echo "Installation cancelled."
