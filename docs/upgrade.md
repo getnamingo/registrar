@@ -1,10 +1,12 @@
 # Namingo Registrar Upgrade Guide
 
-## v1.0.0 to v1.2.3
+## v1.0.0 to v1.2.4
 
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.2.1** to **v1.2.3**, first run the **v1.2.2** upgrade, then the **v1.2.3** upgrade.
+> For example, to upgrade from **v1.2.2** to **v1.2.4**, first run the **v1.2.3** upgrade, then the **v1.2.4** upgrade.
+
+- v1.2.3 to v1.2.4 - download and run the [update124.sh](update124.sh) script.
 
 - v1.2.2 to v1.2.3 - download and run the [update123.sh](update123.sh) script.
 
@@ -162,6 +164,40 @@ After all upgrades are complete:
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
 
+## Upgrade to Namingo Registrar v1.2.4
+
+### Step 1: Billing Platform Requirements
+
+Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
+
+- **WHMCS:** v9.0.6 or later. WHMCS v8.13.5 may also work, but it is not officially supported and should be used at your own risk.
+- **FOSSBilling:** v0.8.6 or later
+- **Loom:** latest available version
+
+Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
+
+### Step 2: Upgrade to Namingo Registrar v1.2.4
+
+Download and run the **v1.2.4** upgrade script:
+
+```bash
+./update124.sh
+```
+
+### Step 3: Upgrade Tide theme to v1.2.3
+
+> **Required only if you are also upgrading FOSSBilling to v0.8.6.**
+
+FOSSBilling **v0.8.6 requires Tide v1.2.3**. If your installation uses the Tide theme, you must upgrade Tide together with FOSSBilling.
+
+Follow the official Tide upgrade instructions:
+
+https://github.com/getnamingo/tide#upgrade
+
+Make sure the installed theme version is **Tide v1.2.3** before putting the upgraded registrar back into production.
+
+If you are **not upgrading to FOSSBilling v0.8.6**, skip this step.
+
 ## Upgrade to Namingo Registrar v1.2.3
 
 ### Step 1: Billing Platform Requirements
@@ -173,6 +209,14 @@ Before upgrading Namingo Registrar, ensure that your billing platform meets the 
 - **Loom:** latest available version
 
 Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
+
+### Step 2: Upgrade to Namingo Registrar v1.2.3
+
+Download and run the **v1.2.3** upgrade script:
+
+```bash
+./update123.sh
+```
 
 ## Upgrade to Namingo Registrar v1.2.2
 
