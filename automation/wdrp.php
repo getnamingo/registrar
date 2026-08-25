@@ -8,84 +8,40 @@
  */
 
 declare(strict_types=1);
+
+use Registrar\Backend\DriverFactory;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
+
 date_default_timezone_set('UTC');
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception as PHPMailerException;
-
-$backend = $config['escrow']['backend'] ?? 'FOSS';
-
 $logFilePath = '/var/log/namingo/wdrp.log';
 $log = setupLogger($logFilePath, 'RDRP');
 $log->info('job started.');
 
-// Database connection
 try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    $log->error('Database connection error: ' . $e->getMessage());
+    $driver = DriverFactory::create($pdo, $config, $log);
+} catch (Throwable $e) {
+    $log->error('Initialization error: ' . $e->getMessage());
     exit(1);
 }
 
 try {
     $current_date = date('Y-m-d');
-    if ($backend === 'FOSS') {
-        $query = "SELECT sld, tld, expires_at, contact_email FROM service_domain WHERE expires_at BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
-    } elseif ($backend === 'WHMCS') {
-        $query = "
-            SELECT 
-                nd.name,
-                nd.exdate,
-                c.email
-            FROM namingo_domain nd
-            INNER JOIN tbldomains d 
-                ON d.domain = nd.name
-            INNER JOIN tblclients c 
-                ON c.id = d.userid
-            WHERE nd.exdate BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)";
-    } elseif ($backend === 'LOOM') {
-        $query = 'SELECT
-                    service_name,
-                    expires_at,
-                    JSON_UNQUOTE(JSON_EXTRACT(config, \'$.contacts.registrant.email\')) AS contact_email
-                  FROM services
-                  WHERE type = \'domain\'
-                    AND status = \'active\'
-                    AND expires_at BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)';
-    } else {
-        $log->error("Unknown backend: $backend");
-        exit(1);
-    }
-
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([':current_date' => $current_date]);
-    $domains = $stmt->fetchAll();
+    $domains = $driver->getWdrpDomains($current_date);
 
     if ($domains) {
         foreach ($domains as $domain) {
             $subject = $config['email']['subject'];
-
-            if ($backend === 'FOSS') {
-                $to = $domain['contact_email'];
-                $domainName = $domain['sld'].'.'.$domain['tld'];
-                $message = sprintf($config['email']['message'], $domainName, $domain['expires_at']);
-            } elseif ($backend === 'WHMCS') {
-                $to = $domain['email'];
-                $domainName = $domain['name'];
-                $message = sprintf($config['email']['message'], $domainName, $domain['exdate']);
-            } elseif ($backend === 'LOOM') {
-                $to = $domain['contact_email'];
-                $domainName = $domain['service_name'];
-                $message = sprintf($config['email']['message'], $domainName, $domain['expires_at']);
-            } else {
-                $log->error("Unknown backend: $backend");
-                exit(1);
-            }
+            $to = $domain['email'];
+            $domainName = $domain['domain_name'];
+            $message = sprintf($config['email']['message'], $domainName, $domain['expires_at']);
 
             // Basic email sanity
             if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -100,7 +56,7 @@ try {
     }
 
     $log->info('job completed.');
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     $log->error('Database error: ' . $e->getMessage());
     exit(1);
 }

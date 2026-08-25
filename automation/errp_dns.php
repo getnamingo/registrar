@@ -8,17 +8,13 @@
  */
 
 declare(strict_types=1);
+
+use Registrar\Backend\DriverFactory;
+
 date_default_timezone_set('UTC');
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/helpers.php';
-
-$backend = $config['escrow']['backend'] ?? 'FOSS';
-
-if ($backend === 'WHMCS') {
-    require_once '/var/www/whmcs/init.php';
-}
-
 require_once __DIR__ . '/vendor/autoload.php';
 
 $logFilePath = '/var/log/namingo/errp_dns.log';
@@ -26,73 +22,20 @@ $log = setupLogger($logFilePath, 'ERRP_DNS');
 $log->info('job started.');
 
 try {
-    // Set up database connection
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $driver = DriverFactory::create($pdo, $config, $log);
 
-    // Get all expired domain names with registrar nameservers
-    if ($backend === 'FOSS') {
-        $sql = "SELECT * FROM service_domain WHERE NOW() > expires_at";
-    } elseif ($backend === 'WHMCS') {
-        $sql = "SELECT * FROM namingo_domain WHERE NOW() > exdate";
-    } elseif ($backend === 'LOOM') {
-        $sql = "SELECT * FROM services WHERE type = 'domain' AND NOW() > expires_at";
-    } else {
-        $log->error("Unknown backend: $backend");
-        exit(1);
-    }
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute();
-    $expired_domains = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $expired_domains = $driver->getExpiredDomains();
+
     foreach ($expired_domains as $domain) {
-        // Nameservers to update
         $ns1 = $config['ns1'];
         $ns2 = $config['ns2'];
+        $domainName = $domain['domain_name'];
 
-        // Prepare the SQL query
-        if ($backend === 'FOSS') {
-            $sql = "UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id";
-            $domainName = buildFossDomainName($domain);
-        } elseif ($backend === 'WHMCS') {
-            $sql = "UPDATE namingo_domain SET ns1 = :ns1, ns2 = :ns2, ns3 = NULL, ns4 = NULL, ns5 = NULL WHERE id = :id";
-            $domainName = $domain['name'];
-        } elseif ($backend === 'LOOM') {
-            $sql = "UPDATE services 
-                    SET config = JSON_SET(
-                        config,
-                        '$.nameservers[0]', :ns1,
-                        '$.nameservers[1]', :ns2
-                    )
-                    WHERE id = :id AND type = 'domain'";
-            $domainName = $domain['service_name'];
-        } else {
-            $log->error("Unknown backend: $backend");
-            exit(1);
-        }
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(':ns1', $ns1);
-        $stmt->bindParam(':ns2', $ns2);
-        $stmt->bindParam(':id', $domain['id'], PDO::PARAM_INT);
-        $stmt->execute();
+        $driver->updateExpiredDomainNameservers($domain, $ns1, $ns2);
+        $eppConfig = $driver->getEppConfiguration($domainName);
 
-        // Get EPP configuration
-        if ($backend === 'FOSS') {
-            require_once '/var/www/load.php';
-            $di = include '/var/www/di.php';
-
-            $dbConfig = \FOSSBilling\Config::getProperty('db', []);
-
-            $dsn = 'mysql' . ":host=" . $dbConfig["host"] . ";port=" . $dbConfig["port"] . ";dbname=" . $dbConfig["name"];
-            $pdo_foss = new PDO($dsn, $dbConfig["user"], $dbConfig["password"]);
-        } elseif ($backend === 'WHMCS') {
-            $pdo_foss = null;
-        } elseif ($backend === 'LOOM') {
-            $pdo_foss = $pdo;
-        }
-
-        $eppConfig = getEppConfiguration($backend, $pdo_foss, $domainName, $log);
-
-        // Send EPP update to registry
         try {
             $epp = epp_client($eppConfig);
             $domainPuny = function_exists('idn_to_ascii')

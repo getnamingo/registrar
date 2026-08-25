@@ -30,7 +30,7 @@ $config = array(
         ],
     ),
     'escrow' => array(
-        'backend' => 'FOSS', // Available options: 'FOSS' (default), 'WHMCS', 'LOOM', 'Custom'
+        'backend' => 'FOSS', // Built-ins: FOSS, WHMCS, LOOM. Custom driver class names from src/Backend are also supported.
         'full' => '/opt/registrar/escrow/full.csv',
         'hdl'  => '/opt/registrar/escrow/hdl.csv',
 
