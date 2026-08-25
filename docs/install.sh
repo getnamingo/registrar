@@ -235,7 +235,7 @@ show_install_summary() {
 }
 
 configure_firewall() {
-  echo "Configuring firewall"
+  log "Configuring firewall"
 
   command -v ufw >/dev/null 2>&1 || die "UFW is not installed."
 
@@ -263,7 +263,7 @@ install_composer() {
   local expected_signature
   local actual_signature
 
-  echo "Installing Composer"
+  log "Installing Composer"
 
   command -v "$php_bin" >/dev/null 2>&1 \
     || die "PHP executable not found: $php_bin"
@@ -327,7 +327,7 @@ install_php_packages() {
       ;;
   esac
 
-  echo "Installing PHP ${version} packages"
+  log "Installing PHP ${version} packages"
 
   for package in "${suffixes[@]}"; do
     packages+=("php${version}-${package}")
@@ -346,7 +346,7 @@ configure_mariadb() {
   [[ "$database" =~ ^[A-Za-z0-9_]+$ ]] \
     || die "Invalid MariaDB database name: $database"
 
-  echo "Securing MariaDB"
+  log "Securing MariaDB"
 
   # Remove anonymous users and remote root accounts using normal
   # account-management statements rather than modifying mysql.user.
@@ -365,7 +365,7 @@ configure_mariadb() {
   mariadb -u root -e \
     "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'; FLUSH PRIVILEGES;"
 
-  echo "Creating database $database and user $db_user"
+  log "Creating database $database and user $db_user"
 
   mariadb -u root -e "CREATE DATABASE IF NOT EXISTS \`${database}\`;"
   mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
@@ -402,7 +402,7 @@ set_php_ini_value() {
 install_rdap_and_whois_services() {
     local panel="${1:-foss}"
 
-    echo "Installing RDAP & WHOIS services..."
+    log "Installing RDAP & WHOIS services..."
 
     if [[ -e /opt/registrar ]]; then
         die "/opt/registrar already exists. Remove or move it before continuing."
@@ -750,6 +750,7 @@ ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
 wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 
 # Download and Extract FOSSBilling
+log "Installing FOSSBilling"
 cd /tmp
 wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.6/FOSSBilling-0.8.6.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
@@ -827,6 +828,7 @@ find /var/www/data -type f -exec chmod 644 {} \;
 wget https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
+log "Installing Tide theme"
 git clone https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
@@ -983,18 +985,15 @@ set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
 
-echo "== Downloading ionCube Loader =="
+log "Installing ionCube Loader"
 cd /tmp
 wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
 tar xfz ioncube_loaders_lin_x86-64.tar.gz
 
-echo "== Detecting PHP extension directory =="
-
 ext_dir=$(php8.3 -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
 
 if [[ ! -d "$ext_dir" ]]; then
-  echo "Error: PHP extension directory not found: $ext_dir"
-  exit 1
+  die "PHP extension directory not found: $ext_dir"
 fi
 
 loader_file="ioncube_loader_lin_8.3.so"
@@ -1028,11 +1027,9 @@ whmcs_docroot="/var/www/whmcs"
 whmcs_conf="/etc/apache2/sites-available/whmcs.conf"
 rdap_conf="/etc/apache2/sites-available/rdap.conf"
 
-echo "== Enabling and Starting Apache =="
+log "Configuring Apache"
 systemctl enable apache2
 systemctl start apache2
-
-echo "== Creating WHMCS VirtualHost config =="
 
 cat > "$whmcs_conf" <<EOF
 <VirtualHost *:80>
@@ -1101,7 +1098,7 @@ a2enmod proxy_http
 
 fi
 
-echo "== Restarting Apache =="
+log "Starting Apache"
 echo 'opcache.enable=0' > /etc/php/8.3/fpm/conf.d/99-disable-opcache.ini
 systemctl restart php8.3-fpm
 systemctl restart apache2
@@ -1122,8 +1119,7 @@ PHP_BIN="php8.3"
 
 # === CHECK FILE EXISTS ===
 if [ ! -f "$WHMCS_ZIP" ]; then
-    echo "[!] WHMCS zip not found at $WHMCS_ZIP"
-    exit 1
+    die "WHMCS zip not found at $WHMCS_ZIP"
 fi
 
 # === CLEAN INSTALL PATH ===
@@ -1175,14 +1171,14 @@ $PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c
 echo "Cleaning up..."
 rm -rf "$INSTALL_PATH/install"
 
-echo "== Requesting SSL certificates for $panel_domain_name and rdap.$domain_name =="
+log "Requesting TLS certificates"
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     certbot --apache -d "$panel_domain_name" -d "rdap.$domain_name" --non-interactive --agree-tos -m webmaster@"$domain_name"
 else
     certbot --apache -d "$panel_domain_name" --non-interactive --agree-tos -m webmaster@"$domain_name"
 fi
 
-echo "== Adding WHMCS cron job to crontab =="
+log "Configuring WHMCS cron job"
 
 command -v crontab >/dev/null 2>&1 || apt install -y cron
 systemctl enable --now cron 2>/dev/null || true
