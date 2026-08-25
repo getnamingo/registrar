@@ -8,6 +8,27 @@ warn() { printf "\n\033[1;33m[WARN]\033[0m %s\n" "$*"; }
 err() { printf "\n\033[1;31m[ERR]\033[0m %s\n" "$*" >&2; }
 die() { err "$*"; exit 1; }
 
+# ---------- Command-line options ----------
+REGISTRAR_SOURCE="release"
+
+case "${1:-}" in
+  --main)
+    REGISTRAR_SOURCE="main"
+    ;;
+  -h|--help)
+    echo "Usage: $0 [--main]"
+    echo
+    echo "  --main   Install Namingo Registrar services from the current main branch"
+    echo "           instead of the bundled release version."
+    exit 0
+    ;;
+  "")
+    ;;
+  *)
+    die "Unknown option: $1. Use --help for available options."
+    ;;
+esac
+
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
     die "Please run as root (sudo bash $0)."
@@ -17,8 +38,10 @@ require_root() {
 # Check the Linux distribution and version
 if [[ -r /etc/os-release ]]; then
     . /etc/os-release
-    OS_ID="$ID"
-    VER="$VERSION_ID"
+    OS="${NAME}"
+    OS_ID="${ID,,}"
+    VER="${VERSION_ID}"
+    CODENAME="${VERSION_CODENAME:-}"
 else
     echo "Error: /etc/os-release not found."
     exit 1
@@ -70,6 +93,70 @@ generate_password() {
     openssl rand -base64 24 | tr -d '\n' | tr '+/' '-_'
 }
 
+parse_domain() {
+  local var="$1"
+  local hostname="${!var}"
+  local -a parts
+  local n tld sld registrable suffix_len sub_labels
+
+  # Normalize
+  hostname="$(echo "$hostname" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+
+  # Basic hostname validation
+  if [[ ! "$hostname" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
+    echo
+    echo "   Unsupported domain format."
+    echo "   Please use a simple domain like:"
+    echo "     - example.com"
+    echo "     - cp.example.com"
+    echo "     - cp.example.co.uk"
+    echo
+    exit 1
+  fi
+
+  IFS='.' read -r -a parts <<< "$hostname"
+  n=${#parts[@]}
+
+  tld="${parts[n-1]}"
+  sld="${parts[n-2]}"
+
+  case "$sld" in
+    co|com|net|org|gov|edu|ac|mil|int|go|gob|nic|id|sch|school|k12|or)
+      if (( ${#tld} == 2 && n >= 3 )); then
+        registrable="${parts[n-3]}.${parts[n-2]}.${parts[n-1]}"
+        suffix_len=3
+      else
+        registrable="${parts[n-2]}.${parts[n-1]}"
+        suffix_len=2
+      fi
+      ;;
+    *)
+      registrable="${parts[n-2]}.${parts[n-1]}"
+      suffix_len=2
+      ;;
+  esac
+
+  # Permit the registrable domain itself or one subdomain.
+  sub_labels=$(( n - suffix_len ))
+
+  if (( sub_labels > 1 )); then
+    echo
+    echo "   Unsupported domain format."
+    echo "   Please use a simple domain like:"
+    echo "     - example.com"
+    echo "     - cp.example.com"
+    echo "     - cp.example.co.uk"
+    echo
+    echo "   Domains with multiple nested subdomains are not supported."
+    echo "   (e.g. cp.eu.example.com)"
+    echo
+    exit 1
+  fi
+
+  printf -v "$var" '%s' "$hostname"
+  domain_name="$registrable"
+}
+
 prompt() {
   local var="$1"; local msg="$2"; local def="${3-}"; local secret="${4-}"
   local val
@@ -93,22 +180,190 @@ prompt() {
   eval "$var=\"\$val\""
 }
 
+prompt_password_confirm() {
+  local var="$1"
+  local password_value
+  local password_confirm
+
+  read -r -s -p "Enter registrar admin password: " password_value
+  echo
+  read -r -s -p "Confirm registrar admin password: " password_confirm
+  echo
+
+  [[ -n "$password_value" ]] || die "Password cannot be empty."
+  [[ "$password_value" == "$password_confirm" ]] || die "Passwords do not match."
+
+  printf -v "$var" '%s' "$password_value"
+}
+
+show_install_summary() {
+  local panel="$1"
+  local url="$2"
+  local admin="$3"
+  local db_config="$4"
+
+  echo
+  echo "=================================================="
+  echo " Namingo Registrar installation complete"
+  echo "=================================================="
+  echo
+  echo "Panel:        $panel"
+  echo "URL:          $url"
+  echo "Admin user:   $admin"
+  echo "Database:     registrar"
+  echo "DB settings:  $db_config"
+
+  if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+      echo "Registrar mode: gTLD (WHOIS, RDAP and automation)"
+  else
+      echo "Registrar mode: ccTLD (WHOIS, RDAP, and automation disabled)"
+  fi
+
+  echo
+  echo "Next steps:"
+  echo
+}
+
+configure_firewall() {
+  echo "Configuring firewall"
+
+  command -v ufw >/dev/null 2>&1 || die "UFW is not installed."
+
+  # Secure defaults for a dedicated registrar server.
+  ufw default deny incoming >/dev/null
+  ufw default allow outgoing >/dev/null
+  ufw logging low >/dev/null
+
+  # Management and web services.
+  ufw allow 22/tcp >/dev/null
+  ufw allow 80/tcp >/dev/null
+  ufw allow 443/tcp >/dev/null
+
+  # WHOIS is exposed only in gTLD registrar mode.
+  if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
+    ufw allow 43/tcp >/dev/null
+  fi
+
+  ufw --force enable >/dev/null
+}
+
+install_composer() {
+  local php_bin="$1"
+  local installer="/tmp/composer-setup.php"
+  local expected_signature
+  local actual_signature
+
+  echo "Installing Composer"
+
+  command -v "$php_bin" >/dev/null 2>&1 \
+    || die "PHP executable not found: $php_bin"
+
+  expected_signature="$(curl -fsSL https://composer.github.io/installer.sig)"
+  curl -fsSL https://getcomposer.org/installer -o "$installer"
+
+  actual_signature="$(sha384sum "$installer" | awk '{print $1}')"
+
+  if [[ "$expected_signature" != "$actual_signature" ]]; then
+    rm -f "$installer"
+    die "Composer installer signature verification failed."
+  fi
+
+  "$php_bin" "$installer" \
+    --install-dir=/usr/local/bin \
+    --filename=composer \
+    --quiet
+
+  rm -f "$installer"
+}
+
+install_php_packages() {
+  local panel="$1"
+  local version
+  local -a extras=()
+  local -a suffixes=(
+    bcmath
+    bz2
+    cli
+    common
+    curl
+    fpm
+    gd
+    gmp
+    imap
+    intl
+    mbstring
+    mysql
+    readline
+    soap
+    swoole
+    xml
+    yaml
+    zip
+  )
+  local -a packages=()
+  local package
+
+  case "$panel" in
+    foss|loom)
+      version="8.5"
+      extras=(apcu ds igbinary imagick redis uuid)
+      ;;
+    whmcs)
+      version="8.3"
+      extras=(imagick xmlrpc)
+      ;;
+    *)
+      die "Unsupported panel for PHP installation: $panel"
+      ;;
+  esac
+
+  echo "Installing PHP ${version} packages"
+
+  for package in "${suffixes[@]}"; do
+    packages+=("php${version}-${package}")
+  done
+
+  for package in "${extras[@]}"; do
+    packages+=("php${version}-${package}")
+  done
+
+  apt install -y "${packages[@]}"
+}
+
+configure_mariadb() {
+  local database="${1:-registrar}"
+
+  [[ "$database" =~ ^[A-Za-z0-9_]+$ ]] \
+    || die "Invalid MariaDB database name: $database"
+
+  echo "Securing MariaDB"
+
+  # Remove anonymous users and remote root accounts using normal
+  # account-management statements rather than modifying mysql.user.
+  mariadb -u root --batch --skip-column-names -e "
+    SELECT CONCAT(
+      'DROP USER IF EXISTS ',
+      QUOTE(User), '@', QUOTE(Host), ';'
+    )
+    FROM mysql.user
+    WHERE User = ''
+       OR (User = 'root'
+           AND Host NOT IN ('localhost', '127.0.0.1', '::1'));
+  " | mariadb -u root
+
+  mariadb -u root -e "DROP DATABASE IF EXISTS test;"
+  mariadb -u root -e \
+    "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'; FLUSH PRIVILEGES;"
+
+  echo "Creating database $database and user $db_user"
+
+  mariadb -u root -e "CREATE DATABASE IF NOT EXISTS \`${database}\`;"
+  mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
+  mariadb -u root -e "GRANT ALL PRIVILEGES ON \`${database}\`.* TO '${db_user}'@'localhost';"
+  mariadb -u root -e "FLUSH PRIVILEGES;"
+}
+
 require_root
-
-# Check the Linux distribution and version
-OS=""
-VER=""
-OS_ID=""
-CODENAME=""
-
-if [[ -r /etc/os-release ]]; then
-  . /etc/os-release
-
-  OS="${NAME}"
-  VER="${VERSION_ID}"
-  OS_ID="${ID,,}"
-  CODENAME="${VERSION_CODENAME:-}"
-fi
 
 # Get the available RAM in MB
 AVAILABLE_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
@@ -139,8 +394,18 @@ install_rdap_and_whois_services() {
 
     echo "Installing RDAP & WHOIS services..."
 
+    if [[ -e /opt/registrar ]]; then
+        die "/opt/registrar already exists. Remove or move it before continuing."
+    fi
+
     # Clone the registrar repository
-    git clone --branch v1.2.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+    if [[ "$REGISTRAR_SOURCE" == "main" ]]; then
+        echo "Cloning Namingo Registrar from main"
+        git clone https://github.com/getnamingo/registrar /opt/registrar
+    else
+        echo "Cloning Namingo Registrar v1.2.3"
+        git clone --branch v1.2.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+    fi
 
     # Setup for WHOIS service
     cd /opt/registrar/whois
@@ -249,8 +514,7 @@ install_rdap_and_whois_services() {
         echo "LOOM selected, no modules."
     fi
 
-    mkdir /opt/registrar/escrow
-    mkdir /opt/registrar/escrow/process
+    mkdir -p /opt/registrar/escrow/process
     mkdir -p /var/log/namingo
 }
 
@@ -307,73 +571,19 @@ fi
 
 read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
 
-# normalize
-panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+parse_domain panel_domain_name
 
-# basic sanity
-if [[ ! "$panel_domain_name" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a simple domain like:"
-  echo "     - example.com"
-  echo "     - cp.example.com"
-  echo "     - cp.example.co.uk"
-  echo ""
-  exit 1
-fi
+read -p "Install RDAP and WHOIS services (gTLD registrar mode)? (Y/N): " install_rdap_whois
 
-# split into labels
-IFS='.' read -r -a parts <<< "$panel_domain_name"
-n=${#parts[@]}
+echo
+echo "=================================================="
+echo " Namingo Registrar Admin Account"
+echo "=================================================="
+echo
 
-if (( n < 2 )); then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a domain like example.com"
-  echo ""
-  exit 1
-fi
+read -p "Enter registrar admin email: " email
+prompt_password_confirm password
 
-tld="${parts[n-1]}"
-sld="${parts[n-2]}"
-
-case "$sld" in
-  co|com|net|org|gov|edu|ac|mil|int|go|gob|nic|id|sch|school|k12|or)
-    if (( ${#tld} == 2 )) && (( n >= 3 )); then
-      registrable="${parts[n-3]}.${parts[n-2]}.${parts[n-1]}"
-      suffix_len=3
-    else
-      registrable="${parts[n-2]}.${parts[n-1]}"
-      suffix_len=2
-    fi
-    ;;
-  *)
-    registrable="${parts[n-2]}.${parts[n-1]}"
-    suffix_len=2
-    ;;
-esac
-
-# allow only:
-# - registrable domain itself (no subdomain)
-# - exactly one label before registrable (one subdomain)
-sub_labels=$(( n - suffix_len ))
-if (( sub_labels > 1 )); then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a simple domain like:"
-  echo "     - example.com"
-  echo "     - cp.example.com"
-  echo "     - cp.example.co.uk"
-  echo ""
-  echo "   Domains with multiple nested subdomains are not supported."
-  echo "   (e.g. cp.eu.example.com)"
-  echo ""
-  exit 1
-fi
-
-domain_name="$registrable"
-
-read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 db_user="$(generate_db_username)"
 db_pass="$(generate_password)"
 
@@ -381,6 +591,7 @@ db_pass="$(generate_password)"
 apt update -y
 apt install -y ufw bzip2 ca-certificates curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+configure_firewall
 
 mkdir -p /etc/apt/keyrings
 curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
@@ -398,10 +609,9 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmo
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
 
 apt update -y
-apt install -y mariadb-client mariadb-server caddy php8.5-cli php8.5-common php8.5-curl php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-gd php8.5-gmp php8.5-imagick php8.5-imap php8.5-intl php8.5-mbstring php8.5-readline php8.5-soap php8.5-swoole php8.5-xml php8.5-yaml php8.5-zip php8.5-mysql
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
+apt install -y mariadb-client mariadb-server caddy
+install_php_packages foss
+install_composer php8.5
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
@@ -413,7 +623,6 @@ set_php_ini_value "/etc/php/8.5/fpm/php.ini" "expose_php" "0"
 systemctl restart php8.5-fpm
 
 # Configure Caddy
-ufw disable
 systemctl stop caddy
 cat > /etc/caddy/Caddyfile << EOF
 $panel_domain_name {
@@ -511,32 +720,16 @@ EOF
 fi
 
 # Enable and restart Caddy
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow 43/tcp
-ufw allow 22/tcp
-ufw --force enable
 systemctl enable caddy
 systemctl restart caddy
 
-echo "Applying MariaDB hardening..."
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-mariadb -u root -e "DROP DATABASE IF EXISTS test;"
-mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
-
-# Create user and grant privileges
-echo "Creating user $db_user and setting privileges..."
-mariadb -u root -e "CREATE DATABASE IF NOT EXISTS registrar;"
-mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
-mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
+configure_mariadb registrar
 
 mkdir -p /var/www
 
 # Install Adminer
-wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
+ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
+wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 
 # Download and Extract FOSSBilling
 cd /tmp
@@ -585,18 +778,9 @@ rm -f "$tmp_cron" /tmp/crontab.err
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/structure.sql
 mariadb -u $db_user -p$db_pass registrar < /var/www/install/sql/content.sql
 
-echo ""
-echo "=================================================="
-echo " Namingo Registrar Admin Account"
-echo "=================================================="
-echo ""
-
-read -p "Enter registrar admin email: " email
-read -s -p "Enter registrar admin password: " password
-echo ""
-
 # Hash password using PHP (bcrypt, cost 12)
-hash=$(php -r "echo password_hash('$password', PASSWORD_BCRYPT, ['cost' => 12]);")
+hash=$(printf '%s' "$password" | php8.5 -r \
+  '$p = stream_get_contents(STDIN); echo password_hash($p, PASSWORD_BCRYPT, ["cost" => 12]);')
 
 # Build SQL
 sql="
@@ -623,9 +807,6 @@ find /var/www/data -type d -exec chmod 755 {} \;
 find /var/www/data -type f -exec chmod 644 {} \;
 
 wget https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
-
-echo "Configuring required client fields."
-php /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 git clone https://github.com/getpinga/tide /var/www/themes/tide
@@ -665,43 +846,49 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     install_rdap_and_whois_services "foss"
 fi
 
-# Final instructions to the user
+# Final summary
+show_install_summary \
+    "FOSSBilling" \
+    "https://$panel_domain_name" \
+    "$email" \
+    "/var/www/config.php"
+
+echo "Adminer installed at: https://$panel_domain_name/${ADMINER_SLUG}"
 echo
-echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
-echo
-echo "Generated database user: $db_user"
-echo "Generated database password: $db_pass"
-echo
-echo "1. Open your browser, visit https://$panel_domain_name/admin and log in with your admin account. Then return to the terminal and manually run:"
+echo "1. Open the FOSSBilling admin page to complete the installation:"
+echo "   https://$panel_domain_name/admin"
+echo "   Complete the installation, then log in with your admin account."
+echo "   After logging in, return to this terminal and run:"
 echo "   php /tmp/configure-client-fields.php"
 echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
-echo "Click the 'Settings' button next to 'Tide' and adjust the settings as needed."
+echo "   Click Settings next to Tide and adjust the theme as needed."
 echo
 echo "3. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "4. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
-    echo "   - /opt/registrar/whois/config.php"
-    echo "   - /opt/registrar/rdap/config.php"
-    echo "   - /opt/registrar/automation/config.php"
-    echo
-    echo "5. Add the following cron job to ensure automation runs smoothly:"
-    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-    echo
-    echo "6. In the FOSSBilling admin panel, go to Extensions > Overview and activate the following extensions:"
-    echo "   - Domain Contact Verification"
+    echo "4. In Extensions > Overview, activate the registrar extensions:"
+    echo "   - Domain Contact Validation"
     echo "   - TMCH Claims Notice Support"
     echo "   - WHOIS & RDAP Client"
     echo "   - Domain Registrant Contact"
     echo "   - ICANN Registrar Accreditation"
     echo
-    echo "7. Update your Contact page with all required company details, including the company registration number and responsible person. Complete the escrow, website content, and compliance configuration described in install-fossbilling.md (sections 12.1 and 20) to meet ICANN requirements."
+    echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
+    echo "   - /opt/registrar/whois/config.php"
+    echo "   - /opt/registrar/rdap/config.php"
+    echo "   - /opt/registrar/automation/config.php"
+    echo
+    echo "6. Add the registrar automation cron job:"
+    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
+    echo "7. Complete the registrar contact, website, escrow and compliance configuration"
+    echo "   described in install-fossbilling.md (sections 12.1 and 20)."
     echo
 fi
 
-echo "Please follow these steps carefully to complete your installation and configuration."
+echo "Namingo Registrar is ready for final configuration."
         ;;
     2)
         echo "WHMCS selected."
@@ -731,35 +918,21 @@ fi
 
 read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
 
-# normalize
-panel_domain_name="$(echo "$panel_domain_name" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+parse_domain panel_domain_name
 
-# count dots
-dot_count="$(grep -o "\." <<< "$panel_domain_name" | wc -l)"
+read -p "Install RDAP and WHOIS services (gTLD registrar mode)? (Y/N): " install_rdap_whois
 
-# reject complex domains
-if [[ "$dot_count" -gt 2 ]]; then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a simple domain like:"
-  echo "     - example.com"
-  echo "     - cp.example.com"
-  echo "     - cp.example.co.uk"
-  echo ""
-  echo "   Domains with multiple nested subdomains are not supported."
-  echo "   (e.g. cp.eu.example.com)"
-  echo ""
-  exit 1
-fi
+# === Admin account ===
+echo
+echo "=================================================="
+echo " Namingo Registrar Admin Account"
+echo "=================================================="
+echo
 
-# derive main domain
-if [[ "$panel_domain_name" == *.*.* ]]; then
-  domain_name="${panel_domain_name#*.}"
-else
-  domain_name="$panel_domain_name"
-fi
+read -rp "Enter WHMCS License Key: " LICENSE_KEY
+read -rp "Enter registrar admin username: " ADMIN_USER
+prompt_password_confirm ADMIN_PASS
 
-read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
 db_user="$(generate_db_username)"
 db_pass="$(generate_password)"
 
@@ -767,6 +940,7 @@ db_pass="$(generate_password)"
 apt update -y
 apt install -y ufw bzip2 ca-certificates certbot curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+configure_firewall
 
 # Install and configure MariaDB
 mkdir -p /etc/apt/keyrings
@@ -781,10 +955,9 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
-apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server php8.3 php8.3-bcmath php8.3-bz2 php8.3-cli php8.3-common php8.3-curl php8.3-fpm php8.3-gd php8.3-gmp php8.3-imagick php8.3-imap php8.3-intl php8.3-mbstring php8.3-mysql php8.3-readline php8.3-soap php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip python3-certbot-apache
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.3 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
+apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server python3-certbot-apache
+install_php_packages whmcs
+install_composer php8.3
 
 # Update php.ini files
 set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
@@ -800,7 +973,7 @@ tar xfz ioncube_loaders_lin_x86-64.tar.gz
 
 echo "== Detecting PHP extension directory =="
 
-ext_dir=$(php -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
+ext_dir=$(php8.3 -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
 
 if [[ ! -d "$ext_dir" ]]; then
   echo "Error: PHP extension directory not found: $ext_dir"
@@ -918,25 +1091,7 @@ systemctl restart apache2
 
 echo "Apache configured on $panel_domain_name"
 
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow 43/tcp
-ufw allow 22/tcp
-ufw --force enable
-
-echo "Applying MariaDB hardening..."
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-mariadb -u root -e "DROP DATABASE IF EXISTS test;"
-mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
-
-# Create user and grant privileges
-echo "Creating user $db_user and setting privileges..."
-mariadb -u root -e "CREATE DATABASE IF NOT EXISTS registrar;"
-mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
-mariadb -u root -e "GRANT ALL PRIVILEGES ON registrar.* TO '${db_user}'@'localhost';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
+configure_mariadb registrar
 
 # Install WHMCS
 DB_NAME="registrar"
@@ -946,13 +1101,7 @@ DB_HOST="localhost"
 DB_PORT=3306
 INSTALL_PATH="/var/www/whmcs"
 WHMCS_ZIP="/tmp/whmcs.zip"
-PHP_BIN="php"
-
-# === PROMPT FOR REQUIRED VALUES ===
-read -rp "Enter WHMCS License Key: " LICENSE_KEY
-read -rp "Enter registrar admin username: " ADMIN_USER
-read -rsp "Enter registrar admin password: " ADMIN_PASS
-echo
+PHP_BIN="php8.3"
 
 # === CHECK FILE EXISTS ===
 if [ ! -f "$WHMCS_ZIP" ]; then
@@ -976,7 +1125,8 @@ chown -R www-data:www-data "$INSTALL_PATH"
 chmod -R 755 "$INSTALL_PATH"
 
 # Install Adminer
-wget "http://www.adminer.org/latest.php" -O /var/www/whmcs/adm.php
+ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
+wget -q "https://www.adminer.org/latest.php" -O "/var/www/whmcs/${ADMINER_SLUG}"
 
 # === CREATE CONFIG JSON ===
 ENCRYPTION_HASH=$(openssl rand -base64 128 | tr -d '\n\/+=' | cut -c 1-64)
@@ -1007,7 +1157,6 @@ $PHP_BIN -f "$INSTALL_PATH/install/bin/installer.php" -- -i -n -c
 # === CLEANUP ===
 echo "Cleaning up..."
 rm -rf "$INSTALL_PATH/install"
-ufw disable
 
 echo "== Requesting SSL certificates for $panel_domain_name and rdap.$domain_name =="
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
@@ -1016,18 +1165,12 @@ else
     certbot --apache -d "$panel_domain_name" --non-interactive --agree-tos -m webmaster@"$domain_name"
 fi
 
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow 43/tcp
-ufw allow 22/tcp
-ufw --force enable
-
 echo "== Adding WHMCS cron job to crontab =="
 
 command -v crontab >/dev/null 2>&1 || apt install -y cron
 systemctl enable --now cron 2>/dev/null || true
 
-cron_line="*/5 * * * * /usr/bin/php -q /var/www/whmcs/crons/cron.php"
+cron_line="*/5 * * * * /usr/bin/php8.3 -q /var/www/whmcs/crons/cron.php"
 
 tmp_cron="$(mktemp 2>/dev/null)" || exit 1
 
@@ -1049,15 +1192,20 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     install_rdap_and_whois_services "whmcs"
 fi
 
-# Final instructions to the user
-echo "Installation is complete. Please follow these manual steps to finalize your setup:"
+# Final summary
+show_install_summary \
+    "WHMCS" \
+    "https://$panel_domain_name" \
+    "$ADMIN_USER" \
+    "/var/www/whmcs/configuration.php"
+
+echo "Adminer installed at: https://$panel_domain_name/${ADMINER_SLUG}"
 echo
-echo "Generated database user: $db_user"
-echo "Generated database password: $db_pass"
+echo "1. Log in to the WHMCS admin panel:"
+echo "   https://$panel_domain_name/admin"
 echo
-echo "1. Open your browser and visit https://$panel_domain_name/admin to complete the initial setup."
-echo
-echo "2. In WHMCS admin, make sure all required client and contact profile fields are set as mandatory before accepting registrations."
+echo "2. Verify that all required client and contact profile fields are mandatory"
+echo "   before accepting domain registrations."
 echo
 echo "3. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15 of install-whmcs.md."
 echo
@@ -1065,22 +1213,23 @@ echo
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "4. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the Namingo Registrar extension."
     echo
-    echo "5. Add the following cron job to ensure automation runs smoothly:"
-    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-    echo
-    echo "6. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "7. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo "6. Add the registrar automation cron job:"
+    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "8. Configure the escrow and backup tools following the instructions in the install-whmcs.md file (sections 12.1 and 16)."
+    echo "7. Complete the required registrar website, contact, terms, privacy"
+    echo "   and ICANN compliance information."
+    echo
+    echo "8. Configure escrow and backup according to install-whmcs.md"
+    echo "   (sections 12.1 and 16)."
     echo
 fi
 
-echo "Please follow these steps carefully to complete your installation and configuration."
+echo "Namingo Registrar is ready for final configuration."
                 ;;
             2)
                 read -rp "Enter full path to the existing WHMCS installation: " whmcs_path
@@ -1138,56 +1287,7 @@ fi
 DEFAULT_HOST="loom.local"
 prompt HOSTNAME "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " "$DEFAULT_HOST"
 
-# split into labels
-IFS='.' read -r -a parts <<< "$HOSTNAME"
-n=${#parts[@]}
-
-if (( n < 2 )); then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a domain like example.com"
-  echo ""
-  exit 1
-fi
-
-tld="${parts[n-1]}"
-sld="${parts[n-2]}"
-
-case "$sld" in
-  co|com|net|org|gov|edu|ac|mil|int|go|gob|nic|id|sch|school|k12|or)
-    if (( ${#tld} == 2 )) && (( n >= 3 )); then
-      registrable="${parts[n-3]}.${parts[n-2]}.${parts[n-1]}"
-      suffix_len=3
-    else
-      registrable="${parts[n-2]}.${parts[n-1]}"
-      suffix_len=2
-    fi
-    ;;
-  *)
-    registrable="${parts[n-2]}.${parts[n-1]}"
-    suffix_len=2
-    ;;
-esac
-
-# allow only:
-# - registrable domain itself (no subdomain)
-# - exactly one label before registrable (one subdomain)
-sub_labels=$(( n - suffix_len ))
-if (( sub_labels > 1 )); then
-  echo ""
-  echo "   Unsupported domain format."
-  echo "   Please use a simple domain like:"
-  echo "     - example.com"
-  echo "     - cp.example.com"
-  echo "     - cp.example.co.uk"
-  echo ""
-  echo "   Domains with multiple nested subdomains are not supported."
-  echo "   (e.g. cp.eu.example.com)"
-  echo ""
-  exit 1
-fi
-
-domain_name="$registrable"
+parse_domain HOSTNAME
 
 INSTALL_PATH="/var/www/loom"
 
@@ -1196,12 +1296,17 @@ db_name="registrar"
 db_user="$(generate_db_username)"
 db_pass="$(generate_password)"
 
-read -p "Install RDAP and WHOIS services (full gTLD registrar mode)? (Y/N): " install_rdap_whois
+read -p "Install RDAP and WHOIS services (gTLD registrar mode)? (Y/N): " install_rdap_whois
 
 # Admin user for Loom
-log "Admin user for Loom"
+echo
+echo "=================================================="
+echo " Namingo Registrar Admin Account"
+echo "=================================================="
+echo
+
 prompt ADMIN_USER "Enter registrar admin email: " "admin@example.com"
-prompt ADMIN_PASS "Enter registrar admin password: " "" "secret"
+prompt_password_confirm ADMIN_PASS
 
 # Optional custom bind IPs for Caddy
 USE_BIND="n"
@@ -1221,6 +1326,7 @@ log "Install necessary packages…"
 apt update -y
 apt install -y apt-transport-https ufw bzip2 ca-certificates curl debian-keyring debian-archive-keyring git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
+configure_firewall
 
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
@@ -1237,10 +1343,9 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
-apt install -y caddy mariadb-client mariadb-server php8.5 php8.5-apcu php8.5-cli php8.5-common php8.5-fpm php8.5-bcmath php8.5-bz2 php8.5-curl php8.5-ds php8.5-gd php8.5-gmp php8.5-igbinary php8.5-imap php8.5-intl php8.5-mbstring php8.5-mysql php8.5-readline php8.5-redis php8.5-soap php8.5-swoole php8.5-uuid php8.5-xml php8.5-yaml php8.5-zip
-curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-php8.5 /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-rm /tmp/composer-setup.php
+apt install -y caddy mariadb-client mariadb-server
+install_php_packages loom
+install_composer php8.5
 
 # Update php.ini (FPM)
 set_php_ini_value "/etc/php/8.5/fpm/php.ini" "session.cookie_secure" "1"
@@ -1266,19 +1371,7 @@ wget -q "https://www.adminer.org/latest.php" -O /usr/share/adminer/latest.php
 ADMINER_SLUG="adminer-$(cut -d- -f1 </proc/sys/kernel/random/uuid).php"
 ln -sf /usr/share/adminer/latest.php "/usr/share/adminer/${ADMINER_SLUG}"
 
-echo "Applying MariaDB hardening..."
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='';"
-mariadb -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-mariadb -u root -e "DROP DATABASE IF EXISTS test;"
-mariadb -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
-
-# Create user and grant privileges
-echo "Creating user $db_name and setting privileges..."
-mariadb -u root -e "CREATE DATABASE IF NOT EXISTS ${db_name};"
-mariadb -u root -e "CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
-mariadb -u root -e "GRANT ALL PRIVILEGES ON ${db_name}.* TO '${db_user}'@'localhost';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
+configure_mariadb "$db_name"
 
 # ---------- Create Loom project ----------
 log "Creating Loom project in $INSTALL_PATH …"
@@ -1316,7 +1409,7 @@ touch /var/log/loom/caddy.log
 chown caddy:caddy /var/log/loom/caddy.log
 chmod 664 /var/log/loom/caddy.log
 
-COMPOSER_ALLOW_SUPERUSER=1 composer update --no-interaction --quiet
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
 
 # ---------- Install DB schema ----------
 log "Running Loom DB installer…"
@@ -1424,51 +1517,44 @@ systemctl restart caddy
 
 fi
 
-# ---------- Firewall ----------
-log "Configuring UFW…"
-ufw allow OpenSSH >/dev/null 2>&1 || true
-ufw allow 22,43,80,443/tcp >/dev/null 2>&1 || true
-yes | ufw enable >/dev/null 2>&1 || true
-ufw status || true
+# Final summary
+show_install_summary \
+    "Loom" \
+    "https://$HOSTNAME" \
+    "$ADMIN_USER" \
+    "$INSTALL_PATH/.env"
 
-# ---------- Summary ----------
-echo "Namingo Registrar installation is complete. Please follow these manual steps to finalize your setup:"
+echo "1. Open the panel and verify that the administrator account works:"
+echo "   https://$HOSTNAME"
 echo
-cat <<SUM
-• App path:          $INSTALL_PATH
-• Hostname:          https://$HOSTNAME
-• Adminer URL:       https://$HOSTNAME/${ADMINER_SLUG}
-
-• DB Name/User:     $db_name / $db_user
-• MySQL Tuning:     Run MySQLTuner later: perl mysqltuner.pl
-
-• Admin user:        $ADMIN_USER  (created best-effort)
-  If admin creation failed, run inside $INSTALL_PATH:
-     php bin/create-admin-user.php
-
-Logs:
-  - Caddy:           /var/log/loom/caddy.log
-  - Loom (app):      $INSTALL_PATH/logs
-SUM
+echo "2. Review the Loom production configuration:"
+echo "   $INSTALL_PATH/.env"
+echo
+echo "3. Review application logs if required:"
+echo "   - Caddy: /var/log/loom/caddy.log"
+echo "   - Loom:  $INSTALL_PATH/logs"
+echo
+echo "4. Run MySQLTuner after the server has accumulated normal production usage."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "1. Edit the following configuration files to match your registrar/escrow settings and after that restart the services:"
+    echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "2. Add the following cron job to ensure automation runs smoothly:"
+    echo "6. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "3. Ensure your website's footer includes links to various ICANN documents, your terms and conditions, and privacy policy."
-    echo "   On your contact page, list all company details, including registration number and the name of the CEO."
+    echo "7. Complete the required registrar website, contact, terms, privacy"
+    echo "   and ICANN compliance information."
     echo
-    echo "9. Configure the escrow and backup tools following the instructions in the install-loom.md file (sections 11 and 12)."
+    echo "8. Configure escrow and backup according to install-loom.md"
+    echo "   (sections 11 and 12)."
     echo
 fi
 
-echo "Please follow these steps carefully to complete your installation and configuration."
+echo "Namingo Registrar is ready for final configuration."
         ;;
     c|C)
         echo "Installation cancelled."
