@@ -1,12 +1,34 @@
 # Namingo Registrar Upgrade Guide
 
-## v1.0.0 to v1.2.4
+## Universal Upgrade System
 
+Namingo Registrar v1.2.3 and later use the universal upgrade script.
+
+To upgrade from v1.2.3 or any later version to the latest release:
+
+```bash
+sudo /opt/registrar/docs/upgrade.sh
+```
+
+For an existing v1.2.3 installation that does not yet contain the universal upgrade script, download it first:
+
+```bash
+curl -fsSL \
+https://raw.githubusercontent.com/getnamingo/registrar/main/docs/upgrade.sh \
+-o /tmp/namingo-upgrade.sh
+
+chmod +x /tmp/namingo-upgrade.sh
+
+sudo /tmp/namingo-upgrade.sh
+```
+
+## Versions older than v1.2.3
+
+> Older installations must use the legacy sequential upgrade scripts until they reach v1.2.3.
+>
 > Upgrade scripts **must be run sequentially** without skipping versions.
 >
-> For example, to upgrade from **v1.2.2** to **v1.2.4**, first run the **v1.2.3** upgrade, then the **v1.2.4** upgrade.
-
-- v1.2.3 to v1.2.4 - download and run the [update124.sh](update124.sh) script.
+> For example, to upgrade from **v1.2.1** to **v1.2.3**, first run the **v1.2.2** upgrade, then the **v1.2.3** upgrade. After reaching v1.2.3, use the universal upgrade system for all subsequent releases.
 
 - v1.2.2 to v1.2.3 - download and run the [update123.sh](update123.sh) script.
 

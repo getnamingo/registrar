@@ -67,31 +67,30 @@ Need help migrating between **FOSSBilling, WHMCS, Loom, or a custom billing plat
 ### Upgrade
 
 > [!IMPORTANT]
-> Upgrade scripts **must be run sequentially** without skipping versions.
+> Namingo Registrar v1.2.3 is the last version using the legacy sequential upgrade scripts.
 >
-> For example, to upgrade from **v1.2.2** to **v1.2.4**, first run the **v1.2.3** upgrade, then the **v1.2.4** upgrade.
+> Starting with v1.2.4, all upgrades use the universal [`upgrade.sh`](docs/upgrade.sh) script.
 
 > [!WARNING]
-> Upgrading Namingo Registrar does **not** automatically upgrade any billing system integrated with it, including FOSSBilling, WHMCS, Loom, or custom integrations.
+> Upgrading Namingo Registrar does **not** automatically upgrade integrated billing systems such as FOSSBilling, WHMCS, Loom, or custom integrations.
 >
-> If you are using FOSSBilling and wish to upgrade to **FOSSBilling v0.8.6**, please refer to the **[FOSSBilling Upgrade Path](docs/upgrade.md#fossbilling-upgrade-path)**.
+> See the full **[Upgrade Guide](docs/upgrade.md)** for billing-system requirements, legacy upgrade paths, and version-specific notes.
 
-- **v1.2.3 → v1.2.4**  
-  Download and run the [`update124.sh`](docs/update124.sh) script, then review the **[v1.2.4 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v124)**.
+#### v1.2.3 and later
 
-- **v1.2.2 → v1.2.3**  
-  Download and run the [`update123.sh`](docs/update123.sh) script, then review the **[v1.2.3 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v123)**.
+Upgrade to the latest Namingo Registrar release with:
 
-- **v1.2.1 → v1.2.2**  
-  Download and run the [`update122.sh`](docs/update122.sh) script, then review the **[v1.2.2 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v122)**.
+```bash
+sudo /opt/registrar/docs/upgrade.sh
+```
 
-- **v1.2.0 → v1.2.1**  
-  Download and run the [`update121.sh`](docs/update121.sh) script, then review the **[v1.2.1 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v121)**.
+Existing v1.2.3 installations that do not yet have `upgrade.sh` should follow the bootstrap instructions in the **[Upgrade Guide](docs/upgrade.md)**.
 
-- **v1.1.7 → v1.2.0**  
-  Download and run the [`update120.sh`](docs/update120.sh) script, then review the **[v1.2.0 upgrade notes](docs/upgrade.md#upgrade-to-namingo-registrar-v120)**.
+#### Older than v1.2.3
 
-For **older versions**, please refer to [`upgrade.md`](docs/upgrade.md).
+Use the legacy sequential upgrade scripts until you reach **v1.2.3**, then use the universal upgrader for all future releases.
+
+See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
 
 ## Support
 
