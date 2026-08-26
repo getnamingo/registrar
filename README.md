@@ -84,9 +84,7 @@ bash <(wget -qO- https://namingo.org/registrar-upgrade.sh)
 
 #### Older than v1.2.3
 
-Use the legacy sequential upgrade scripts until you reach **v1.2.3**, then use the universal upgrader for all future releases.
-
-See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
+Use the legacy sequential upgrade scripts until you reach **v1.2.3**, then use the universal upgrader for all future releases. See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
 
 ## Support
 
