@@ -8,13 +8,11 @@ Open source ICANN-accredited domain registrar management system.
 
 ## Introduction
 
-**Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs.
-
-**Namingo Registrar** integrates with [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), and [Loom](https://github.com/getargora/loom) — allowing you to choose the platform that best suits your needs and workflow.
+**Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs, with integrations for [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), [Loom](https://github.com/getargora/loom), and [PNLCS](https://github.com/Panelica/pnlcs) to fit different billing and operational workflows.
 
 ## Get Involved
 
-We're on a mission to make **Namingo** the best it can be, and we need your expertise! Whether you're adept in development, have a keen eye for design, or simply brim with innovative ideas, your contribution can make a world of difference.
+**Namingo Registrar** is built in the open, and contributions are always welcome. Whether you want to improve the code, refine the interface, expand documentation, report issues, test new features, or suggest better ways of doing things, your input can help make Namingo stronger for everyone.
 
 ## Features
 
@@ -94,26 +92,21 @@ See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
 
 ## Support
 
-Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If you need support, have questions, or want to contribute your thoughts:
+Need help, found a bug, or have an idea for Namingo Registrar?
 
-- **Email**: Feel free to reach out directly at [help@namingo.org](mailto:help@namingo.org).
+- **Email:** [help@namingo.org](mailto:help@namingo.org)
+- **Discord:** Join the community on [Discord](https://discord.gg/97R9VCrWgc)
+- **GitHub Issues:** Report bugs or request features in [GitHub Issues](https://github.com/getnamingo/registrar/issues)
 
-- **Discord**: Or chat with us on our [Discord](https://discord.gg/97R9VCrWgc) channel.
-  
-- **GitHub Issues**: For bug reports or feature requests, please use the [Issues](https://github.com/getnamingo/registrar/issues) section of our GitHub repository.
-
-We appreciate your involvement and patience as Namingo continues to grow and adapt.
+Questions, feedback, and contributions are always welcome.
 
 ## Acknowledgements
 
-Special thanks to the [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), and [**Loom**](https://github.com/getargora/loom) teams for their work on powerful billing platforms that Namingo builds upon.
-
-Additionally, we extend our gratitude to:
-- **ChatGPT** for invaluable assistance with code and text writing.
+Thanks to [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), [**Loom**](https://github.com/getargora/loom), and [**PNLCS**](https://github.com/Panelica/pnlcs) for their work on billing platforms supported by Namingo Registrar, and to **ChatGPT** for assistance with code and documentation.
 
 ## Support This Project
 
-If you find Namingo Registry useful, consider donating:
+If you find Namingo Registrar useful, consider donating:
 
 - [Donate via Stripe](https://donate.stripe.com/7sI2aI4jV3Offn28ww)
 - BTC: `bc1q9jhxjlnzv0x4wzxfp8xzc6w289ewggtds54uqa`
@@ -123,26 +116,6 @@ If you find Namingo Registry useful, consider donating:
 
 Namingo Registrar is licensed under the MIT License.
 
-### Third-Party Software Notices
+### Third-Party Software
 
-#### escrow-rde-client
-
-Namingo Registrar can invoke the separately installed `escrow-rde-client`
-command-line application for validation, encryption and submission of
-Registration Data Escrow deposits.
-
-Project:
-https://gitlab.com/team-escrow/escrow-rde-client
-
-Copyright:
-DENIC eG and the escrow-rde-client contributors
-
-Licence:
-GNU Lesser General Public License version 3.0
-
-Namingo Registrar does not incorporate or link against escrow-rde-client.
-The client is executed as an independent command-line program and remains
-subject to its own licence terms.
-
-A copy of the LGPLv3 licence is available from:
-https://www.gnu.org/licenses/lgpl-3.0.html
+For DENIC escrow, Namingo Registrar requires the separately installed [escrow-rde-client](https://gitlab.com/team-escrow/escrow-rde-client), licensed under the [LGPL-3.0](https://www.gnu.org/licenses/lgpl-3.0.html).
