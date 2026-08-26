@@ -413,8 +413,8 @@ install_rdap_and_whois_services() {
         echo "Cloning Namingo Registrar from main"
         git clone https://github.com/getnamingo/registrar /opt/registrar
     else
-        echo "Cloning Namingo Registrar v1.2.3"
-        git clone --branch v1.2.3 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+        echo "Cloning Namingo Registrar v1.2.4"
+        git clone --branch v1.2.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
     fi
 
     # Setup for WHOIS service
@@ -548,7 +548,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.3 ===="
+echo "==== Namingo Registrar v1.2.4 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo

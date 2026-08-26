@@ -7,19 +7,7 @@ Namingo Registrar v1.2.3 and later use the universal upgrade script.
 To upgrade from v1.2.3 or any later version to the latest release:
 
 ```bash
-sudo /opt/registrar/docs/upgrade.sh
-```
-
-For an existing v1.2.3 installation that does not yet contain the universal upgrade script, download it first:
-
-```bash
-curl -fsSL \
-https://raw.githubusercontent.com/getnamingo/registrar/main/docs/upgrade.sh \
--o /tmp/namingo-upgrade.sh
-
-chmod +x /tmp/namingo-upgrade.sh
-
-sudo /tmp/namingo-upgrade.sh
+bash <(wget -qO- https://namingo.org/registrar-upgrade.sh)
 ```
 
 ## Versions older than v1.2.3

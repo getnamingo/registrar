@@ -79,10 +79,8 @@ Need help migrating between **FOSSBilling, WHMCS, Loom, or a custom billing plat
 Upgrade to the latest Namingo Registrar release with:
 
 ```bash
-sudo /opt/registrar/docs/upgrade.sh
+bash <(wget -qO- https://namingo.org/registrar-upgrade.sh)
 ```
-
-Existing v1.2.3 installations that do not yet have `upgrade.sh` should follow the bootstrap instructions in the **[Upgrade Guide](docs/upgrade.md)**.
 
 #### Older than v1.2.3
 
