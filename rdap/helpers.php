@@ -117,7 +117,26 @@ function rdapEmailOrContactUriProp(?string $email, array $c, string $domain): ar
 {
     if (!empty($c['minimum_data'])) {
         if (!empty($c['contact_uri'])) {
-            return ["contact-uri", new stdClass(), "uri", $c['contact_uri'].'?domain='.$domain];
+            $backend = strtolower((string)($c['backend'] ?? 'custom'));
+            $contactUri = rtrim((string)$c['contact_uri'], '/');
+
+            $contactUri .= match ($backend) {
+                'whmcs' => '/index.php?' . http_build_query([
+                    'm'      => 'namingo_registrar',
+                    'page'   => 'contact',
+                    'domain' => $domain,
+                ], '', '&', PHP_QUERY_RFC3986),
+
+                'loom', 'foss' => '/contact?' . http_build_query([
+                    'domain' => $domain,
+                ], '', '&', PHP_QUERY_RFC3986),
+
+                default => '?' . http_build_query([
+                    'domain' => $domain,
+                ], '', '&', PHP_QUERY_RFC3986),
+            };
+
+            return ["contact-uri", new stdClass(), "uri", $contactUri];
         }
 
         $registrarUrl = rtrim((string)($c['registrar_url'] ?? ''), '/');

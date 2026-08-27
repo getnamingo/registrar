@@ -56,14 +56,7 @@ function parseQuery($data) {
 function whoisContactUrl(array $c, string $domain): string
 {
     $domain = strtolower($domain);
-    $host = trim((string)($c['registrar_whois'] ?? ''));
-
-    if ($host === '') {
-        return '';
-    }
-
-    $baseUrl = 'https://' . rtrim($host, '/');
-    $backend = $c['backend'] ?? 'foss';
+    $backend = strtolower((string)($c['backend'] ?? 'foss'));
 
     $query = http_build_query(
         ['domain' => $domain],
@@ -71,6 +64,30 @@ function whoisContactUrl(array $c, string $domain): string
         '&',
         PHP_QUERY_RFC3986
     );
+
+    if (!empty($c['contact_uri'])) {
+        $baseUrl = rtrim((string)$c['contact_uri'], '/');
+
+        return match ($backend) {
+            'whmcs' => $baseUrl . '/index.php?' . http_build_query([
+                'm'      => 'namingo_registrar',
+                'page'   => 'contact',
+                'domain' => $domain,
+            ], '', '&', PHP_QUERY_RFC3986),
+
+            'loom', 'foss' => $baseUrl . '/contact?' . $query,
+
+            default => $baseUrl . '?' . $query,
+        };
+    }
+
+    $host = trim((string)($c['registrar_whois'] ?? ''));
+
+    if ($host === '') {
+        return '';
+    }
+
+    $baseUrl = 'https://' . rtrim($host, '/');
 
     return match ($backend) {
         'whmcs' => $baseUrl . '/index.php?' . http_build_query([
