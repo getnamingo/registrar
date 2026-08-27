@@ -194,8 +194,6 @@ for cmd in \
     curl \
     tar \
     gzip \
-    mariadb \
-    mariadb-dump \
     php \
     composer \
     systemctl \
@@ -441,6 +439,39 @@ DB_PASSWORD="$(php_config_value "$WHOIS_CONFIG" db_password)" \
    && -n "$DB_USER" ]] \
    || die "Incomplete database settings in $WHOIS_CONFIG."
 
+DB_CLIENT_AVAILABLE=0
+DB_DUMP_AVAILABLE=0
+
+command -v mariadb >/dev/null 2>&1 \
+    && DB_CLIENT_AVAILABLE=1
+
+command -v mariadb-dump >/dev/null 2>&1 \
+    && DB_DUMP_AVAILABLE=1
+
+if [[ "$DB_DUMP_AVAILABLE" -ne 1 ]]; then
+
+    warn \
+"MariaDB backup tools are not available on this server.
+
+The database may be hosted externally, so this upgrader cannot
+create a database backup automatically.
+
+Before continuing, create and verify a backup of:
+
+  ${DB_NAME} @ ${DB_HOST}:${DB_PORT}"
+
+    read -r -p \
+        "Database backup completed and verified? (y/N): " \
+        db_backup_confirm
+
+    [[ "$db_backup_confirm" =~ ^[Yy]$ ]] || {
+        echo "Upgrade aborted."
+        SUCCESS=1
+        exit 0
+    }
+
+fi
+
 # ---------------------------------------------------------
 # Variables available to migration scripts
 # ---------------------------------------------------------
@@ -461,17 +492,25 @@ export NAMINGO_DB_PASSWORD="$DB_PASSWORD"
 # Test database before doing anything
 # ---------------------------------------------------------
 
-log "Testing database connection"
+if [[ "$DB_CLIENT_AVAILABLE" -eq 1 ]]; then
 
-MYSQL_PWD="$DB_PASSWORD" mariadb \
-    --host="$DB_HOST" \
-    --port="$DB_PORT" \
-    --user="$DB_USER" \
-    --database="$DB_NAME" \
-    --batch \
-    --skip-column-names \
-    -e "SELECT 1;" \
-    >/dev/null
+    log "Testing database connection"
+
+    MYSQL_PWD="$DB_PASSWORD" mariadb \
+        --host="$DB_HOST" \
+        --port="$DB_PORT" \
+        --user="$DB_USER" \
+        --database="$DB_NAME" \
+        --batch \
+        --skip-column-names \
+        -e "SELECT 1;" \
+        >/dev/null
+
+else
+
+    warn "Skipping automatic database connection test."
+
+fi
 
 # ---------------------------------------------------------
 # Backups
@@ -497,17 +536,25 @@ tar -czf \
     -C / \
     opt/registrar
 
-log "Creating MariaDB backup"
+if [[ "$DB_DUMP_AVAILABLE" -eq 1 ]]; then
 
-MYSQL_PWD="$DB_PASSWORD" mariadb-dump \
-    --host="$DB_HOST" \
-    --port="$DB_PORT" \
-    --user="$DB_USER" \
-    --single-transaction \
-    --quick \
-    "$DB_NAME" \
-    | gzip \
-    > "${BACKUP_DIR}/db_${DB_NAME}_backup_${BACKUP_STAMP}.sql.gz"
+    log "Creating MariaDB backup"
+
+    MYSQL_PWD="$DB_PASSWORD" mariadb-dump \
+        --host="$DB_HOST" \
+        --port="$DB_PORT" \
+        --user="$DB_USER" \
+        --single-transaction \
+        --quick \
+        "$DB_NAME" \
+        | gzip \
+        > "${BACKUP_DIR}/db_${DB_NAME}_backup_${BACKUP_STAMP}.sql.gz"
+
+else
+
+    log "Using manually confirmed database backup"
+
+fi
 
 # ---------------------------------------------------------
 # Discover required migrations
@@ -545,6 +592,23 @@ if [[ -d "$MIGRATION_DIR" ]]; then
             -print \
         | sort -V
     )
+
+fi
+
+if [[ "$DB_CLIENT_AVAILABLE" -ne 1 ]]; then
+
+    for migration in "${MIGRATIONS[@]}"; do
+
+        if grep -Eq '(^|[[:space:]])mariadb([[:space:]\\]|$)' "$migration"; then
+
+            die \
+"Migration $(basename "$migration") requires the MariaDB client.
+
+Install the MariaDB client package on this server and run the upgrade again."
+
+        fi
+
+    done
 
 fi
 
@@ -805,5 +869,11 @@ if [[ -d /var/www ]]; then
 fi
 
 echo "  ${BACKUP_DIR}/registrar_backup_${BACKUP_STAMP}.tar.gz"
-echo "  ${BACKUP_DIR}/db_${DB_NAME}_backup_${BACKUP_STAMP}.sql.gz"
+
+if [[ "$DB_DUMP_AVAILABLE" -eq 1 ]]; then
+    echo "  ${BACKUP_DIR}/db_${DB_NAME}_backup_${BACKUP_STAMP}.sql.gz"
+else
+    echo "  Database backup: manual/external (confirmed)"
+fi
+
 echo
