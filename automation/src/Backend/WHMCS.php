@@ -215,8 +215,13 @@ final class WHMCS extends AbstractDriver
 
     public function getValidationUrl(string $token): string
     {
-        return rtrim($this->config['registrar_url'], '/')
-            . '/index.php?m=namingo_registrar&page=validation&token=' . urlencode($token);
+        $baseUrl = !empty($this->config['contact_uri'])
+            ? $this->config['contact_uri']
+            : $this->config['registrar_url'];
+
+        return rtrim($baseUrl, '/')
+            . '/index.php?m=namingo_registrar&page=validation&token='
+            . urlencode($token);
     }
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void

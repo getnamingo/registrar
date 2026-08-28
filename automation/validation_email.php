@@ -63,11 +63,15 @@ foreach ($rows as $row) {
 
     $link = $driver->getValidationUrl($token);
 
-    // Send email with validation link
-    $subject = 'Namingo Registrar Validation Link';
-    $message = "Please click the following link to validate your contact information:\n\n$link";
+    $email = render_email_template(
+        'validation_email',
+        [
+            'validation_url' => $link,
+        ],
+        $config
+    );
 
-    send_email($to, $subject, $message, $config, $log);
+    send_email($to, $email['subject'], $email['body'], $config, $log);
 
     $log->info("Validation token set and email sent for contact ID {$contact_id}");
 }

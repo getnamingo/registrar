@@ -1,0 +1,16 @@
+Subject: Expired domain notice: {{domain_name}}
+
+Dear Registrant,
+
+The domain name {{domain_name}} expired on {{expires_at}} and has not been renewed.
+
+Depending on the current registration status, renewal or restoration may still be available.
+
+Please sign in to your registrar account to review the available options:
+
+{{registrar_url}}
+
+For assistance with renewal or restoration, please contact {{support_email}}.
+
+Regards,
+Domain Registrar Team

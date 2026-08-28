@@ -111,6 +111,95 @@ function epp_client_logout($epp)
     try { $epp->logout(); } catch (\Throwable $e) {}
 }
 
+/**
+ * Load and render an automation email template.
+ *
+ * Local overrides are loaded from templates_custom first.
+ * If no override exists, the bundled template from templates is used.
+ *
+ * Template format:
+ *
+ * Subject: Example subject for {{domain_name}}
+ *
+ * Message body...
+ *
+ * Available variables use {{variable_name}} syntax.
+ */
+function render_email_template(string $name, array $variables, array $config): array
+{
+    if (!preg_match('/^[a-z0-9_-]+$/i', $name)) {
+        throw new InvalidArgumentException('Invalid email template name.');
+    }
+
+    $filename = $name . '.txt';
+    $customTemplate = __DIR__ . '/templates_custom/' . $filename;
+    $defaultTemplate = __DIR__ . '/templates/' . $filename;
+
+    $template = is_readable($customTemplate)
+        ? $customTemplate
+        : $defaultTemplate;
+
+    if (!is_readable($template)) {
+        throw new RuntimeException(
+            "Email template not found or not readable: {$filename}"
+        );
+    }
+
+    $content = file_get_contents($template);
+
+    if ($content === false) {
+        throw new RuntimeException(
+            "Unable to read email template: {$filename}"
+        );
+    }
+
+    $content = str_replace(["\r\n", "\r"], "\n", $content);
+    $lines = explode("\n", $content);
+
+    $subjectLine = array_shift($lines) ?? '';
+
+    if (!str_starts_with($subjectLine, 'Subject:')) {
+        throw new RuntimeException(
+            "Email template {$filename} must begin with 'Subject:'"
+        );
+    }
+
+    $subject = trim(substr($subjectLine, strlen('Subject:')));
+
+    if (isset($lines[0]) && trim($lines[0]) === '') {
+        array_shift($lines);
+    }
+
+    $body = rtrim(implode("\n", $lines)) . "\n";
+
+    $variables = array_merge([
+        'registrar_url' => rtrim(
+            (string)($config['registrar_url'] ?? ''),
+            '/'
+        ),
+        'support_email' => (string)(
+            $config['email']['reply-to'] ?? ''
+        ),
+        'from_email' => (string)(
+            $config['email']['from'] ?? ''
+        ),
+    ], $variables);
+
+    $replace = [];
+
+    foreach ($variables as $key => $value) {
+        $replace['{{' . $key . '}}'] =
+            is_scalar($value) || $value === null
+                ? (string)($value ?? '')
+                : '';
+    }
+
+    return [
+        'subject' => strtr($subject, $replace),
+        'body' => strtr($body, $replace),
+    ];
+}
+
 function send_email($to, $subject, $message, $config, $log) {
     $mail = new PHPMailer(true);
 
@@ -130,7 +219,8 @@ function send_email($to, $subject, $message, $config, $log) {
         $mail->addReplyTo($config['email']['reply-to']);
 
         // Content
-        $mail->isHTML(true);  // Set email format to HTML if your email content has HTML, else set to false
+        $mail->CharSet = 'UTF-8';
+        $mail->isHTML(false);
         $mail->Subject = $subject;
         $mail->Body    = $message;
 

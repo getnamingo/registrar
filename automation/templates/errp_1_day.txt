@@ -1,0 +1,17 @@
+Subject: Renewal reminder: {{domain_name}} expires tomorrow
+
+Dear Registrant,
+
+The domain name {{domain_name}} is currently scheduled to expire on {{expires_at}}.
+
+If you wish to keep the domain registered, please renew it as soon as possible.
+
+Registrar account:
+{{registrar_url}}
+
+If the domain has already been renewed, no further action is required.
+
+For assistance, please contact {{support_email}}.
+
+Regards,
+Domain Registrar Team

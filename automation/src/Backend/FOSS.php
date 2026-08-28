@@ -216,7 +216,11 @@ final class FOSS extends AbstractDriver
 
     public function getValidationUrl(string $token): string
     {
-        return rtrim($this->config['registrar_url'], '/') . '/validate?token=' . urlencode($token);
+        $baseUrl = !empty($this->config['contact_uri'])
+            ? $this->config['contact_uri']
+            : $this->config['registrar_url'];
+
+        return rtrim($baseUrl, '/') . '/validate?token=' . urlencode($token);
     }
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void

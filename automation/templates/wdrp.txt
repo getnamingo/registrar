@@ -1,0 +1,18 @@
+Subject: Domain expiration notice: {{domain_name}}
+
+Dear Registrant,
+
+This is a reminder that the domain name {{domain_name}} is currently scheduled to expire on {{expires_at}}.
+
+If you wish to keep the domain registered, please review its renewal status before the expiration date.
+
+You can access your registrar account here:
+
+{{registrar_url}}
+
+If the domain has already been renewed, no further action is required.
+
+For assistance, please contact {{support_email}}.
+
+Regards,
+Domain Registrar Team

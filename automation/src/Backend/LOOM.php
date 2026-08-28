@@ -125,7 +125,11 @@ final class LOOM extends AbstractDriver
 
     public function getValidationUrl(string $token): string
     {
-        return rtrim($this->config['registrar_url'], '/') . '/validation/' . urlencode($token);
+        $baseUrl = !empty($this->config['contact_uri'])
+            ? $this->config['contact_uri']
+            : $this->config['registrar_url'];
+
+        return rtrim($baseUrl, '/') . '/validation/' . urlencode($token);
     }
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void

@@ -1,0 +1,14 @@
+Subject: Please validate your contact information
+
+Dear Registrant,
+
+Please validate the contact information associated with your registrar account by opening the link below:
+
+{{validation_url}}
+
+If you have already completed validation, no further action is required.
+
+If you did not expect this message or need assistance, please contact us at {{support_email}}.
+
+Regards,
+Domain Registrar Team

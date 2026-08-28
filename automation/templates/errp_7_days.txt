@@ -1,0 +1,17 @@
+Subject: Renewal reminder: {{domain_name}} expires in 7 days
+
+Dear Registrant,
+
+The domain name {{domain_name}} is currently scheduled to expire on {{expires_at}}, approximately one week from now.
+
+To avoid an interruption to the domain registration, please review its renewal status as soon as possible.
+
+Registrar account:
+{{registrar_url}}
+
+If the domain has already been renewed, no further action is required.
+
+For assistance, please contact {{support_email}}.
+
+Regards,
+Domain Registrar Team

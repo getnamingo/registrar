@@ -61,16 +61,16 @@ try {
             continue;
         }
 
-        $subject = 'Contact Information Validation Reminder';
-        $message = "Dear Registrant,\n\n"
-            . "This is a reminder to validate your contact information for the domain {$domain_name}. "
-            . "Please click the following link to validate your information:\n\n"
-            . "{$link}\n\n"
-            . "If you have already validated your information, please disregard this message.\n\n"
-            . "Sincerely,\n"
-            . "The Registrar";
+        $email = render_email_template(
+            'validation_reminder',
+            [
+                'domain_name' => $domain_name,
+                'validation_url' => $link,
+            ],
+            $config
+        );
 
-        send_email($registrant_email, $subject, $message, $config, $log);
+        send_email($registrant_email, $email['subject'], $email['body'], $config, $log);
 
         $ns1 = $config['ns1'];
         $ns2 = $config['ns2'];

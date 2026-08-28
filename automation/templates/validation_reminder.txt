@@ -1,0 +1,18 @@
+Subject: Action required: validate contact information for {{domain_name}}
+
+Dear Registrant,
+
+The contact information associated with {{domain_name}} is still awaiting validation.
+
+Please complete the validation process using the link below:
+
+{{validation_url}}
+
+Until the required contact information has been validated, the domain registration may be suspended.
+
+If you have already completed validation, you may disregard this message.
+
+For assistance, please contact {{support_email}}.
+
+Regards,
+Domain Registrar Team

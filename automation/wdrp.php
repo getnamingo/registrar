@@ -38,10 +38,8 @@ try {
 
     if ($domains) {
         foreach ($domains as $domain) {
-            $subject = $config['email']['subject'];
             $to = $domain['email'];
             $domainName = $domain['domain_name'];
-            $message = sprintf($config['email']['message'], $domainName, $domain['expires_at']);
 
             // Basic email sanity
             if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -49,7 +47,22 @@ try {
                 continue;
             }
 
-            send_email($to, $subject, $message, $config, $log);
+            $email = render_email_template(
+                'wdrp',
+                [
+                    'domain_name' => $domainName,
+                    'expires_at' => $domain['expires_at'],
+                ],
+                $config
+            );
+
+            send_email(
+                $to,
+                $email['subject'],
+                $email['body'],
+                $config,
+                $log
+            );
         }
     } else {
         $log->info('no eligible domains found.');
