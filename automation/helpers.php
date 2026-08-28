@@ -330,3 +330,53 @@ function getRegistryExtensionByTld(string $tld): string
 
     return $tldMap[$tld] ?? 'namingo';
 }
+
+function rdrpArchivePath(string $domain, string $creationDate, int $year): string {
+    $safeDomain = preg_replace('/[^a-z0-9.-]/i', '_', strtolower($domain));
+
+    $id = substr(
+        hash(
+            'sha256',
+            strtolower($domain) . '|' . $creationDate
+        ),
+        0,
+        16
+    );
+
+    return sprintf('/var/lib/namingo/rdrp/%d/%s-%s.json', $year, $safeDomain, $id);
+}
+
+function archiveRdrpNotice(string $domain, string $creationDate, int $year, string $recipient, string $subject, string $body): void {
+    $path = rdrpArchivePath($domain, $creationDate, $year);
+
+    $dir = dirname($path);
+
+    if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+        throw new RuntimeException("Unable to create RDRP archive directory: {$dir}");
+    }
+
+    $data = json_encode(
+        [
+            'domain_name' => $domain,
+            'creation_date' => $creationDate,
+            'recipient' => $recipient,
+            'sent_at' => gmdate('Y-m-d\TH:i:s\Z'),
+            'subject' => $subject,
+            'body' => $body,
+        ],
+        JSON_PRETTY_PRINT
+        | JSON_UNESCAPED_SLASHES
+        | JSON_UNESCAPED_UNICODE
+    );
+
+    if (
+        $data === false
+        || file_put_contents(
+            $path,
+            $data . PHP_EOL,
+            LOCK_EX
+        ) === false
+    ) {
+        throw new RuntimeException("Unable to archive RDRP notice for {$domain}");
+    }
+}

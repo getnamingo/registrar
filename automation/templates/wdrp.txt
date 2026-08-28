@@ -1,18 +1,37 @@
-Subject: Domain expiration notice: {{domain_name}}
+Subject: Annual registration data reminder for {{domain_name}}
 
-Dear Registrant,
+This is your annual registration data reminder.
 
-This is a reminder that the domain name {{domain_name}} is currently scheduled to expire on {{expires_at}}.
+Domain Name: {{domain_name}}
+Registrar Whois Server: {{registrar_whois}}
+Registrar URL: {{registrar_url}}
+Registrar: {{registrar_name}}
+Registrar IANA ID: {{registrar_iana}}
+Registrar Abuse Contact Email: {{abuse_email}}
+Registrar Abuse Contact Phone: {{abuse_phone}}
+Domain Status(es): {{domain_statuses}}
 
-If you wish to keep the domain registered, please review its renewal status before the expiration date.
+Registrant Name: {{registrant_name}}
+Registrant Organization: {{registrant_organization}}
+Registrant Street: {{registrant_street}}
+Registrant City: {{registrant_city}}
+Registrant State/Province: {{registrant_state}}
+Registrant Postal Code: {{registrant_postal_code}}
+Registrant Country: {{registrant_country}}
+Registrant Phone: {{registrant_phone}}
+Registrant Email: {{registrant_email}}
 
-You can access your registrar account here:
+Technical Contact:
+Name: {{tech_name}}
+Phone: {{tech_phone}}
+Email: {{tech_email}}
 
-{{registrar_url}}
+Original Creation Date: {{creation_date}}
+Registrar Registration Expiration Date: {{expires_at}}
 
-If the domain has already been renewed, no further action is required.
+Name Servers: {{nameservers}}
+DNSSEC Elements: {{dnssec_elements}}
 
-For assistance, please contact {{support_email}}.
+Please review the registration data above and correct any inaccurate information.
 
-Regards,
-Domain Registrar Team
+Under the terms of your registration agreement, providing false contact information can be grounds for cancellation of your domain name registration.
