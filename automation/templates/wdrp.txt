@@ -21,11 +21,6 @@ Registrant Country: {{registrant_country}}
 Registrant Phone: {{registrant_phone}}
 Registrant Email: {{registrant_email}}
 
-Technical Contact:
-Name: {{tech_name}}
-Phone: {{tech_phone}}
-Email: {{tech_email}}
-
 Original Creation Date: {{creation_date}}
 Registrar Registration Expiration Date: {{expires_at}}
 

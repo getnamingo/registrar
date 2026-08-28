@@ -11,14 +11,143 @@ final class FOSS extends AbstractDriver
 
     public function getWdrpDomains(string $currentDate): array
     {
+        $date = new \DateTimeImmutable($currentDate);
+
+        $year = (int)$date->format('Y');
+        $month = (int)$date->format('n');
+        $day = (int)$date->format('j');
+
+        $includeFeb29 =
+            $month === 3
+            && $day === 1
+            && !checkdate(2, 29, $year);
+
         $stmt = $this->pdo->prepare("
-            SELECT CONCAT(sld, '.', tld) AS domain_name,
-                   expires_at,
-                   contact_email AS email
-            FROM service_domain
-            WHERE expires_at BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)
+            SELECT
+                sd.id AS domain_id,
+
+                CONCAT(
+                    RTRIM(sd.sld),
+                    CASE
+                        WHEN LEFT(sd.tld, 1) = '.'
+                            THEN sd.tld
+                        ELSE CONCAT('.', sd.tld)
+                    END
+                ) AS domain_name,
+
+                sd.registered_at AS creation_date,
+                sd.expires_at,
+
+                COALESCE(
+                    NULLIF(sd.contact_email, ''),
+                    c.email
+                ) AS email,
+
+                TRIM(
+                    CONCAT_WS(
+                        ' ',
+                        NULLIF(sd.contact_first_name, ''),
+                        NULLIF(sd.contact_last_name, '')
+                    )
+                ) AS registrant_name,
+
+                COALESCE(
+                    sd.contact_company,
+                    ''
+                ) AS registrant_organization,
+
+                CONCAT_WS(
+                    ', ',
+                    NULLIF(sd.contact_address1, ''),
+                    NULLIF(sd.contact_address2, '')
+                ) AS registrant_street,
+
+                COALESCE(sd.contact_city, '') AS registrant_city,
+                COALESCE(sd.contact_state, '') AS registrant_state,
+                COALESCE(sd.contact_postcode, '') AS registrant_postal_code,
+                COALESCE(UPPER(sd.contact_country), '') AS registrant_country,
+
+                CASE
+                    WHEN COALESCE(sd.contact_phone, '') = ''
+                        THEN ''
+                    WHEN COALESCE(sd.contact_phone_cc, '') = ''
+                        THEN sd.contact_phone
+                    ELSE CONCAT(
+                        '+',
+                        sd.contact_phone_cc,
+                        '.',
+                        sd.contact_phone
+                    )
+                END AS registrant_phone,
+
+                COALESCE(sd.contact_email, '') AS registrant_email,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            ds.status
+                            ORDER BY ds.status
+                            SEPARATOR ', '
+                        )
+                        FROM domain_status ds
+                        WHERE ds.domain_id = sd.id
+                    ),
+                    'ok'
+                ) AS domain_statuses,
+
+                CONCAT_WS(
+                    ', ',
+                    NULLIF(sd.ns1, ''),
+                    NULLIF(sd.ns2, ''),
+                    NULLIF(sd.ns3, ''),
+                    NULLIF(sd.ns4, '')
+                ) AS nameservers,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            CONCAT(
+                                'keyTag=', dns.key_tag,
+                                ', algorithm=', dns.algorithm,
+                                ', digestType=', dns.digest_type,
+                                ', digest=', dns.digest
+                            )
+                            ORDER BY dns.key_tag, dns.algorithm
+                            SEPARATOR '\n'
+                        )
+                        FROM domain_dnssec dns
+                        WHERE dns.domain_id = sd.id
+                    ),
+                    ''
+                ) AS dnssec_elements
+
+            FROM service_domain sd
+
+            LEFT JOIN client c
+                ON c.id = sd.client_id
+
+            WHERE YEAR(sd.registered_at) < :year
+              AND sd.expires_at >= :current_date
+              AND (
+                    (
+                        MONTH(sd.registered_at) = :month
+                        AND DAY(sd.registered_at) = :day
+                    )
+                    OR (
+                        :include_feb29 = 1
+                        AND MONTH(sd.registered_at) = 2
+                        AND DAY(sd.registered_at) = 29
+                    )
+                  )
         ");
-        $stmt->execute([':current_date' => $currentDate]);
+
+        $stmt->execute([
+            'year' => $year,
+            'month' => $month,
+            'day' => $day,
+            'current_date' => $currentDate,
+            'include_feb29' => $includeFeb29 ? 1 : 0,
+        ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

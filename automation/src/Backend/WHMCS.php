@@ -9,16 +9,119 @@ final class WHMCS extends AbstractDriver
 {
     public function getWdrpDomains(string $currentDate): array
     {
+        $date = new \DateTimeImmutable($currentDate);
+
+        $year = (int)$date->format('Y');
+        $month = (int)$date->format('n');
+        $day = (int)$date->format('j');
+
+        $includeFeb29 =
+            $month === 3
+            && $day === 1
+            && !checkdate(2, 29, $year);
+
         $stmt = $this->pdo->prepare("
-            SELECT nd.name AS domain_name,
-                   nd.exdate AS expires_at,
-                   c.email
+            SELECT
+                nd.id AS domain_id,
+                nd.name AS domain_name,
+                nd.crdate AS creation_date,
+                nd.exdate AS expires_at,
+
+                COALESCE(NULLIF(rc.email, ''), c.email) AS email,
+
+                COALESCE(rc.name, '') AS registrant_name,
+                COALESCE(rc.org, '') AS registrant_organization,
+
+                CONCAT_WS(
+                    ', ',
+                    NULLIF(rc.street1, ''),
+                    NULLIF(rc.street2, ''),
+                    NULLIF(rc.street3, '')
+                ) AS registrant_street,
+
+                COALESCE(rc.city, '') AS registrant_city,
+                COALESCE(rc.sp, '') AS registrant_state,
+                COALESCE(rc.pc, '') AS registrant_postal_code,
+                COALESCE(UPPER(rc.cc), '') AS registrant_country,
+                COALESCE(rc.voice, '') AS registrant_phone,
+                COALESCE(rc.email, '') AS registrant_email,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            ds.status
+                            ORDER BY ds.status
+                            SEPARATOR ', '
+                        )
+                        FROM namingo_domain_status ds
+                        WHERE ds.domain_id = nd.id
+                    ),
+                    'ok'
+                ) AS domain_statuses,
+
+                CONCAT_WS(
+                    ', ',
+                    NULLIF(nd.ns1, ''),
+                    NULLIF(nd.ns2, ''),
+                    NULLIF(nd.ns3, ''),
+                    NULLIF(nd.ns4, ''),
+                    NULLIF(nd.ns5, '')
+                ) AS nameservers,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            CONCAT(
+                                'keyTag=', dns.key_tag,
+                                ', algorithm=', dns.algorithm,
+                                ', digestType=', dns.digest_type,
+                                ', digest=', dns.digest
+                            )
+                            ORDER BY dns.key_tag, dns.algorithm
+                            SEPARATOR '\n'
+                        )
+                        FROM namingo_domain_dnssec dns
+                        WHERE dns.domain_id = nd.id
+                    ),
+                    ''
+                ) AS dnssec_elements
+
             FROM namingo_domain nd
-            INNER JOIN tbldomains d ON d.domain = nd.name
-            INNER JOIN tblclients c ON c.id = d.userid
-            WHERE nd.exdate BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)
+
+            LEFT JOIN namingo_contact rc
+                ON rc.id = nd.registrant
+
+            LEFT JOIN namingo_contact tc
+                ON tc.id = nd.tech
+
+            LEFT JOIN tbldomains d
+                ON d.domain = nd.name
+
+            LEFT JOIN tblclients c
+                ON c.id = d.userid
+
+            WHERE YEAR(nd.crdate) < :year
+              AND nd.exdate >= :current_date
+              AND (
+                    (
+                        MONTH(nd.crdate) = :month
+                        AND DAY(nd.crdate) = :day
+                    )
+                    OR (
+                        :include_feb29 = 1
+                        AND MONTH(nd.crdate) = 2
+                        AND DAY(nd.crdate) = 29
+                    )
+                  )
         ");
-        $stmt->execute([':current_date' => $currentDate]);
+
+        $stmt->execute([
+            'year' => $year,
+            'month' => $month,
+            'day' => $day,
+            'current_date' => $currentDate,
+            'include_feb29' => $includeFeb29 ? 1 : 0,
+        ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

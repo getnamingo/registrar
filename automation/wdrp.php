@@ -134,15 +134,6 @@ try {
                         'registrant_email' =>
                             $domain['registrant_email'] ?? $to,
 
-                        'tech_name' =>
-                            $domain['tech_name'] ?? '',
-
-                        'tech_phone' =>
-                            $domain['tech_phone'] ?? '',
-
-                        'tech_email' =>
-                            $domain['tech_email'] ?? '',
-
                         'creation_date' => $creationDate,
 
                         'expires_at' =>

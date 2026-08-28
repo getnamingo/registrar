@@ -8,16 +8,238 @@ final class LOOM extends AbstractDriver
 {
     public function getWdrpDomains(string $currentDate): array
     {
+        $date = new \DateTimeImmutable($currentDate);
+
+        $year = (int)$date->format('Y');
+        $month = (int)$date->format('n');
+        $day = (int)$date->format('j');
+
+        $includeFeb29 =
+            $month === 3
+            && $day === 1
+            && !checkdate(2, 29, $year);
+
         $stmt = $this->pdo->prepare("
-            SELECT service_name AS domain_name,
-                   expires_at,
-                   JSON_UNQUOTE(JSON_EXTRACT(config, '$.contacts.registrant.email')) AS email
-            FROM services
-            WHERE type = 'domain'
-              AND status = 'active'
-              AND expires_at BETWEEN :current_date AND DATE_ADD(:current_date, INTERVAL 30 DAY)
+            SELECT
+                s.id AS domain_id,
+                s.service_name AS domain_name,
+                s.registered_at AS creation_date,
+                s.expires_at,
+
+                COALESCE(
+                    NULLIF(
+                        JSON_UNQUOTE(
+                            JSON_EXTRACT(
+                                s.config,
+                                '$.contacts.registrant.email'
+                            )
+                        ),
+                        ''
+                    ),
+                    uc.email,
+                    u.email
+                ) AS email,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.name'
+                        )
+                    ),
+                    ''
+                ) AS registrant_name,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.org'
+                        )
+                    ),
+                    ''
+                ) AS registrant_organization,
+
+                CONCAT_WS(
+                    ', ',
+                    NULLIF(
+                        JSON_UNQUOTE(
+                            JSON_EXTRACT(
+                                s.config,
+                                '$.contacts.registrant.street1'
+                            )
+                        ),
+                        ''
+                    ),
+                    NULLIF(
+                        JSON_UNQUOTE(
+                            JSON_EXTRACT(
+                                s.config,
+                                '$.contacts.registrant.street2'
+                            )
+                        ),
+                        ''
+                    )
+                ) AS registrant_street,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.city'
+                        )
+                    ),
+                    ''
+                ) AS registrant_city,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.sp'
+                        )
+                    ),
+                    ''
+                ) AS registrant_state,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.pc'
+                        )
+                    ),
+                    ''
+                ) AS registrant_postal_code,
+
+                COALESCE(
+                    UPPER(
+                        JSON_UNQUOTE(
+                            JSON_EXTRACT(
+                                s.config,
+                                '$.contacts.registrant.cc'
+                            )
+                        )
+                    ),
+                    ''
+                ) AS registrant_country,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.voice'
+                        )
+                    ),
+                    ''
+                ) AS registrant_phone,
+
+                COALESCE(
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(
+                            s.config,
+                            '$.contacts.registrant.email'
+                        )
+                    ),
+                    ''
+                ) AS registrant_email,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            j.status
+                            ORDER BY j.ord
+                            SEPARATOR ', '
+                        )
+                        FROM JSON_TABLE(
+                            COALESCE(s.config, '{}'),
+                            '$.status[*]'
+                            COLUMNS (
+                                ord FOR ORDINALITY,
+                                status VARCHAR(64) PATH '$'
+                            )
+                        ) AS j
+                    ),
+                    'ok'
+                ) AS domain_statuses,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            j.nameserver
+                            ORDER BY j.ord
+                            SEPARATOR ', '
+                        )
+                        FROM JSON_TABLE(
+                            COALESCE(s.config, '{}'),
+                            '$.nameservers[*]'
+                            COLUMNS (
+                                ord FOR ORDINALITY,
+                                nameserver VARCHAR(255) PATH '$'
+                            )
+                        ) AS j
+                    ),
+                    ''
+                ) AS nameservers,
+
+                COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(
+                            CONCAT(
+                                'keyTag=', j.keytag,
+                                ', algorithm=', j.algorithm,
+                                ', digestType=', j.digesttype,
+                                ', digest=', j.digest
+                            )
+                            ORDER BY j.ord
+                            SEPARATOR '\n'
+                        )
+                        FROM JSON_TABLE(
+                            COALESCE(s.config, '{}'),
+                            '$.dnssec.ds_records[*]'
+                            COLUMNS (
+                                ord FOR ORDINALITY,
+                                keytag VARCHAR(32) PATH '$.keytag',
+                                algorithm VARCHAR(32) PATH '$.alg',
+                                digesttype VARCHAR(32) PATH '$.digesttype',
+                                digest TEXT PATH '$.digest'
+                            )
+                        ) AS j
+                    ),
+                    ''
+                ) AS dnssec_elements
+
+            FROM services s
+
+            LEFT JOIN users u
+                ON u.id = s.user_id
+
+            LEFT JOIN users_contact uc
+                ON uc.user_id = s.user_id
+               AND uc.type = 'owner'
+
+            WHERE s.type = 'domain'
+              AND s.status = 'active'
+              AND YEAR(s.registered_at) < :year
+              AND (
+                    (
+                        MONTH(s.registered_at) = :month
+                        AND DAY(s.registered_at) = :day
+                    )
+                    OR (
+                        :include_feb29 = 1
+                        AND MONTH(s.registered_at) = 2
+                        AND DAY(s.registered_at) = 29
+                    )
+                  )
         ");
-        $stmt->execute([':current_date' => $currentDate]);
+
+        $stmt->execute([
+            'year' => $year,
+            'month' => $month,
+            'day' => $day,
+            'include_feb29' => $includeFeb29 ? 1 : 0,
+        ]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
