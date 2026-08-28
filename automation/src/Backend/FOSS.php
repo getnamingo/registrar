@@ -285,20 +285,17 @@ final class FOSS extends AbstractDriver
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$row) {
-                $this->log->error("Registrar not found: {$registrar}");
-                exit(1);
+                throw new \RuntimeException("Registrar not found: {$registrar}");
             }
 
             $config = json_decode($row['config'] ?? '', true);
             if (!is_array($config)) {
                 $err = json_last_error_msg();
-                $this->log->error("Registrar config is empty/invalid JSON ({$err})");
-                exit(1);
+                throw new \RuntimeException("Registrar config is empty/invalid JSON ({$err})");
             }
 
             if (empty($config)) {
-                $this->log->error("Registrar config is empty: {$registrar}");
-                exit(1);
+                throw new \RuntimeException("Registrar config is empty: {$registrar}");
             }
 
             return [
@@ -307,12 +304,9 @@ final class FOSS extends AbstractDriver
                 'registrar_id' => (int)$row['id'],
                 'config' => $config,
             ];
-        } catch (\PDOException $e) {
-            $this->log->error('Database connection error: ' . $e->getMessage());
-            exit(1);
-        } catch (\Exception $e) {
-            $this->log->error('General error: ' . $e->getMessage());
-            exit(1);
+        } catch (\Throwable $e) {
+            $this->log->error('FOSSBilling registrar config error: ' . $e->getMessage());
+            throw $e;
         }
     }
 

@@ -10,8 +10,6 @@
 declare(strict_types=1);
 
 use Registrar\Backend\DriverFactory;
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 date_default_timezone_set('UTC');
 
@@ -44,22 +42,29 @@ try {
     exit(1);
 }
 
-// Loop through domains and send reminder email and EPP command to update nameservers
-try {
-    foreach ($rows as $row) {
-        if ((int)$row['validation'] !== 0) {
+// Loop through domains and send reminder email and EPP commands.
+foreach ($rows as $row) {
+    $domain_name = trim((string)($row['domain_name'] ?? ''));
+
+    if ($domain_name === '') {
+        $log->warning('Skipping validation row: missing domain name.');
+        continue;
+    }
+
+    try {
+        if ((int)($row['validation'] ?? 0) !== 0) {
             continue;
         }
 
-        $domain_name = $row['domain_name'];
-        $registrant_email = $row['registrant_email'] ?? null;
+        $registrant_email = trim((string)($row['registrant_email'] ?? ''));
+
+        if ($registrant_email === '' || !filter_var($registrant_email, FILTER_VALIDATE_EMAIL)) {
+            $log->warning("Skipping validation reminder for {$domain_name}: invalid or missing registrant email.");
+            continue;
+        }
+
         $token = $driver->getOrCreateValidationToken($row);
         $link = $driver->getValidationUrl($token);
-
-        if (empty($registrant_email)) {
-            $log->warning("Skipping validation reminder for {$domain_name}: missing registrant email.");
-            continue;
-        }
 
         $email = render_email_template(
             'validation_reminder',
@@ -70,33 +75,21 @@ try {
             $config
         );
 
-        send_email($registrant_email, $email['subject'], $email['body'], $config, $log);
-
-        $ns1 = $config['ns1'];
-        $ns2 = $config['ns2'];
-
-        $driver->updateValidationNameservers($row, $ns1, $ns2);
-        $driver->updateValidationStatus($row);
+        if (!send_email($registrant_email, $email['subject'], $email['body'], $config, $log)) {
+            $log->error("Validation reminder delivery failed for {$domain_name}.");
+            continue;
+        }
 
         $eppConfig = $driver->getEppConfiguration($domain_name);
 
+        $epp = null;
+
         try {
             $epp = epp_client($eppConfig);
+
             $domainPuny = function_exists('idn_to_ascii')
                 ? (idn_to_ascii($domain_name, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain_name)
                 : $domain_name;
-
-            $domainUpdateNS = $epp->domainUpdateNS([
-                'domainname' => $domainPuny,
-                'ns1' => $ns1,
-                'ns2' => $ns2,
-            ]);
-
-            if (array_key_exists('error', $domainUpdateNS)) {
-                $log->error($domainUpdateNS['error'] . ' (' . $domain_name . ')');
-            } else {
-                $log->info("Validation cron nameserver update completed for {$domain_name}.");
-            }
 
             $domainUpdateStatus = $epp->domainUpdateStatus([
                 'domainname' => $domainPuny,
@@ -108,25 +101,31 @@ try {
                 $log->error($domainUpdateStatus['error'] . ' (' . $domain_name . ')');
             } else {
                 $log->info("Validation cron clientHold update completed for {$domain_name}.");
+                $driver->updateValidationStatus($row);
             }
-        } catch(EppException $e) {
-            $log->error('Error: ' . $e->getMessage());
-            exit(1);
+
+            $domainTransferStatus = $epp->domainUpdateStatus([
+                'domainname' => $domainPuny,
+                'command' => 'add',
+                'status' => 'clientTransferProhibited',
+            ]);
+
+            if (array_key_exists('error', $domainTransferStatus)) {
+                $log->error($domainTransferStatus['error'] . ' (' . $domain_name . ')');
+            } else {
+                $log->info("Validation cron clientTransferProhibited update completed for {$domain_name}.");
+            }
         } finally {
-            epp_client_logout($epp);
+            if ($epp !== null) {
+                epp_client_logout($epp);
+            }
         }
 
         $driver->markValidationReminderSent($row, $domainUpdateStatus);
+    } catch (Throwable $e) {
+        $log->error("Validation processing failed for {$domain_name}: " . $e->getMessage());
+        continue;
     }
-} catch (PDOException $e) {
-    $log->error('Database error: ' . $e->getMessage());
-    exit(1);
-} catch (Exception $e) {
-    $log->error('Error: ' . $e->getMessage());
-    exit(1);
-} catch (Throwable $e) {
-    $log->error('Error: ' . $e->getMessage());
-    exit(1);
 }
 
 $log->info('job completed.');

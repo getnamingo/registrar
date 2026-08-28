@@ -134,44 +134,35 @@ final class LOOM extends AbstractDriver
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void
     {
-        $config = json_decode($row['config'] ?? '', true);
-        if (!is_array($config)) {
-            $config = [];
-        }
-
-        $config['nameservers'] = array_values(array_filter([
-            trim($ns1),
-            trim($ns2),
-        ]));
-
         $stmt = $this->pdo->prepare("
             UPDATE services
-            SET config = :config
+            SET config = JSON_SET(
+                COALESCE(config, JSON_OBJECT()),
+                '$.nameservers',
+                JSON_ARRAY(:ns1, :ns2)
+            )
             WHERE id = :id
         ");
         $stmt->execute([
-            'config' => json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            'ns1' => trim($ns1),
+            'ns2' => trim($ns2),
             'id' => $row['id'],
         ]);
     }
 
     public function updateValidationStatus(array $row): void
     {
-        $config = json_decode($row['config'] ?? '', true);
-        if (!is_array($config)) {
-            $config = [];
-        }
-
-        $config['status'] = ['1' => 'clientHold'];
-
         $stmt = $this->pdo->prepare("
             UPDATE services
-            SET config = :config,
+            SET config = JSON_SET(
+                    COALESCE(config, JSON_OBJECT()),
+                    '$.status',
+                    JSON_ARRAY('clientHold')
+                ),
                 updated_at = NOW()
             WHERE id = :id
         ");
         $stmt->execute([
-            'config' => json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
             'id' => $row['id'],
         ]);
     }
@@ -213,21 +204,18 @@ final class LOOM extends AbstractDriver
 
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
-                $this->log->error("LOOM provider not found for TLD: {$tldKey}");
-                exit(1);
+                throw new \RuntimeException("LOOM provider not found for TLD: {$tldKey}");
             }
 
             $credentials = json_decode($row['credentials'] ?? '', true);
             if (!is_array($credentials)) {
                 $err = json_last_error_msg();
-                $this->log->error("LOOM provider credentials are empty/invalid JSON ({$err})");
-                exit(1);
+                throw new \RuntimeException("LOOM provider credentials are empty/invalid JSON ({$err})");
             }
 
             $endpoint = trim($row['api_endpoint'] ?? '');
             if ($endpoint === '') {
-                $this->log->error("LOOM provider API endpoint is empty for TLD: {$tldKey}");
-                exit(1);
+                throw new \RuntimeException("LOOM provider API endpoint is empty for TLD: {$tldKey}");
             }
 
             if (!str_contains($endpoint, '://')) {
@@ -239,8 +227,7 @@ final class LOOM extends AbstractDriver
             $port = (int)($parts['port'] ?? 700);
 
             if ($host === '') {
-                $this->log->error("LOOM provider API endpoint is invalid: {$row['api_endpoint']}");
-                exit(1);
+                throw new \RuntimeException("LOOM provider API endpoint is invalid: {$row['api_endpoint']}");
             }
 
             $config = [
@@ -266,7 +253,7 @@ final class LOOM extends AbstractDriver
             ];
         } catch (\Throwable $e) {
             $this->log->error('LOOM provider config error: ' . $e->getMessage());
-            exit(1);
+            throw $e;
         }
     }
 

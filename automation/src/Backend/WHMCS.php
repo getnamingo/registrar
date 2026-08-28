@@ -268,8 +268,7 @@ final class WHMCS extends AbstractDriver
                 ->pluck('value', 'setting');
 
             if ($rows->isEmpty()) {
-                $this->log->error("Registrar not found or not configured in WHMCS: {$registrar}");
-                exit(1);
+                throw new \RuntimeException("Registrar not found or not configured in WHMCS: {$registrar}");
             }
 
             $config = [];
@@ -278,8 +277,7 @@ final class WHMCS extends AbstractDriver
             }
 
             if (empty($config)) {
-                $this->log->error("Registrar config is empty for WHMCS registrar: {$registrar}");
-                exit(1);
+                throw new \RuntimeException("Registrar config is empty for WHMCS registrar: {$registrar}");
             }
 
             $hostname = $config['host'] ?? null;
@@ -288,8 +286,7 @@ final class WHMCS extends AbstractDriver
             $password = $config['pw'] ?? null;
 
             if (empty($hostname) || empty($username) || empty($password)) {
-                $this->log->error('WHMCS EPP registrar config missing hostname, username, or password.');
-                exit(1);
+                throw new \RuntimeException('WHMCS EPP registrar config missing hostname, username, or password.');
             }
 
             return [
@@ -304,7 +301,7 @@ final class WHMCS extends AbstractDriver
             ];
         } catch (Throwable $e) {
             $this->log->error('WHMCS registrar config error: ' . $e->getMessage());
-            exit(1);
+            throw $e;
         }
     }
 

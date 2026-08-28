@@ -10,8 +10,6 @@
 declare(strict_types=1);
 
 use Registrar\Backend\DriverFactory;
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 date_default_timezone_set('UTC');
 
@@ -48,32 +46,50 @@ foreach ($rows as $row) {
         continue;
     }
 
-    // Generate validation token
-    $token = bin2hex(random_bytes(16));
-
     try {
+        // Generate validation token
+        $token = bin2hex(random_bytes(32));
+
+        $db->beginTransaction();
+
         if (!$driver->storeValidationEmailToken($row, $token)) {
+            $db->rollBack();
+
             $log->warning("Skipping contact {$contact_id}: validation token was not stored.");
             continue;
         }
+
+        $link = $driver->getValidationUrl($token);
+
+        $email = render_email_template(
+            'validation_email',
+            [
+                'validation_url' => $link,
+            ],
+            $config
+        );
+
+        if (!send_email($to, $email['subject'], $email['body'], $config, $log)) {
+            $db->rollBack();
+
+            $log->error(
+                "Validation email delivery failed for contact ID {$contact_id}."
+            );
+            continue;
+        }
+
+        $db->commit();
+
+        $log->info("Validation token set and email sent for contact ID {$contact_id}.");
     } catch (Throwable $e) {
-        $log->error("Unable to store validation token for contact {$contact_id}: " . $e->getMessage());
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+
+        $log->error("Validation email failed for contact {$contact_id}: " . $e->getMessage());
+
         continue;
     }
-
-    $link = $driver->getValidationUrl($token);
-
-    $email = render_email_template(
-        'validation_email',
-        [
-            'validation_url' => $link,
-        ],
-        $config
-    );
-
-    send_email($to, $email['subject'], $email['body'], $config, $log);
-
-    $log->info("Validation token set and email sent for contact ID {$contact_id}");
 }
 
 $log->info('job completed.');
