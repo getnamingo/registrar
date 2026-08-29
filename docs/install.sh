@@ -2,6 +2,16 @@
 
 set -euo pipefail
 
+# Optional environment variables for unattended FOSSBilling provisioning:
+#   NAMINGO_BILLING_SYSTEM      fossbilling
+#   NAMINGO_DOMAIN
+#   NAMINGO_DNS_READY           yes|no
+#   NAMINGO_INSTALL_WHOIS       yes|no
+#   NAMINGO_PANEL_EMAIL
+#   NAMINGO_PANEL_PASSWORD
+#   NAMINGO_SSH_PORT            default: 22
+#   NAMINGO_CONFIGURE_FIREWALL  yes|no (default: yes)
+
 # ---------- Helpers ----------
 log() { printf "\n\033[1;32m[%s]\033[0m %s\n" "$(date +%H:%M:%S)" "$*"; }
 warn() { printf "\n\033[1;33m[WARN]\033[0m %s\n" "$*"; }
@@ -235,6 +245,18 @@ show_install_summary() {
 }
 
 configure_firewall() {
+  local ssh_port="${1:-22}"
+  local configure="${2:-yes}"
+
+  case "${configure,,}" in
+    y|yes) ;;
+    n|no) warn "Firewall configuration skipped."; return ;;
+    *) die "Invalid NAMINGO_CONFIGURE_FIREWALL value. Use yes or no." ;;
+  esac
+
+  [[ "$ssh_port" =~ ^[0-9]+$ ]] && (( ssh_port >= 1 && ssh_port <= 65535 )) \
+    || die "Invalid NAMINGO_SSH_PORT value: $ssh_port"
+
   log "Configuring firewall"
 
   command -v ufw >/dev/null 2>&1 || die "UFW is not installed."
@@ -245,7 +267,7 @@ configure_firewall() {
   ufw logging low >/dev/null
 
   # Management and web services.
-  ufw allow 22/tcp >/dev/null
+  ufw allow "${ssh_port}/tcp" >/dev/null
   ufw allow 80/tcp >/dev/null
   ufw allow 443/tcp >/dev/null
 
@@ -563,7 +585,13 @@ fi
 echo "  c) Cancel"
 echo
 
-if [[ "$ALPHA_FEATURES" -eq 1 ]]; then
+choice="${NAMINGO_BILLING_SYSTEM:-}"
+if [[ -n "$choice" ]]; then
+  case "${choice,,}" in
+    1|foss|fossbilling) choice=1 ;;
+    *) die "NAMINGO_BILLING_SYSTEM supports only fossbilling for unattended installation." ;;
+  esac
+elif [[ "$ALPHA_FEATURES" -eq 1 ]]; then
   read -rp "Enter your choice [1/2/3/4/c]: " choice
 else
   read -rp "Enter your choice [1/2/3/c]: " choice
@@ -580,18 +608,26 @@ echo "2. WHOIS service domain, for example: whois.example.com"
 echo "3. RDAP service domain, for example: rdap.example.com"
 
 echo
-read -p "Do these domains already point to this server? (Y/N): " continue_install
+continue_install="${NAMINGO_DNS_READY:-}"
+[[ -n "$continue_install" ]] || read -p "Do these domains already point to this server? (Y/N): " continue_install
+case "${continue_install,,}" in
+    y|yes) ;;
+    n|no) die "Installation aborted. Please update DNS first, then run the installer again." ;;
+    *) die "Invalid NAMINGO_DNS_READY value. Use yes or no." ;;
+esac
 
-if [[ "$continue_install" != "Y" && "$continue_install" != "y" ]]; then
-    echo "Installation aborted. Please update DNS first, then run the installer again."
-    exit 1
-fi
-
-read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
+panel_domain_name="${NAMINGO_DOMAIN:-}"
+[[ -n "$panel_domain_name" ]] || read -p "Enter the domain where the system will be installed (e.g., example.com or cp.example.com): " panel_domain_name
 
 parse_domain panel_domain_name
 
-read -p "Install RDAP and WHOIS services (gTLD registrar mode)? (Y/N): " install_rdap_whois
+install_rdap_whois="${NAMINGO_INSTALL_WHOIS:-}"
+[[ -n "$install_rdap_whois" ]] || read -p "Install RDAP and WHOIS services (gTLD registrar mode)? (Y/N): " install_rdap_whois
+case "${install_rdap_whois,,}" in
+    y|yes) install_rdap_whois="Y" ;;
+    n|no) install_rdap_whois="N" ;;
+    *) die "Invalid NAMINGO_INSTALL_WHOIS value. Use yes or no." ;;
+esac
 
 echo
 echo "=================================================="
@@ -599,8 +635,13 @@ echo " Namingo Registrar Admin Account"
 echo "=================================================="
 echo
 
-read -p "Enter registrar admin email: " email
-prompt_password_confirm password
+email="${NAMINGO_PANEL_EMAIL:-}"
+[[ -n "$email" ]] || read -p "Enter registrar admin email: " email
+[[ -n "$email" ]] || die "Registrar admin email cannot be empty."
+
+password="${NAMINGO_PANEL_PASSWORD:-}"
+[[ -n "$password" ]] || prompt_password_confirm password
+[[ -n "$password" ]] || die "Registrar admin password cannot be empty."
 
 db_user="$(generate_db_username)"
 db_pass="$(generate_password)"
@@ -609,7 +650,7 @@ db_pass="$(generate_password)"
 apt update -y
 apt install -y ufw bzip2 ca-certificates curl git gnupg lsb-release openssl net-tools unzip wget whois
 install_php_repo
-configure_firewall
+configure_firewall "${NAMINGO_SSH_PORT:-22}" "${NAMINGO_CONFIGURE_FIREWALL:-yes}"
 
 mkdir -p /etc/apt/keyrings
 curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
