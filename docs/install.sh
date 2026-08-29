@@ -473,8 +473,7 @@ install_rdap_and_whois_services() {
     rm escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
 
     if [ "$panel" = "foss" ]; then
-        # Clone and move FOSSBilling modules
-        cd /opt
+        cd /tmp
         git clone https://github.com/getnamingo/fossbilling-validation
         mv fossbilling-validation/Validation /var/www/modules/
 
@@ -497,6 +496,7 @@ install_rdap_and_whois_services() {
         git clone https://github.com/getnamingo/fossbilling-contact-validation
         mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
     elif [ "$panel" = "whmcs" ]; then
+        cd /tmp
         git clone https://github.com/getnamingo/whmcs-namingo-registrar
         mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
         chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
@@ -1223,7 +1223,8 @@ echo "3. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "4. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate the Namingo Registrar extension."
+    echo "4. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate:"
+    echo "   Namingo Registrar and WHMCS Contact Validation."
     echo
     echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
@@ -1254,7 +1255,7 @@ echo "Namingo Registrar is ready for final configuration."
                     echo "Please install Namingo Registrar manually by following:"
                     echo "  install-whmcs.md"
                     echo
-                    echo "For WHMCS 9.0.6 already installed on a VPS/server with root access,"
+                    echo "For WHMCS 9.0.7 already installed on a VPS/server with root access,"
                     echo "review Section 1.3, Section 4.1, and Section 9 onwards."
                     echo
                     echo "Note: Shared hosting is not supported."
