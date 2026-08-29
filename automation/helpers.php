@@ -177,6 +177,9 @@ function render_email_template(string $name, array $variables, array $config): a
             (string)($config['registrar_url'] ?? ''),
             '/'
         ),
+        'registrar_name' => (string)(
+            $config['registrar_name'] ?? ''
+        ),
         'support_email' => (string)(
             $config['email']['reply-to'] ?? ''
         ),
@@ -261,7 +264,7 @@ function send_email($to, $subject, $message, $config, $log, $htmlMessage = null)
         $mail->Port = $config['email']['smtp']['port'];
 
         // Recipients
-        $mail->setFrom($config['email']['from']);
+        $mail->setFrom($config['email']['from'], $config['registrar_name']);
         $mail->addAddress($to);
         $mail->addReplyTo($config['email']['reply-to']);
 
