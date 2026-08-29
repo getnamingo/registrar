@@ -132,12 +132,19 @@ final class WHMCS extends AbstractDriver
             $stmt = $this->pdo->prepare("
                 SELECT
                     ncv.id AS validation_id,
-                    tc.id AS contact_id,
+                    ncv.contact_id,
+                    CASE
+                        WHEN ncv.contact_id > 0 THEN tct.email
+                        ELSE tc.email
+                    END AS email,
                     tc.email,
                     ncv.validation_token AS token,
                     0 AS is_legacy
                 FROM namingo_contact_validation ncv
                 JOIN tblclients tc ON tc.id = ncv.client_id
+                LEFT JOIN tblcontacts tct
+                    ON tct.id = ncv.contact_id
+                   AND tct.userid = ncv.client_id
                 WHERE ncv.is_validated = 0
                   AND ncv.validation_token IS NULL
             ");
@@ -198,16 +205,33 @@ final class WHMCS extends AbstractDriver
             $stmt = $this->pdo->prepare("
                 INSERT IGNORE INTO namingo_contact_validation (
                     client_id,
+                    contact_id,
                     is_validated,
                     validation_checked_at
                 )
                 SELECT DISTINCT
                     td.userid,
+                    CASE
+                        WHEN o.contactid > 0 AND tct.id IS NOT NULL
+                            THEN tct.id
+                        ELSE 0
+                    END,
                     0,
                     CURRENT_TIMESTAMP(3)
                 FROM tbldomains td
                 JOIN tblclients tc ON tc.id = td.userid
-                LEFT JOIN namingo_contact_validation ncv ON ncv.client_id = tc.id
+                LEFT JOIN tblorders o
+                    ON o.id = td.orderid
+                LEFT JOIN tblcontacts tct
+                    ON tct.id = o.contactid
+                   AND tct.userid = td.userid
+                LEFT JOIN namingo_contact_validation ncv
+                    ON ncv.client_id = td.userid
+                   AND ncv.contact_id = CASE
+                        WHEN o.contactid > 0 AND tct.id IS NOT NULL
+                            THEN tct.id
+                        ELSE 0
+                    END
                 WHERE td.registrationdate IS NOT NULL
                   AND td.registrationdate <> '0000-00-00'
                   AND ncv.id IS NULL
@@ -218,9 +242,13 @@ final class WHMCS extends AbstractDriver
                 SELECT
                     td.id AS id,
                     td.domain AS name,
-                    tc.id AS cid,
-                    tc.id AS registrant,
-                    tc.email,
+                    ncv.client_id AS cid,
+                    ncv.client_id AS registrant,
+                    ncv.contact_id,
+                    CASE
+                        WHEN ncv.contact_id > 0 THEN tct.email
+                        ELSE tc.email
+                    END AS email,
                     ncv.id AS validation_id,
                     ncv.is_validated AS validation,
                     ncv.validation_checked_at AS validation_stamp,
@@ -229,14 +257,37 @@ final class WHMCS extends AbstractDriver
                     ncv.validation_log
                 FROM namingo_contact_validation ncv
                 JOIN tblclients tc ON tc.id = ncv.client_id
+                LEFT JOIN tblcontacts tct
+                    ON tct.id = ncv.contact_id
+                   AND tct.userid = ncv.client_id
                 JOIN (
-                    SELECT userid, MIN(id) AS domain_id
-                    FROM tbldomains
-                    WHERE registrationdate IS NOT NULL
-                      AND registrationdate <> '0000-00-00'
-                      AND registrationdate < :registered_at
-                    GROUP BY userid
-                ) eligible_domain ON eligible_domain.userid = tc.id
+                    SELECT
+                        d.userid,
+                        CASE
+                            WHEN o.contactid > 0 AND oct.id IS NOT NULL
+                                THEN oct.id
+                            ELSE 0
+                        END AS contact_id,
+                        MIN(d.id) AS domain_id
+                    FROM tbldomains d
+                    LEFT JOIN tblorders o
+                        ON o.id = d.orderid
+                    LEFT JOIN tblcontacts oct
+                        ON oct.id = o.contactid
+                       AND oct.userid = d.userid
+                    WHERE d.registrationdate IS NOT NULL
+                      AND d.registrationdate <> '0000-00-00'
+                      AND d.registrationdate < :registered_at
+                    GROUP BY
+                        d.userid,
+                        CASE
+                            WHEN o.contactid > 0 AND oct.id IS NOT NULL
+                                THEN oct.id
+                            ELSE 0
+                        END
+                ) eligible_domain
+                    ON eligible_domain.userid = ncv.client_id
+                   AND eligible_domain.contact_id = ncv.contact_id
                 JOIN tbldomains td ON td.id = eligible_domain.domain_id
                 WHERE ncv.is_validated = 0
             ");
