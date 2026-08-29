@@ -75,7 +75,7 @@ foreach ($rows as $row) {
             $config
         );
 
-        if (!send_email($registrant_email, $email['subject'], $email['body'], $config, $log)) {
+        if (!send_email($registrant_email, $email['subject'], $email['body'], $config, $log, $email['html'])) {
             $log->error("Validation reminder delivery failed for {$domain_name}.");
             continue;
         }

@@ -194,13 +194,60 @@ function render_email_template(string $name, array $variables, array $config): a
                 : '';
     }
 
+    $html = null;
+
+    $customHtml = __DIR__ . '/templates_custom/' . $name . '.html';
+    $defaultHtml = __DIR__ . '/templates/' . $name . '.html';
+
+    /*
+     * Preserve existing custom text-only installations:
+     *
+     * - custom HTML exists -> use it
+     * - custom TXT exists without custom HTML -> remain text-only
+     * - otherwise use bundled HTML if available
+     */
+    $htmlTemplate = null;
+
+    if (is_readable($customHtml)) {
+        $htmlTemplate = $customHtml;
+    } elseif (!is_readable($customTemplate) && is_readable($defaultHtml)) {
+        $htmlTemplate = $defaultHtml;
+    }
+
+    if ($htmlTemplate !== null) {
+        $htmlContent = file_get_contents($htmlTemplate);
+
+        if ($htmlContent === false) {
+            throw new RuntimeException(
+                "Unable to read HTML email template: {$name}.html"
+            );
+        }
+
+        $htmlReplace = [];
+
+        foreach ($variables as $key => $value) {
+            $value = is_scalar($value) || $value === null
+                ? (string)($value ?? '')
+                : '';
+
+            $htmlReplace['{{' . $key . '}}'] = htmlspecialchars(
+                $value,
+                ENT_QUOTES | ENT_SUBSTITUTE,
+                'UTF-8'
+            );
+        }
+
+        $html = strtr($htmlContent, $htmlReplace);
+    }
+
     return [
         'subject' => strtr($subject, $replace),
         'body' => strtr($body, $replace),
+        'html' => $html,
     ];
 }
 
-function send_email($to, $subject, $message, $config, $log) {
+function send_email($to, $subject, $message, $config, $log, $htmlMessage = null) {
     $mail = new PHPMailer(true);
 
     try {
@@ -220,9 +267,16 @@ function send_email($to, $subject, $message, $config, $log) {
 
         // Content
         $mail->CharSet = 'UTF-8';
-        $mail->isHTML(false);
         $mail->Subject = $subject;
-        $mail->Body    = $message;
+
+        if (is_string($htmlMessage) && trim($htmlMessage) !== '') {
+            $mail->isHTML(true);
+            $mail->Body = $htmlMessage;
+            $mail->AltBody = $message;
+        } else {
+            $mail->isHTML(false);
+            $mail->Body = $message;
+        }
 
         $mail->send();
 

@@ -56,7 +56,7 @@ function sendRenewalReminderEmail($to_email, $domainName, $expiresAt, $days_unti
         $config
     );
 
-    if (send_email($to_email, $email['subject'], $email['body'], $config, $log)) {
+    if (send_email($to_email, $email['subject'], $email['body'], $config, $log, $email['html'])) {
         $log->info("ERRP notice sent for domain $domainName.");
     } else {
         $log->error("ERRP notice delivery failed for domain $domainName.");

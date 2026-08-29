@@ -69,7 +69,7 @@ foreach ($rows as $row) {
             $config
         );
 
-        if (!send_email($to, $email['subject'], $email['body'], $config, $log)) {
+        if (!send_email($to, $email['subject'], $email['body'], $config, $log, $email['html'])) {
             $db->rollBack();
 
             $log->error(

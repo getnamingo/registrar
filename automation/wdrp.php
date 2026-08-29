@@ -148,13 +148,7 @@ try {
                     $config
                 );
 
-                if (!send_email(
-                    $to,
-                    $email['subject'],
-                    $email['body'],
-                    $config,
-                    $log
-                )) {
+                if (!send_email($to, $email['subject'], $email['body'], $config, $log, $email['html'])) {
                     $log->error("RDRP delivery failed for {$domainName}.");
                     continue;
                 }
