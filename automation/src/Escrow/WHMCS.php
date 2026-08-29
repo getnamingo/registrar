@@ -189,10 +189,26 @@ class WHMCS implements EscrowInterface {
             // If registrant still not found, fallback to WHMCS
             if (empty($contacts[$domain['registrant']])) {
                 $stmt = $this->pdo->prepare("
-                    SELECT CONCAT(TRIM(tc.firstname), ' ', TRIM(tc.lastname)) AS name, tc.address1 AS street1, tc.city, tc.state AS sp,
-                           tc.postcode AS pc, tc.country AS cc, tc.phonenumber AS voice, tc.email
+                    SELECT
+                        CASE
+                            WHEN tct.id IS NOT NULL
+                                THEN CONCAT(TRIM(tct.firstname), ' ', TRIM(tct.lastname))
+                            ELSE CONCAT(TRIM(tc.firstname), ' ', TRIM(tc.lastname))
+                        END AS name,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.address1 ELSE tc.address1 END AS street1,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.city ELSE tc.city END AS city,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.state ELSE tc.state END AS sp,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.postcode ELSE tc.postcode END AS pc,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.country ELSE tc.country END AS cc,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.phonenumber ELSE tc.phonenumber END AS voice,
+                        CASE WHEN tct.id IS NOT NULL THEN tct.email ELSE tc.email END AS email
                     FROM tbldomains td
                     JOIN tblclients tc ON tc.id = td.userid
+                    LEFT JOIN tblorders o
+                        ON o.id = td.orderid
+                    LEFT JOIN tblcontacts tct
+                        ON tct.id = o.contactid
+                       AND tct.userid = td.userid
                     WHERE td.domain = ?
                     ORDER BY td.id DESC LIMIT 1
                 ");

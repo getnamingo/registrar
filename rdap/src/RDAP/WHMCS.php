@@ -54,18 +54,25 @@ class WHMCS implements RdapInterface
             return [];
         }
 
-        $stmt = $pdo->prepare("SELECT userid FROM tbldomains WHERE domain = :domain LIMIT 1");
+        $stmt = $pdo->prepare("
+            SELECT
+                CASE
+                    WHEN tct.id IS NOT NULL THEN tct.country
+                    ELSE tc.country
+                END AS country
+            FROM tbldomains td
+            JOIN tblclients tc
+                ON tc.id = td.userid
+            LEFT JOIN tblorders o
+                ON o.id = td.orderid
+            LEFT JOIN tblcontacts tct
+                ON tct.id = o.contactid
+               AND tct.userid = td.userid
+            WHERE td.domain = :domain
+            ORDER BY td.id DESC
+            LIMIT 1
+        ");
         $stmt->bindValue(':domain', $domain);
-        $stmt->execute();
-
-        $userid = $stmt->fetchColumn();
-
-        if (!$userid) {
-            return [];
-        }
-
-        $stmt = $pdo->prepare("SELECT country FROM tblclients WHERE id = :id LIMIT 1");
-        $stmt->bindValue(':id', (int)$userid);
         $stmt->execute();
 
         $country = $stmt->fetchColumn();
