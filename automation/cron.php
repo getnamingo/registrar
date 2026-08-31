@@ -7,8 +7,8 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/helpers.php';
 
 $cronJobConfig = [
+    'tools' => $config['cron_tools'] ?? false,
     'backup' => $config['cron_backup'] ?? false,
-    'backup_upload' => $config['cron_backup_upload'] ?? false,
 ];
 
 use GO\Scheduler;
