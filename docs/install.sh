@@ -306,6 +306,11 @@ install_composer() {
     --quiet
 
   rm -f "$installer"
+
+  log "Installing phpBU"
+  curl -fsSL https://github.com/sebastianfeldmann/phpbu/releases/latest/download/phpbu.phar -o /tmp/phpbu.phar
+  chmod +x /tmp/phpbu.phar
+  mv /tmp/phpbu.phar /usr/local/bin/phpbu
 }
 
 install_php_packages() {

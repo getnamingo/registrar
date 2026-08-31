@@ -61,11 +61,7 @@ if ($cronJobConfig['tools']) {
 }
 
 if ($cronJobConfig['backup']) {
-    $addJob('backup', '/opt/registrar/automation/vendor/bin/phpbu --configuration=/opt/registrar/automation/backup.json', '15 * * * *');
-}
-
-if ($cronJobConfig['backup_upload']) {
-    $addJob('backup-upload', $php . ' /opt/registrar/automation/backup-upload.php', '30 * * * *');
+    $addJob('backup', 'phpbu --configuration=/opt/registrar/automation/backup.json', '15 * * * *');
 }
 
 $scheduler->run();

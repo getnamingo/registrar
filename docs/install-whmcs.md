@@ -1,8 +1,8 @@
 # Namingo Registrar: Installation Guide (WHMCS)
 
-This guide is for setting up **WHMCS 9.0.6** with **PHP 8.3** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
+This guide is for setting up **WHMCS 9.0.7** with **PHP 8.3** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
 
-> **Important:** If **WHMCS 9.0.6** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
+> **Important:** If **WHMCS 9.0.7** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
@@ -356,6 +356,13 @@ Clone the repository to your system:
 git clone --branch v1.2.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
+```
+
+Install phpBU:
+
+```bash
+curl -fsSL https://github.com/sebastianfeldmann/phpbu/releases/latest/download/phpbu.phar -o /usr/local/bin/phpbu
+chmod +x /usr/local/bin/phpbu
 ```
 
 ## 10. Setup WHOIS:

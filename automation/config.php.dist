@@ -79,5 +79,4 @@ $config = array(
     'cron_alert_email' => 'admin@example.com',
     'cron_tools' => true,
     'cron_backup' => false,
-    'cron_backup_upload' => false,
 );

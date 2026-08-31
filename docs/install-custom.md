@@ -201,6 +201,13 @@ mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
 
+Install phpBU:
+
+```bash
+curl -fsSL https://github.com/sebastianfeldmann/phpbu/releases/latest/download/phpbu.phar -o /usr/local/bin/phpbu
+chmod +x /usr/local/bin/phpbu
+```
+
 ## 5. Setup WHOIS:
 
 ```bash

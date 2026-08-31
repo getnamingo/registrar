@@ -3,18 +3,21 @@
   "logging": [
     {
       "type": "json",
-      "target": "/var/log/backup.log"
+      "target": "/var/log/namingo/backup.log"
     }
   ],
   "backups": [
     {
       "name": "Database",
       "source": {
-        "type": "mysqldump",
+        "type": "mariadb-dump",
         "options": {
           "databases": "registrar",
           "user": "your_username",
-          "password": "your_password"
+          "password": "your_password",
+          "quick": true,
+          "singleTransaction": true,
+          "lockTables": false
         }
       },
       "target": {

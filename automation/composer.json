@@ -2,12 +2,7 @@
     "require": {
         "peppeocchi/php-cron-scheduler": "^4.0",
         "phpmailer/phpmailer": "^7.1.1",
-        "phpseclib/phpseclib": "^3.0.53",
-        "phpbu/phpbu": "^6.0.31",
         "monolog/monolog": "^3.10.0",
-        "league/flysystem": "^3.34.0",
-        "league/flysystem-local": "^3.31.0",
-        "league/flysystem-sftp-v3": "^3.33.0",
         "pinga/tembo": "^1.1"
     },
     "autoload": {
