@@ -89,15 +89,21 @@ $configArray = [
 // Generate YAML string
 $yaml = yaml_emit($configArray);
 
-// Save to temp file in current directory
-$tempFile = __DIR__ . '/config-' . uniqid('', true) . '.yaml';
-file_put_contents($tempFile, $yaml);
+// Save to secure temporary file
+$tempFile = tempnam(sys_get_temp_dir(), 'namingo-rde-');
+if ($tempFile === false || !chmod($tempFile, 0600) || file_put_contents($tempFile, $yaml, LOCK_EX) === false) {
+    if (is_string($tempFile)) {
+        @unlink($tempFile);
+    }
+    $log->error('Failed to create secure temporary escrow configuration.');
+    exit(1);
+}
 
-// Execute the command
-exec(__DIR__ . "/escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
-
-// Delete temp file
-unlink($tempFile);
+try {
+    exec(__DIR__ . "/escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
+} finally {
+    @unlink($tempFile);
+}
 
 // Log results
 foreach ($output as $line) {
@@ -129,3 +135,5 @@ if ($exitCode === 0) {
 } else {
     $log->error("Escrow job failed with exit code: $exitCode", ['output' => $output]);
 }
+
+exit($exitCode);

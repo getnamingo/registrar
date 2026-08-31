@@ -232,7 +232,7 @@ class FOSS implements EscrowInterface {
         }
 
         fclose($file);
-        $this->splitCsvIfTooLarge($this->full, 100000);
+        $this->splitCsvIfTooLarge($this->full, 1_000_000);
     }
 
     private function cleanText(string $text): string
@@ -250,7 +250,7 @@ class FOSS implements EscrowInterface {
         return trim(preg_replace('/\s+/', ' ', $text));
     }
 
-    private function splitCsvIfTooLarge(string $path, int $maxLines = 100000): void
+    private function splitCsvIfTooLarge(string $path, int $maxLines = 1_000_000, int $maxBytes = 1_000_000_000): void
     {
         if (!file_exists($path)) {
             return;
@@ -273,8 +273,8 @@ class FOSS implements EscrowInterface {
             $totalLines++;
         }
 
-        // If within limit, keep single original file as-is
-        if ($totalLines <= $maxLines) {
+        // Header counts as a row in the first file
+        if ($totalLines + 1 <= $maxLines && filesize($path) <= $maxBytes) {
             fclose($handle);
             return;
         }
@@ -294,16 +294,23 @@ class FOSS implements EscrowInterface {
         $dir  = rtrim($dir, DIRECTORY_SEPARATOR);
 
         $lineCount = 0;
-        $part = 1;     // split sequence starts at 1
+        $bytesWritten = 0;
+        $part = 0;
         $out = null;
 
         while (($line = fgets($handle)) !== false) {
 
-            if ($lineCount % $maxLines === 0) {
+            $lineLimit = $part === 1 ? $maxLines - 1 : $maxLines;
+
+            if ($out === null || ($lineCount > 0 && (
+                $lineCount >= $lineLimit ||
+                $bytesWritten + strlen($line) > $maxBytes
+            ))) {
                 if ($out) {
                     fclose($out);
                 }
 
+                $part++;
                 $target = $dir . DIRECTORY_SEPARATOR . $name . '_' . $part . $ext;
 
                 $out = fopen($target, 'w');
@@ -312,15 +319,18 @@ class FOSS implements EscrowInterface {
                     return; // cannot write output
                 }
 
+                $lineCount = 0;
+                $bytesWritten = 0;
+
                 if ($part === 1) {
                     fwrite($out, $header); // header only in first split file
+                    $bytesWritten += strlen($header);
                 }
-
-                $part++;
             }
 
             fwrite($out, $line);
             $lineCount++;
+            $bytesWritten += strlen($line);
         }
 
         fclose($handle);
