@@ -59,7 +59,11 @@ class WHMCS implements RdapInterface
                 CASE
                     WHEN tct.id IS NOT NULL THEN tct.country
                     ELSE tc.country
-                END AS country
+                END AS country,
+                CASE
+                    WHEN tct.id IS NOT NULL THEN tct.state
+                    ELSE tc.state
+                END AS state
             FROM tbldomains td
             JOIN tblclients tc
                 ON tc.id = td.userid
@@ -75,14 +79,15 @@ class WHMCS implements RdapInterface
         $stmt->bindValue(':domain', $domain);
         $stmt->execute();
 
-        $country = $stmt->fetchColumn();
+        $location = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$country) {
+        if (!$location || empty($location['country'])) {
             return [];
         }
 
         return [
-            'cc' => strtoupper($country),
+            'cc' => strtoupper($location['country']),
+            'sp' => $location['state'] ?? '',
         ];
     }
 
