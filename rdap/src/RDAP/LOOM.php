@@ -58,7 +58,37 @@ class LOOM implements RdapInterface
         $config = json_decode($configJson ?: '{}', true);
 
         $statuses = $config['status'] ?? [];
-        return !empty($statuses) ? $statuses : ['active'];
+
+        $map = [
+            'addPeriod'                 => 'add period',
+            'autoRenewPeriod'           => 'auto renew period',
+            'clientDeleteProhibited'    => 'client delete prohibited',
+            'clientHold'                => 'client hold',
+            'clientRenewProhibited'     => 'client renew prohibited',
+            'clientTransferProhibited'  => 'client transfer prohibited',
+            'clientUpdateProhibited'    => 'client update prohibited',
+            'inactive'                  => 'inactive',
+            'linked'                    => 'associated',
+            'ok'                        => 'active',
+            'pendingCreate'             => 'pending create',
+            'pendingDelete'             => 'pending delete',
+            'pendingRenew'              => 'pending renew',
+            'pendingRestore'            => 'pending restore',
+            'pendingTransfer'           => 'pending transfer',
+            'pendingUpdate'             => 'pending update',
+            'redemptionPeriod'          => 'redemption period',
+            'renewPeriod'               => 'renew period',
+            'serverDeleteProhibited'    => 'server delete prohibited',
+            'serverRenewProhibited'     => 'server renew prohibited',
+            'serverTransferProhibited'  => 'server transfer prohibited',
+            'serverUpdateProhibited'    => 'server update prohibited',
+            'serverHold'                => 'server hold',
+            'transferPeriod'            => 'transfer period',
+        ];
+
+        return !empty($statuses)
+            ? array_map(fn($status) => $map[$status] ?? $status, $statuses)
+            : ['active'];
     }
 
     public function getNameservers(array $domain): array
