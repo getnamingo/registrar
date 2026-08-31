@@ -66,6 +66,10 @@ $config = array(
     'registrar_url' => 'https://example.com/',
     'registrar_name' => 'Example Registrar LLC',
 
+    // Registration Data Reminder Policy
+    'registration_data_update_url' => 'https://example.com/account/domains',
+    'registration_agreement_url' => 'https://example.com/legal/domain-registration-agreement',
+
     // URS Configuration
     'urs_imap_host' => '{your_imap_server:993/imap/ssl}INBOX',
     'urs_imap_username' => 'your_username',

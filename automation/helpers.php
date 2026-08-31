@@ -403,7 +403,7 @@ function rdrpArchivePath(string $domain, string $creationDate, int $year): strin
     return sprintf('/var/lib/namingo/rdrp/%d/%s-%s.json', $year, $safeDomain, $id);
 }
 
-function archiveRdrpNotice(string $domain, string $creationDate, int $year, string $recipient, string $subject, string $body): void {
+function archiveRdrpNotice(string $domain, string $creationDate, int $year, string $recipient, string $subject, string $body, ?string $html = null, array $metadata = []): void {
     $path = rdrpArchivePath($domain, $creationDate, $year);
 
     $dir = dirname($path);
@@ -414,26 +414,39 @@ function archiveRdrpNotice(string $domain, string $creationDate, int $year, stri
 
     $data = json_encode(
         [
+            'policy' => 'Registration Data Reminder Policy',
             'domain_name' => $domain,
             'creation_date' => $creationDate,
             'recipient' => $recipient,
             'sent_at' => gmdate('Y-m-d\TH:i:s\Z'),
             'subject' => $subject,
             'body' => $body,
+            'html' => $html,
+            'content_sha256' => hash(
+                'sha256',
+                $subject . "\n" . $body . "\n" . ($html ?? '')
+            ),
+            'metadata' => $metadata,
         ],
         JSON_PRETTY_PRINT
         | JSON_UNESCAPED_SLASHES
         | JSON_UNESCAPED_UNICODE
     );
 
-    if (
-        $data === false
-        || file_put_contents(
-            $path,
-            $data . PHP_EOL,
-            LOCK_EX
-        ) === false
-    ) {
+    if ($data === false) {
         throw new RuntimeException("Unable to archive RDRP notice for {$domain}");
+    }
+
+    $tmp = $path . '.tmp.' . getmypid();
+
+    if (file_put_contents($tmp, $data . PHP_EOL, LOCK_EX) === false) {
+        throw new RuntimeException("Unable to archive RDRP notice for {$domain}");
+    }
+
+    chmod($tmp, 0640);
+
+    if (!rename($tmp, $path)) {
+        @unlink($tmp);
+        throw new RuntimeException("Unable to finalize RDRP archive for {$domain}");
     }
 }

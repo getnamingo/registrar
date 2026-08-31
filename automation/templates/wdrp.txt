@@ -29,4 +29,15 @@ DNSSEC Elements: {{dnssec_elements}}
 
 Please review the registration data above and correct any inaccurate information.
 
-Under the terms of your registration agreement, providing false contact information can be grounds for cancellation of your domain name registration.
+You can review and correct your registration data here:
+{{registration_data_update_url}}
+
+Your registration agreement requires you to keep your contact information accurate and reliable and to update it within seven days after any change.
+
+ Under the terms of your registration agreement, providing false contact information can be grounds for cancellation of your domain name registration.
+
+Registration Agreement:
+{{registration_agreement_url}}
+
+ICANN registrant educational information:
+{{icann_education_url}}

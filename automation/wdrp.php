@@ -35,6 +35,18 @@ $logFilePath = '/var/log/namingo/wdrp.log';
 $log = setupLogger($logFilePath, 'RDRP');
 $log->info('job started.');
 
+$registrationDataUpdateUrl = trim(
+    (string)($config['registration_data_update_url'] ?? '')
+);
+$registrationAgreementUrl = trim(
+    (string)($config['registration_agreement_url'] ?? '')
+);
+
+if ($registrationDataUpdateUrl === '' || $registrationAgreementUrl === '') {
+    $log->error('RDRP correction or registration agreement URL is not configured.');
+    exit(1);
+}
+
 try {
     $pdo = new PDO("mysql:host={$config['db']['host']};dbname={$config['db']['dbname']}", $config['db']['username'], $config['db']['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -76,6 +88,8 @@ try {
                 continue;
             }
 
+            $correctionUrl = str_replace('{{domain_name}}', rawurlencode($domainName), $registrationDataUpdateUrl);
+
             if (is_file(rdrpArchivePath($domainName, $creationDate, $noticeYear))) {
                 continue;
             }
@@ -94,6 +108,15 @@ try {
 
                         'registrar_name' =>
                             $registrar['registrar_name'] ?? '',
+
+                        'registration_data_update_url' =>
+                            $correctionUrl,
+
+                        'registration_agreement_url' =>
+                            $registrationAgreementUrl,
+
+                        'icann_education_url' =>
+                            'https://www.icann.org/resources/pages/benefits-2013-09-16-en',
 
                         'registrar_iana' =>
                             $registrar['registrar_iana'] ?? '',
@@ -159,7 +182,12 @@ try {
                     $noticeYear,
                     $to,
                     $email['subject'],
-                    $email['body']
+                    $email['body'],
+                    $email['html'],
+                    [
+                        'correction_url' => $correctionUrl,
+                        'registration_agreement_url' => $registrationAgreementUrl,
+                    ]
                 );
 
                 $sent++;
