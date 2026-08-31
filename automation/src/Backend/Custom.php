@@ -69,7 +69,7 @@ class Custom extends AbstractDriver
         throw $this->notImplemented(__FUNCTION__);
     }
 
-    public function createUrsTicket(string $domain, string $provider, string $date): void
+    public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         throw $this->notImplemented(__FUNCTION__);
     }

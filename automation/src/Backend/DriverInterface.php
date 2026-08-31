@@ -24,7 +24,7 @@ interface DriverInterface
 
     public function getEppConfiguration(string $domain): array;
 
-    public function createUrsTicket(string $domain, string $provider, string $date): void;
+    public function createUrsTicket(string $domain, string $provider, string $date): bool;
 
     public function getErrpDomains(): array;
 

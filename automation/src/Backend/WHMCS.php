@@ -459,7 +459,7 @@ final class WHMCS extends AbstractDriver
         }
     }
 
-    public function createUrsTicket(string $domain, string $provider, string $date): void
+    public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $stmt = $this->pdo->prepare("SELECT id, userid FROM tbldomains WHERE domain = ?");
         $stmt->execute([$domain]);
@@ -467,7 +467,7 @@ final class WHMCS extends AbstractDriver
 
         if (!$domainResult) {
             $this->log->error('Domain ' . $domain . ' does not exists in registry');
-            return;
+            return false;
         }
 
         $userId = $domainResult['userid'];
@@ -515,6 +515,7 @@ final class WHMCS extends AbstractDriver
 
         $ticketId = $this->pdo->lastInsertId();
         $this->log->info("Created support ticket ID $ticketId for domain $domain.");
+        return true;
     }
 
     public function getErrpDomains(): array

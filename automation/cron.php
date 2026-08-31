@@ -21,6 +21,7 @@ if ($cronJobConfig['tools']) {
     $scheduler->php('/opt/registrar/automation/validation_email.php')->at('0 1 * * *');
     $scheduler->php('/opt/registrar/automation/errp_notify.php')->at('0 1 * * *');
     $scheduler->php('/opt/registrar/automation/errp_dns.php')->at('0 2 * * *');
+    $scheduler->php('/opt/registrar/automation/urs_keyring.php')->at('15 0 * * *');
     $scheduler->php('/opt/registrar/automation/urs.php')->at('45 * * * *');
 }
 

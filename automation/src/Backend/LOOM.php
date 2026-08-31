@@ -479,7 +479,7 @@ final class LOOM extends AbstractDriver
         }
     }
 
-    public function createUrsTicket(string $domain, string $provider, string $date): void
+    public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $stmt = $this->pdo->prepare("SELECT user_id FROM services WHERE service_name = ? AND type = 'domain' AND status = 'active' LIMIT 1");
         $stmt->execute([$domain]);
@@ -487,7 +487,7 @@ final class LOOM extends AbstractDriver
 
         if (!$svc || empty($svc['user_id'])) {
             $this->log->error('Domain ' . $domain . ' does not exist or is not active in LOOM services');
-            return;
+            return false;
         }
 
         $userId = (int)$svc['user_id'];
@@ -503,6 +503,7 @@ final class LOOM extends AbstractDriver
 
         $ticketId = $this->pdo->lastInsertId();
         $this->log->info("Created LOOM support ticket ID $ticketId for domain $domain (user_id=$userId).");
+        return true;
     }
 
     public function getErrpDomains(): array

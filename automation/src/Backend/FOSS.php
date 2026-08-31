@@ -439,7 +439,7 @@ final class FOSS extends AbstractDriver
         }
     }
 
-    public function createUrsTicket(string $domain, string $provider, string $date): void
+    public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $parts = explode('.', $domain);
         $domainName = $parts[0];
@@ -450,7 +450,7 @@ final class FOSS extends AbstractDriver
 
         if (!$domainResult) {
             $this->log->error('Domain ' . $domain . ' does not exists in registry');
-            return;
+            return false;
         }
 
         $clientId = $domainResult['client_id'];
@@ -467,6 +467,7 @@ final class FOSS extends AbstractDriver
 
         $ticketId = $this->pdo->lastInsertId();
         $this->log->info("Created support ticket ID $ticketId for domain $domain.");
+        return true;
     }
 
     public function getErrpDomains(): array
