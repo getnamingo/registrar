@@ -54,7 +54,29 @@ interface DriverInterface
 
     public function storeErrpNotification(array $data): void;
 
-    public function getExpiredDomains(): array;
+    public function findErrpDnsState(
+        int $domainId,
+        string $expirationDate
+    ): ?array;
 
-    public function updateExpiredDomainNameservers(array $row, string $ns1, string $ns2): void;
+    public function storeErrpDnsState(array $data): int;
+
+    public function getActiveErrpDnsStates(
+        int $limit = 500,
+        int $afterId = 0
+    ): array;
+
+    public function updateErrpDnsState(int $id, array $metadata): void;
+
+    public function getExpiredDomains(
+        int $limit = 500,
+        int $afterId = 0
+    ): array;
+
+    public function getErrpDnsDomain(int $domainId): ?array;
+
+    public function updateErrpDomainNameservers(
+        array $row,
+        array $nameservers
+    ): void;
 }

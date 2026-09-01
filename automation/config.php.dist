@@ -63,6 +63,21 @@ $config = array(
     'ssl_cafile' => '/path/to/ssl/cafile', // Or leave empty ''
     'ns1' => 'ns1.registrar.com',
     'ns2' => 'ns2.registrar.com',
+
+    // Expired Registration Recovery Policy DNS interruption
+    'errp' => array(
+        // These nameservers must interrupt the RAE's existing DNS path. If
+        // they serve a web page, it must conspicuously say that the domain is
+        // expired and provide renewal instructions (ICANN ERRP 2.2.4).
+        // Falls back to the legacy ns1/ns2 values above when left empty.
+        'nameservers' => array(),
+
+        // Optional explicit ICANN gTLD allowlist, without leading dots.
+        // When empty, WHMCS uses its "gTLD Registry" setting and FOSSBilling
+        // uses "Enable Minimum Data Set". Configure this list for LOOM,
+        // custom drivers, or whenever an explicit policy scope is preferred.
+        'tlds' => array(),
+    ),
     'registrar_url' => 'https://example.com/',
     'registrar_name' => 'Example Registrar LLC',
 

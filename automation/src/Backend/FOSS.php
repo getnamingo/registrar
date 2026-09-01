@@ -759,18 +759,88 @@ final class FOSS extends AbstractDriver
         ]);
     }
 
-    public function getExpiredDomains(): array
+    public function getExpiredDomains(
+        int $limit = 500,
+        int $afterId = 0
+    ): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM service_domain WHERE NOW() > expires_at");
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT sd.*
+            FROM service_domain sd
+            WHERE NOW() > sd.expires_at
+              AND sd.id > :after_id
+              AND sd.registered_at IS NOT NULL
+              AND EXISTS (
+                    SELECT 1
+                    FROM client_order co
+                    WHERE co.service_id = sd.id
+                      AND co.service_type = 'domain'
+                      AND co.status = 'active'
+              )
+            ORDER BY sd.id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
             $row['domain_name'] = $this->buildDomainName($row);
+            $row['nameservers'] = array_values(array_filter([
+                $row['ns1'] ?? null,
+                $row['ns2'] ?? null,
+                $row['ns3'] ?? null,
+                $row['ns4'] ?? null,
+            ], static fn ($value): bool => trim((string)$value) !== ''));
+            $row['errp_active'] = true;
         }
         unset($row);
 
         return $rows;
+    }
+
+    public function getErrpDnsDomain(int $domainId): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT sd.*,
+                   COALESCE((
+                       SELECT co.status
+                       FROM client_order co
+                       WHERE co.service_id = sd.id
+                         AND co.service_type = 'domain'
+                       ORDER BY co.id DESC
+                       LIMIT 1
+                   ), '') AS billing_status,
+                   EXISTS (
+                       SELECT 1
+                       FROM client_order active_order
+                       WHERE active_order.service_id = sd.id
+                         AND active_order.service_type = 'domain'
+                         AND active_order.status = 'active'
+                   ) AS errp_active
+            FROM service_domain sd
+            WHERE sd.id = :id
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $domainId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        $row['domain_name'] = $this->buildDomainName($row);
+        $row['nameservers'] = array_values(array_filter([
+            $row['ns1'] ?? null,
+            $row['ns2'] ?? null,
+            $row['ns3'] ?? null,
+            $row['ns4'] ?? null,
+        ], static fn ($value): bool => trim((string)$value) !== ''));
+        $row['errp_active'] = (bool)$row['errp_active'];
+
+        return $row;
     }
 
     private function buildDomainName(array $row): string
@@ -781,12 +851,29 @@ final class FOSS extends AbstractDriver
         return $sld . (str_starts_with($tld, '.') ? $tld : '.' . $tld);
     }
 
-    public function updateExpiredDomainNameservers(array $row, string $ns1, string $ns2): void
+    public function updateErrpDomainNameservers(
+        array $row,
+        array $nameservers
+    ): void
     {
-        $stmt = $this->pdo->prepare("UPDATE service_domain SET ns1 = :ns1, ns2 = :ns2 WHERE id = :id");
+        $nameservers = array_pad(
+            array_slice(array_values($nameservers), 0, 4),
+            4,
+            null
+        );
+        $stmt = $this->pdo->prepare("
+            UPDATE service_domain
+            SET ns1 = :ns1,
+                ns2 = :ns2,
+                ns3 = :ns3,
+                ns4 = :ns4
+            WHERE id = :id
+        ");
         $stmt->execute([
-            'ns1' => $ns1,
-            'ns2' => $ns2,
+            'ns1' => $nameservers[0],
+            'ns2' => $nameservers[1],
+            'ns3' => $nameservers[2],
+            'ns4' => $nameservers[3],
             'id' => $row['id'],
         ]);
     }
