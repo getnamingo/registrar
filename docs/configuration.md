@@ -287,3 +287,269 @@ Email the same file to ICANN at:
 Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
 
 After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
+
+## 4. Configure automated backups
+
+Namingo Registrar uses [phpBU](https://www.phpbu.de/) for automated backups.
+
+The example backup configuration is provided at:
+
+```text
+/opt/registrar/automation/backup.json.dist
+```
+
+Create the active configuration from the example:
+
+```bash
+cd /opt/registrar/automation
+cp backup.json.dist backup.json
+nano backup.json
+```
+
+The default configuration creates the following backups:
+
+- The `registrar` MariaDB database.
+- The complete `/opt/registrar` directory.
+- The complete `/var/www` directory.
+
+Backups are written to:
+
+```text
+/srv
+```
+
+The default configuration also:
+
+- writes backup logs to `/var/log/namingo/backup.log`;
+- compresses backups with `bzip2`;
+- verifies that each generated backup is at least `10M`;
+- limits the locally retained backups for each backup definition to `750M`.
+
+### Configure the database backup
+
+Update the database credentials in the `Database` backup definition:
+
+```json
+"source": {
+  "type": "mariadb-dump",
+  "options": {
+    "databases": "registrar",
+    "user": "your_username",
+    "password": "your_password",
+    "quick": true,
+    "singleTransaction": true,
+    "lockTables": false
+  }
+}
+```
+
+Replace `your_username` and `your_password` with the MariaDB credentials used for the registrar database.
+
+If required, you may also change the local backup directory, filenames, minimum-size checks, or retention limits in `backup.json`.
+
+### Configure remote backup storage
+
+Keeping the only copy of a backup on the registrar server is not recommended. phpBU supports synchronizing completed backups to remote storage, including SFTP, rsync, Amazon S3-compatible storage, Google Drive, Azure Blob Storage, Dropbox, and other providers.
+
+Remote storage is configured by adding a `syncs` section to the appropriate backup definition in `backup.json`.
+
+For example, to upload a backup to another server using SFTP:
+
+```json
+"syncs": [
+  {
+    "type": "sftp",
+    "options": {
+      "host": "backup.example.com",
+      "port": 22,
+      "user": "backup",
+      "password": "your-backup-password",
+      "path": "/backups/namingo"
+    }
+  }
+]
+```
+
+The `syncs` block belongs inside the individual backup definition, alongside `source`, `target`, `checks`, and `cleanup`.
+
+For example:
+
+```json
+{
+  "name": "Database",
+  "source": {
+    "type": "mariadb-dump",
+    "options": {
+      "databases": "registrar",
+      "user": "your_username",
+      "password": "your_password",
+      "quick": true,
+      "singleTransaction": true,
+      "lockTables": false
+    }
+  },
+  "target": {
+    "dirname": "/srv",
+    "filename": "database-%Y%m%d-%H%i.sql",
+    "compress": "bzip2"
+  },
+  "checks": [
+    {
+      "type": "sizemin",
+      "value": "10M"
+    }
+  ],
+  "syncs": [
+    {
+      "type": "sftp",
+      "options": {
+        "host": "backup.example.com",
+        "port": 22,
+        "user": "backup",
+        "password": "your-backup-password",
+        "path": "/backups/namingo"
+      }
+    }
+  ],
+  "cleanup": {
+    "type": "Capacity",
+    "options": {
+      "size": "750M"
+    }
+  }
+}
+```
+
+Add an appropriate `syncs` section to each backup that should also be stored remotely.
+
+See the **phpBU Manual, Chapter 8: Sync Backups** for all supported remote storage providers and configuration options.
+
+> [!IMPORTANT]
+> Backups may contain registration data, credentials, configuration files, and other sensitive information. Protect remote backup storage appropriately and consider encryption when backups are stored outside the registrar server.
+
+### Enable scheduled backups
+
+Once `/opt/registrar/automation/backup.json` has been configured and tested, open:
+
+```bash
+nano /opt/registrar/automation/config.php
+```
+
+In the Cron / Automation Configuration section, enable backups:
+
+```php
+'cron_backup' => true,
+```
+
+Namingo Registrar will then execute the configured phpBU backup automatically through its automation scheduler.
+
+You can test the configuration manually before enabling the scheduled job:
+
+```bash
+phpbu --configuration=/opt/registrar/automation/backup.json
+```
+
+Check the backup log afterward:
+
+```bash
+tail -n 100 /var/log/namingo/backup.log
+```
+
+## 5. Configure cron failure alerts
+
+Namingo Registrar can send an email when an automation job exits with an error.
+
+Open:
+
+```bash
+nano /opt/registrar/automation/config.php
+```
+
+In the Cron / Automation Configuration section, set:
+
+```php
+'cron_alert_email' => 'admin@example.com',
+```
+
+Replace `admin@example.com` with the email address that should receive automation failure notifications.
+
+For example:
+
+```php
+// Cron / Automation Configuration
+'cron_alert_email' => 'admin@example.com',
+'cron_tools' => true,
+'cron_backup' => true,
+```
+
+The configured address will receive notifications when scheduled automation jobs fail.
+
+If `cron_alert_email` is not configured, Namingo will fall back to the configured email `reply-to` address when available.
+
+## 6. URS Configuration
+
+Namingo Registrar can process Uniform Rapid Suspension System (URS) notices and automatically maintain the ICANN URS provider PGP keyring.
+
+The relevant settings are located in the URS Configuration section of:
+
+```text
+/opt/registrar/automation/config.php
+```
+
+The default configuration contains:
+
+```php
+// URS Configuration
+'urs_imap_host' => '{your_imap_server:993/imap/ssl}INBOX',
+'urs_imap_username' => 'your_username',
+'urs_imap_password' => 'your_password',
+'urs_repository_username' => getenv('URS_REPOSITORY_USERNAME') ?: '',
+'urs_repository_password' => getenv('URS_REPOSITORY_PASSWORD') ?: '',
+'urs_keyring_path' => '/opt/registrar/automation/urs-pgp-keys.gpg',
+'urs_archive_path' => '/var/lib/namingo/urs',
+```
+
+Configure the IMAP mailbox that receives URS notices using:
+
+```php
+'urs_imap_host' => '{your_imap_server:993/imap/ssl}INBOX',
+'urs_imap_username' => 'your_username',
+'urs_imap_password' => 'your_password',
+```
+
+The URS repository credentials are the credentials issued by ICANN for access to the URS repository.
+
+Set the environment variables used by `config.php`:
+
+```text
+URS_REPOSITORY_USERNAME
+URS_REPOSITORY_PASSWORD
+```
+
+After configuring the ICANN-issued repository credentials, run the URS keyring utility once manually:
+
+```bash
+/usr/bin/php8.5 /opt/registrar/automation/urs_keyring.php
+```
+
+This downloads the current ICANN URS provider public-key repository and creates the local keyring configured by:
+
+```php
+'urs_keyring_path' => '/opt/registrar/automation/urs-pgp-keys.gpg',
+```
+
+The initial manual run confirms that the repository credentials are valid and that the keyring can be downloaded and generated successfully.
+
+After the initial setup, Namingo Registrar's automation scheduler periodically refreshes the URS keyring automatically when automation tools are enabled:
+
+```php
+'cron_tools' => true,
+```
+
+URS notices and related files are archived under:
+
+```text
+/var/lib/namingo/urs
+```
+
+unless `urs_archive_path` is changed in `config.php`.
