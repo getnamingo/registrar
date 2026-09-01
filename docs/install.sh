@@ -798,7 +798,7 @@ wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 # Download and Extract FOSSBilling
 log "Installing FOSSBilling"
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.6/FOSSBilling-0.8.6.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.7/FOSSBilling-0.8.7.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 

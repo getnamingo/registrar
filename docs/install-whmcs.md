@@ -576,10 +576,7 @@ Click **Save Changes** to apply the configuration.
    - Registered address  
    - Name of the Chief Executive Officer (CEO)
 
-3. **ICANN Transfer Notifications**  
-   You must enable ICANN transfer notifications in accordance with the instructions provided in [hooks.md](docs/hooks/hooks.md).
-
-4. **ICANN MoSAPI Monitoring**  
+3. **ICANN MoSAPI Monitoring**  
    MoSAPI is ICANN’s official platform for monitoring registrar compliance and domain abuse reports.
 
    To enable MoSAPI support, install the Namingo MoSAPI Monitor module:

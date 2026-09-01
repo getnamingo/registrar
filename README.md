@@ -32,7 +32,7 @@ Open source ICANN-accredited domain registrar management system.
 
 - **Transfer Management (IRTP/ITRP)**: Handles inter-registrar domain transfers with secure authorization and policy-compliant workflows.
 
-- **ICANN Transfer Notification**: Provides policy-compliant notifications for transfer requests, completions, and failures in accordance with the ICANN Transfer Policy. *Currently available in the WHMCS integration.*
+- **ICANN Transfer Notification**: Sends the standardized losing-registrar transfer confirmation from registry EPP poll events, with durable audit evidence.
 
 - **Premium Domain Support**: Provides automated detection and pricing of premium domain names via the EPP Fee Extension during availability checks and registration. *Currently available in the WHMCS integration.*
 
