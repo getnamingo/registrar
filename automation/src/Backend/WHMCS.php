@@ -844,34 +844,113 @@ final class WHMCS extends AbstractDriver
         ]);
     }
 
-    public function getExpiredDomains(): array
+    public function getExpiredDomains(
+        int $limit = 500,
+        int $afterId = 0
+    ): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM namingo_domain WHERE NOW() > exdate");
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT nd.*
+            FROM namingo_domain nd
+            WHERE NOW() > nd.exdate
+              AND nd.id > :after_id
+              AND EXISTS (
+                    SELECT 1
+                    FROM tbldomains d
+                    WHERE LOWER(d.domain) = LOWER(nd.name)
+                      AND d.status IN ('Active', 'Expired', 'Grace')
+              )
+            ORDER BY nd.id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
             $row['domain_name'] = $row['name'];
+            $row['expires_at'] = $row['exdate'];
+            $row['nameservers'] = array_values(array_filter([
+                $row['ns1'] ?? null,
+                $row['ns2'] ?? null,
+                $row['ns3'] ?? null,
+                $row['ns4'] ?? null,
+                $row['ns5'] ?? null,
+            ], static fn ($value): bool => trim((string)$value) !== ''));
+            $row['errp_active'] = true;
         }
         unset($row);
 
         return $rows;
     }
 
-    public function updateExpiredDomainNameservers(array $row, string $ns1, string $ns2): void
+    public function getErrpDnsDomain(int $domainId): ?array
     {
+        $stmt = $this->pdo->prepare("
+            SELECT nd.*,
+                   COALESCE((
+                       SELECT d.status
+                       FROM tbldomains d
+                       WHERE LOWER(d.domain) = LOWER(nd.name)
+                       ORDER BY d.id DESC
+                       LIMIT 1
+                   ), '') AS billing_status
+            FROM namingo_domain nd
+            WHERE nd.id = :id
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $domainId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        $row['domain_name'] = $row['name'];
+        $row['expires_at'] = $row['exdate'];
+        $row['nameservers'] = array_values(array_filter([
+            $row['ns1'] ?? null,
+            $row['ns2'] ?? null,
+            $row['ns3'] ?? null,
+            $row['ns4'] ?? null,
+            $row['ns5'] ?? null,
+        ], static fn ($value): bool => trim((string)$value) !== ''));
+        $row['errp_active'] = in_array(
+            (string)$row['billing_status'],
+            ['Active', 'Expired', 'Grace'],
+            true
+        );
+
+        return $row;
+    }
+
+    public function updateErrpDomainNameservers(
+        array $row,
+        array $nameservers
+    ): void
+    {
+        $nameservers = array_pad(
+            array_slice(array_values($nameservers), 0, 5),
+            5,
+            null
+        );
         $stmt = $this->pdo->prepare("
             UPDATE namingo_domain
             SET ns1 = :ns1,
                 ns2 = :ns2,
-                ns3 = NULL,
-                ns4 = NULL,
-                ns5 = NULL
+                ns3 = :ns3,
+                ns4 = :ns4,
+                ns5 = :ns5
             WHERE id = :id
         ");
         $stmt->execute([
-            'ns1' => $ns1,
-            'ns2' => $ns2,
+            'ns1' => $nameservers[0],
+            'ns2' => $nameservers[1],
+            'ns3' => $nameservers[2],
+            'ns4' => $nameservers[3],
+            'ns5' => $nameservers[4],
             'id' => $row['id'],
         ]);
     }

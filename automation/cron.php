@@ -56,7 +56,7 @@ if ($cronJobConfig['tools']) {
     $addJob('wdrp', $php . ' /opt/registrar/automation/wdrp.php', '0 0 * * *');
     $addJob('validation', $php . ' /opt/registrar/automation/validation.php', '*/15 * * * *');
     $addJob('errp-notify', $php . ' /opt/registrar/automation/errp_notify.php', '0 1 * * *');
-    $addJob('errp-dns', $php . ' /opt/registrar/automation/errp_dns.php', '0 2 * * *');
+    $addJob('errp-dns', $php . ' /opt/registrar/automation/errp_dns.php', '*/5 * * * *');
     $addJob('urs-keyring', $php . ' /opt/registrar/automation/urs_keyring.php', '15 0 * * *');
     $addJob('urs', $php . ' /opt/registrar/automation/urs.php', '45 * * * *');
 }

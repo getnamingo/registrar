@@ -17,7 +17,7 @@ use RuntimeException;
  * - validation rows: every active, unexpired domain with domain_name,
  *   registrant_email, validation, registered_at, verification_key and
  *   contact_data/registrant_data arrays used for exact hashing
- * - expired domains: domain_name plus any backend keys needed by the update
+ * - expired domains: id, domain_name, expires_at, nameservers and errp_active
  */
 class Custom extends AbstractDriver
 {
@@ -100,12 +100,23 @@ class Custom extends AbstractDriver
         throw $this->notImplemented(__FUNCTION__);
     }
 
-    public function getExpiredDomains(): array
+    public function getExpiredDomains(
+        int $limit = 500,
+        int $afterId = 0
+    ): array
     {
         throw $this->notImplemented(__FUNCTION__);
     }
 
-    public function updateExpiredDomainNameservers(array $row, string $ns1, string $ns2): void
+    public function getErrpDnsDomain(int $domainId): ?array
+    {
+        throw $this->notImplemented(__FUNCTION__);
+    }
+
+    public function updateErrpDomainNameservers(
+        array $row,
+        array $nameservers
+    ): void
     {
         throw $this->notImplemented(__FUNCTION__);
     }

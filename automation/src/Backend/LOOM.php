@@ -758,34 +758,88 @@ final class LOOM extends AbstractDriver
         ]);
     }
 
-    public function getExpiredDomains(): array
+    public function getExpiredDomains(
+        int $limit = 500,
+        int $afterId = 0
+    ): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM services WHERE type = 'domain' AND NOW() > expires_at");
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM services
+            WHERE type = 'domain'
+              AND status IN ('active', 'expired')
+              AND NOW() > expires_at
+              AND id > :after_id
+            ORDER BY id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
             $row['domain_name'] = $row['service_name'];
+            $serviceConfig = json_decode((string)($row['config'] ?? ''), true);
+            $row['nameservers'] = is_array($serviceConfig['nameservers'] ?? null)
+                ? array_values($serviceConfig['nameservers'])
+                : [];
+            $row['errp_active'] = true;
         }
         unset($row);
 
         return $rows;
     }
 
-    public function updateExpiredDomainNameservers(array $row, string $ns1, string $ns2): void
+    public function getErrpDnsDomain(int $domainId): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM services
+            WHERE id = :id
+              AND type = 'domain'
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $domainId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        $serviceConfig = json_decode((string)($row['config'] ?? ''), true);
+        $row['domain_name'] = $row['service_name'];
+        $row['nameservers'] = is_array($serviceConfig['nameservers'] ?? null)
+            ? array_values($serviceConfig['nameservers'])
+            : [];
+        $row['errp_active'] = in_array(
+            (string)$row['status'],
+            ['active', 'expired'],
+            true
+        );
+
+        return $row;
+    }
+
+    public function updateErrpDomainNameservers(
+        array $row,
+        array $nameservers
+    ): void
     {
         $stmt = $this->pdo->prepare("
             UPDATE services
             SET config = JSON_SET(
-                config,
-                '$.nameservers[0]', :ns1,
-                '$.nameservers[1]', :ns2
+                COALESCE(config, JSON_OBJECT()),
+                '$.nameservers', JSON_EXTRACT(:nameservers, '$')
             )
             WHERE id = :id AND type = 'domain'
         ");
         $stmt->execute([
-            'ns1' => $ns1,
-            'ns2' => $ns2,
+            'nameservers' => json_encode(
+                array_values($nameservers),
+                JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            ),
             'id' => $row['id'],
         ]);
     }
