@@ -568,7 +568,8 @@ final class FOSS extends AbstractDriver
     public function getErrpDomains(): array
     {
         $stmt = $this->pdo->prepare("
-            SELECT CONCAT(sld, '.', tld) AS domain_name,
+            SELECT id AS domain_id,
+                   CONCAT(sld, '.', tld) AS domain_name,
                    expires_at,
                    contact_email AS email
             FROM service_domain
@@ -578,6 +579,48 @@ final class FOSS extends AbstractDriver
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function hasErrpNotification(
+        int $domainId,
+        string $type,
+        string $expirationDate
+    ): bool
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT 1
+            FROM domain_registrar_notification
+            WHERE domain_id = ?
+              AND type = ?
+              AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.expires_at')) = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$domainId, $type, $expirationDate]);
+
+        return (bool)$stmt->fetchColumn();
+    }
+
+    public function storeErrpNotification(array $data): void
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO domain_registrar_notification
+                (domain_id, domain, type, recipient, subject, body, metadata, sent_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $data['domain_id'],
+            $data['domain'],
+            $data['type'],
+            $data['recipient'],
+            $data['subject'],
+            $data['body'],
+            json_encode(
+                $data['metadata'],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            ),
+            $data['sent_at'],
+        ]);
     }
 
     public function getExpiredDomains(): array

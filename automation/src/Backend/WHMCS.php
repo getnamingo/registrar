@@ -605,18 +605,65 @@ final class WHMCS extends AbstractDriver
     public function getErrpDomains(): array
     {
         $stmt = $this->pdo->prepare("
-            SELECT nd.name AS domain_name,
+            SELECT nd.id AS domain_id,
+                   nd.name AS domain_name,
                    nd.exdate AS expires_at,
-                   c.email
+                   COALESCE(NULLIF(tc.email, ''), c.email) AS email
             FROM namingo_domain nd
             INNER JOIN tbldomains d ON d.domain = nd.name
             INNER JOIN tblclients c ON c.id = d.userid
+            LEFT JOIN tblorders o ON o.id = d.orderid
+            LEFT JOIN tblcontacts tc
+                ON tc.id = o.contactid
+               AND tc.userid = d.userid
             WHERE DATE(nd.exdate) BETWEEN DATE_SUB(CURDATE(), INTERVAL 5 DAY)
                                       AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
         ");
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function hasErrpNotification(
+        int $domainId,
+        string $type,
+        string $expirationDate
+    ): bool
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT 1
+            FROM namingo_registrar_notifications
+            WHERE domain_id = ?
+              AND type = ?
+              AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.expires_at')) = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$domainId, $type, $expirationDate]);
+
+        return (bool)$stmt->fetchColumn();
+    }
+
+    public function storeErrpNotification(array $data): void
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO namingo_registrar_notifications
+                (domain_id, domain, type, recipient, subject, body, metadata, sent_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $data['domain_id'],
+            $data['domain'],
+            $data['type'],
+            $data['recipient'],
+            $data['subject'],
+            $data['body'],
+            json_encode(
+                $data['metadata'],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            ),
+            $data['sent_at'],
+        ]);
     }
 
     public function getExpiredDomains(): array

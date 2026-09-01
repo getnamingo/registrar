@@ -79,6 +79,20 @@ class Custom extends AbstractDriver
         throw $this->notImplemented(__FUNCTION__);
     }
 
+    public function hasErrpNotification(
+        int $domainId,
+        string $type,
+        string $expirationDate
+    ): bool
+    {
+        throw $this->notImplemented(__FUNCTION__);
+    }
+
+    public function storeErrpNotification(array $data): void
+    {
+        throw $this->notImplemented(__FUNCTION__);
+    }
+
     public function getExpiredDomains(): array
     {
         throw $this->notImplemented(__FUNCTION__);

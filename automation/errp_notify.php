@@ -33,63 +33,131 @@ try {
     exit(1);
 }
 
-function sendRenewalReminderEmail($to_email, $domainName, $expiresAt, $days_until_expiry, $config, $log) {
-    $template = match ((int)$days_until_expiry) {
-        30 => 'errp_30_days',
-        7  => 'errp_7_days',
-        1  => 'errp_1_day',
-        -5 => 'errp_expired',
+function getErrpTemplate(int $daysUntilExpiry): ?string
+{
+    return match (true) {
+        $daysUntilExpiry <= 30 && $daysUntilExpiry >= 25 => 'errp_30_days',
+        $daysUntilExpiry <= 7 && $daysUntilExpiry >= 4 => 'errp_7_days',
+        $daysUntilExpiry === 1 => 'errp_1_day',
+        $daysUntilExpiry <= -1 && $daysUntilExpiry >= -5 => 'errp_expired',
         default => null,
     };
+}
 
-    if ($template === null) {
-        return;
-    }
-
+function sendRenewalReminderEmail(
+    DriverInterface $driver,
+    int $domainId,
+    string $toEmail,
+    string $domainName,
+    string $expiresAt,
+    int $daysUntilExpiry,
+    string $template,
+    array $config,
+    $log
+): void {
     $email = render_email_template(
         $template,
         [
             'domain_name' => $domainName,
             'expires_at' => $expiresAt,
-            'days_until_expiry' => $days_until_expiry,
+            'days_until_expiry' => $daysUntilExpiry,
         ],
         $config
     );
 
-    if (send_email($to_email, $email['subject'], $email['body'], $config, $log, $email['html'])) {
-        $log->info("ERRP notice sent for domain $domainName.");
-    } else {
-        $log->error("ERRP notice delivery failed for domain $domainName.");
+    if (!send_email(
+        $toEmail,
+        $email['subject'],
+        $email['body'],
+        $config,
+        $log,
+        $email['html']
+    )) {
+        $log->error("ERRP notice delivery failed for domain {$domainName}.");
+        return;
     }
+
+    $driver->storeErrpNotification([
+        'domain_id' => $domainId,
+        'domain' => $domainName,
+        'type' => $template,
+        'recipient' => $toEmail,
+        'subject' => $email['subject'],
+        'body' => $email['body'],
+        'metadata' => [
+            'expires_at' => (new DateTimeImmutable($expiresAt))->format('Y-m-d'),
+            'days_until_expiry' => $daysUntilExpiry,
+            'html' => $email['html'],
+        ],
+        'sent_at' => gmdate('Y-m-d H:i:s'),
+    ]);
+
+    $log->info(
+        "ERRP notice {$template} sent for domain {$domainName}."
+    );
 }
 
-function sendRenewalReminders(DriverInterface $driver, $log, $config) {
+function sendRenewalReminders(
+    DriverInterface $driver,
+    $log,
+    array $config
+): void {
     try {
-        $expiring_domains = $driver->getErrpDomains();
+        $expiringDomains = $driver->getErrpDomains();
 
-        foreach ($expiring_domains as $domain) {
-            $domainExpiration = $domain['expires_at'];
-            $domainEmail = $domain['email'];
-            $domainName = $domain['domain_name'];
+        foreach ($expiringDomains as $domain) {
+            $domainId = (int)$domain['domain_id'];
+            $domainExpiration = (string)$domain['expires_at'];
+            $domainEmail = (string)$domain['email'];
+            $domainName = (string)$domain['domain_name'];
 
-            $expiry_date = (new DateTime($domainExpiration))->setTime(0, 0, 0);
-            $now = (new DateTime())->setTime(0, 0, 0);
-            $days_until_expiry = (int)$now->diff($expiry_date)->format('%r%a');
+            $expiryDate = (new DateTimeImmutable($domainExpiration))
+                ->setTime(0, 0);
+            $now = (new DateTimeImmutable())->setTime(0, 0);
+            $daysUntilExpiry = (int)$now
+                ->diff($expiryDate)
+                ->format('%r%a');
+            $template = getErrpTemplate($daysUntilExpiry);
 
-            if ($days_until_expiry == 30 || $days_until_expiry == 7 || $days_until_expiry == 1 || $days_until_expiry == -5) {
-                if (!empty($domainEmail) && filter_var($domainEmail, FILTER_VALIDATE_EMAIL)) {
-                    sendRenewalReminderEmail($domainEmail, $domainName, $domainExpiration, $days_until_expiry, $config, $log);
-                } else {
-                    $log->warning("Skipping {$domainName}: no valid email found for reminder ({$days_until_expiry}d).");
-                }
+            if ($template === null) {
+                continue;
             }
+
+            if ($driver->hasErrpNotification(
+                $domainId,
+                $template,
+                $expiryDate->format('Y-m-d')
+            )) {
+                continue;
+            }
+
+            if (
+                $domainEmail === ''
+                || !filter_var($domainEmail, FILTER_VALIDATE_EMAIL)
+            ) {
+                $log->warning(
+                    "Skipping {$domainName}: no valid registrant email "
+                    . "found for {$template}."
+                );
+                continue;
+            }
+
+            sendRenewalReminderEmail(
+                $driver,
+                $domainId,
+                $domainEmail,
+                $domainName,
+                $domainExpiration,
+                $daysUntilExpiry,
+                $template,
+                $config,
+                $log
+            );
         }
+
         $log->info('job completed.');
     } catch (PDOException $e) {
         $log->error('Database error: ' . $e->getMessage());
-        exit(1);
-    } catch (Exception $e) {
-        $log->error('Error: ' . $e->getMessage());
         exit(1);
     } catch (Throwable $e) {
         $log->error('Error: ' . $e->getMessage());
