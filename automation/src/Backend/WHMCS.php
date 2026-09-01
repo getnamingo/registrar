@@ -7,6 +7,32 @@ use Throwable;
 
 final class WHMCS extends AbstractDriver
 {
+    protected function notificationTable(): string
+    {
+        return 'namingo_registrar_notifications';
+    }
+
+    public function getTransferRegistrant(string $domain): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                nd.id AS domain_id,
+                nd.name AS domain_name,
+                COALESCE(NULLIF(rc.email, ''), c.email) AS email,
+                COALESCE(NULLIF(rc.name, ''), 'Registered Name Holder') AS registrant_name
+            FROM namingo_domain nd
+            LEFT JOIN namingo_contact rc ON rc.id = nd.registrant
+            LEFT JOIN tbldomains d ON LOWER(d.domain) = LOWER(nd.name)
+            LEFT JOIN tblclients c ON c.id = d.userid
+            WHERE LOWER(nd.name) = LOWER(:domain)
+            LIMIT 1
+        ");
+        $stmt->execute(['domain' => $domain]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
     public function getWdrpDomains(string $currentDate): array
     {
         $date = new \DateTimeImmutable($currentDate);

@@ -19,6 +19,11 @@ use RuntimeException;
  */
 class Custom extends AbstractDriver
 {
+    public function getTransferRegistrant(string $domain): ?array
+    {
+        throw $this->notImplemented(__FUNCTION__);
+    }
+
     public function getWdrpDomains(string $currentDate): array
     {
         throw $this->notImplemented(__FUNCTION__);

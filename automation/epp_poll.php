@@ -92,6 +92,49 @@ function parseEppPollResponse(string $xml): array
         }
 
         $domain = '';
+        $transfer = [
+            'is_transfer' => false,
+            'status' => '',
+            're_id' => '',
+            're_date' => '',
+            'ac_id' => '',
+            'ac_date' => '',
+            'ex_date' => '',
+        ];
+
+        // RFC 5731 domain transfer data. Do not treat contact:trnData as a
+        // domain transfer merely because it has the same local element name.
+        $transferNode = null;
+        foreach ($xpath->query('//*[local-name()="trnData"]') as $node) {
+            if (
+                $node instanceof DOMElement
+                && str_contains(strtolower((string)$node->namespaceURI), 'domain')
+            ) {
+                $transferNode = $node;
+                break;
+            }
+        }
+
+        if ($transferNode instanceof DOMElement) {
+            $transfer['is_transfer'] = true;
+
+            $fields = [
+                'status' => 'trStatus',
+                're_id' => 'reID',
+                're_date' => 'reDate',
+                'ac_id' => 'acID',
+                'ac_date' => 'acDate',
+                'ex_date' => 'exDate',
+            ];
+
+            foreach ($fields as $key => $localName) {
+                $node = $xpath->query(
+                    './*[local-name()="' . $localName . '"]',
+                    $transferNode
+                )->item(0);
+                $transfer[$key] = trim((string)($node?->textContent ?? ''));
+            }
+        }
 
         // Prefer explicit domain object data such as domain:trnData/domain:name.
         foreach ($xpath->query('//*[local-name()="name"]') as $node) {
@@ -136,6 +179,7 @@ function parseEppPollResponse(string $xml): array
             'q_date' => $qDate,
             'message' => $message,
             'domain' => $domain,
+            'transfer' => $transfer,
         ];
     } finally {
         libxml_clear_errors();
@@ -196,47 +240,6 @@ function pollSubject(string $registry, string $message): string
 
     return substr($subject, 0, 255);
 }
-
-$findExisting = $pdo->prepare("
-    SELECT id, metadata
-    FROM registrar_notifications
-    WHERE type = 'epp_poll'
-      AND recipient = :recipient
-      AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.epp.account_key')) = :account_key
-      AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.epp.msg_id')) = :msg_id
-    ORDER BY id DESC
-    LIMIT 1
-");
-
-$insertNotification = $pdo->prepare("
-    INSERT INTO registrar_notifications (
-        domain_id,
-        domain,
-        type,
-        recipient,
-        subject,
-        body,
-        metadata,
-        sent_at,
-        created_at
-    ) VALUES (
-        NULL,
-        :domain,
-        'epp_poll',
-        :recipient,
-        :subject,
-        :body,
-        :metadata,
-        :sent_at,
-        UTC_TIMESTAMP()
-    )
-");
-
-$updateMetadata = $pdo->prepare("
-    UPDATE registrar_notifications
-    SET metadata = :metadata
-    WHERE id = :id
-");
 
 foreach ($registries as $eppConfig) {
     $epp = null;
@@ -319,13 +322,31 @@ foreach ($registries as $eppConfig) {
                 ],
             ];
 
-            $findExisting->execute([
-                'recipient' => $recipient,
-                'account_key' => $accountKey,
-                'msg_id' => $msgId,
-            ]);
+            if (!empty($poll['transfer']['is_transfer'])) {
+                $transfer = $poll['transfer'];
+                unset($transfer['is_transfer']);
 
-            $existing = $findExisting->fetch(PDO::FETCH_ASSOC);
+                $ourClid = strtolower($recipient);
+                $requestingClid = strtolower((string)($transfer['re_id'] ?? ''));
+                $actingClid = strtolower((string)($transfer['ac_id'] ?? ''));
+                $ourRole = match (true) {
+                    $requestingClid !== '' && $requestingClid === $ourClid => 'gaining',
+                    $actingClid !== '' && $actingClid === $ourClid => 'losing',
+                    default => 'unknown',
+                };
+
+                $metadata['epp']['event'] = 'domain_transfer';
+                $metadata['epp']['transfer'] = array_merge(
+                    $transfer,
+                    ['our_role' => $ourRole]
+                );
+            }
+
+            $existing = $driver->findEppPollNotification(
+                $recipient,
+                $accountKey,
+                $msgId
+            );
 
             if ($existing) {
                 $notificationId = (int)$existing['id'];
@@ -335,21 +356,14 @@ foreach ($registries as $eppConfig) {
                     $metadata = array_replace_recursive($metadata, $existingMetadata);
                 }
             } else {
-                $insertNotification->execute([
+                $notificationId = $driver->storeEppPollNotification([
                     'domain' => (string)$poll['domain'],
                     'recipient' => $recipient,
                     'subject' => pollSubject($registry, (string)$poll['message']),
                     'body' => $body,
-                    'metadata' => json_encode(
-                        $metadata,
-                        JSON_UNESCAPED_SLASHES
-                        | JSON_UNESCAPED_UNICODE
-                        | JSON_THROW_ON_ERROR
-                    ),
+                    'metadata' => $metadata,
                     'sent_at' => normalizePollDate((string)$poll['q_date']),
                 ]);
-
-                $notificationId = (int)$pdo->lastInsertId();
             }
 
             if ($notificationId < 1) {
@@ -371,15 +385,10 @@ foreach ($registries as $eppConfig) {
                     $ack['error'] ?? $ack['msg'] ?? 'unknown EPP poll ACK error'
                 );
 
-                $updateMetadata->execute([
-                    'metadata' => json_encode(
-                        $metadata,
-                        JSON_UNESCAPED_SLASHES
-                        | JSON_UNESCAPED_UNICODE
-                        | JSON_THROW_ON_ERROR
-                    ),
-                    'id' => $notificationId,
-                ]);
+                $driver->updateEppPollNotificationMetadata(
+                    $notificationId,
+                    $metadata
+                );
 
                 throw new RuntimeException(
                     "Unable to ACK EPP message {$msgId}: " . $metadata['epp']['ack_error']
@@ -392,15 +401,10 @@ foreach ($registries as $eppConfig) {
             $metadata['epp']['ack_message'] = (string)($ack['msg'] ?? '');
             unset($metadata['epp']['ack_error']);
 
-            $updateMetadata->execute([
-                'metadata' => json_encode(
-                    $metadata,
-                    JSON_UNESCAPED_SLASHES
-                    | JSON_UNESCAPED_UNICODE
-                    | JSON_THROW_ON_ERROR
-                ),
-                'id' => $notificationId,
-            ]);
+            $driver->updateEppPollNotificationMetadata(
+                $notificationId,
+                $metadata
+            );
 
             $log->info(
                 "Stored and acknowledged EPP poll message {$msgId} from {$registry}."

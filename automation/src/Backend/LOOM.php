@@ -6,6 +6,47 @@ use PDO;
 
 final class LOOM extends AbstractDriver
 {
+    protected function notificationTable(): string
+    {
+        return 'domain_registrar_notification';
+    }
+
+    public function getTransferRegistrant(string $domain): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                s.id AS domain_id,
+                s.service_name AS domain_name,
+                COALESCE(
+                    NULLIF(
+                        JSON_UNQUOTE(JSON_EXTRACT(s.config, '$.contacts.registrant.email')),
+                        ''
+                    ),
+                    uc.email,
+                    u.email
+                ) AS email,
+                COALESCE(
+                    NULLIF(
+                        JSON_UNQUOTE(JSON_EXTRACT(s.config, '$.contacts.registrant.name')),
+                        ''
+                    ),
+                    'Registered Name Holder'
+                ) AS registrant_name
+            FROM services s
+            LEFT JOIN users u ON u.id = s.user_id
+            LEFT JOIN users_contact uc
+                ON uc.user_id = s.user_id
+               AND uc.type = 'owner'
+            WHERE s.type = 'domain'
+              AND LOWER(s.service_name) = LOWER(:domain)
+            LIMIT 1
+        ");
+        $stmt->execute(['domain' => $domain]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
     public function getWdrpDomains(string $currentDate): array
     {
         $date = new \DateTimeImmutable($currentDate);

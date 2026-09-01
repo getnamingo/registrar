@@ -28,6 +28,20 @@ interface DriverInterface
 
     public function getEppConfiguration(string $domain): array;
 
+    public function findEppPollNotification(
+        string $recipient,
+        string $accountKey,
+        string $msgId
+    ): ?array;
+
+    public function storeEppPollNotification(array $data): int;
+
+    public function updateEppPollNotificationMetadata(int $id, array $metadata): void;
+
+    public function getPendingTransferPollNotifications(int $limit = 500): array;
+
+    public function getTransferRegistrant(string $domain): ?array;
+
     public function createUrsTicket(string $domain, string $provider, string $date): bool;
 
     public function getErrpDomains(): array;

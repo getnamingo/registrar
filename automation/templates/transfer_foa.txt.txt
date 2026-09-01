@@ -1,0 +1,17 @@
+Subject: DOMAIN NAME TRANSFER - Confirmation of Registrar Transfer Request
+
+An English version of this message is contained below.
+
+ENGLISH VERSION
+
+DOMAIN NAME TRANSFER
+
+Attention: {{registrant_name}}
+
+Re: Transfer of {{domain_name}}
+
+{{registrar_name}} received notification on {{notification_date}} that you have requested/pre-approved a transfer to another domain name registrar. If you want to proceed with this transfer, you do not need to respond to this message. If you wish to cancel the transfer, please contact us before {{cancel_by}} by:
+
+send an email to {{transfer_contact_email}}
+
+If we do not hear from you by {{cancel_by}}, the transfer will proceed.

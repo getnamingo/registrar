@@ -9,6 +9,48 @@ final class FOSS extends AbstractDriver
 {
     private ?PDO $fossPdo = null;
 
+    protected function notificationTable(): string
+    {
+        return 'domain_registrar_notification';
+    }
+
+    public function getTransferRegistrant(string $domain): ?array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                sd.id AS domain_id,
+                CONCAT(
+                    RTRIM(sd.sld),
+                    CASE
+                        WHEN LEFT(sd.tld, 1) = '.' THEN sd.tld
+                        ELSE CONCAT('.', sd.tld)
+                    END
+                ) AS domain_name,
+                COALESCE(NULLIF(sd.contact_email, ''), c.email) AS email,
+                COALESCE(
+                    NULLIF(
+                        TRIM(CONCAT_WS(' ', sd.contact_first_name, sd.contact_last_name)),
+                        ''
+                    ),
+                    'Registered Name Holder'
+                ) AS registrant_name
+            FROM service_domain sd
+            LEFT JOIN client c ON c.id = sd.client_id
+            WHERE LOWER(CONCAT(
+                    RTRIM(sd.sld),
+                    CASE
+                        WHEN LEFT(sd.tld, 1) = '.' THEN sd.tld
+                        ELSE CONCAT('.', sd.tld)
+                    END
+                  )) = LOWER(:domain)
+            LIMIT 1
+        ");
+        $stmt->execute(['domain' => $domain]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
     public function getWdrpDomains(string $currentDate): array
     {
         $date = new \DateTimeImmutable($currentDate);
