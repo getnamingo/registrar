@@ -459,6 +459,56 @@ final class WHMCS extends AbstractDriver
         }
     }
 
+    public function getEppConfigurations(): array
+    {
+        require_once '/var/www/whmcs/init.php';
+
+        $registrars = \WHMCS\Database\Capsule::table('tblregistrars')
+            ->select('registrar')
+            ->distinct()
+            ->orderBy('registrar')
+            ->pluck('registrar');
+
+        $result = [];
+
+        foreach ($registrars as $registrar) {
+            try {
+                $rows = \WHMCS\Database\Capsule::table('tblregistrars')
+                    ->where('registrar', $registrar)
+                    ->pluck('value', 'setting');
+
+                $eppConfig = [];
+                foreach ($rows as $setting => $value) {
+                    $eppConfig[$setting] = $value !== '' ? \decrypt($value) : '';
+                }
+
+                if (
+                    empty($eppConfig['host'])
+                    || empty($eppConfig['clid'])
+                    || empty($eppConfig['pw'])
+                    || empty($eppConfig['local_cert'])
+                    || empty($eppConfig['local_pk'])
+                ) {
+                    continue;
+                }
+
+                $result[] = [
+                    'backend' => 'WHMCS',
+                    'registrar' => (string)$registrar,
+                    'registrar_id' => 0,
+                    'config' => $eppConfig,
+                ];
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    'Skipping WHMCS registrar ' . (string)$registrar
+                    . ': ' . $e->getMessage()
+                );
+            }
+        }
+
+        return $result;
+    }
+
     public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $stmt = $this->pdo->prepare("SELECT id, userid FROM tbldomains WHERE domain = ?");

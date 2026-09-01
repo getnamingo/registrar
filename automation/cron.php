@@ -52,6 +52,7 @@ $addJob('escrow', $php . ' /opt/registrar/automation/escrow.php', '0 17 * * 5');
 
 if ($cronJobConfig['tools']) {
     $addJob('wdrp', $php . ' /opt/registrar/automation/wdrp.php', '0 0 * * *');
+    $addJob('epp-poll', $php . ' /opt/registrar/automation/epp_poll.php', '*/5 * * * *');
     $addJob('validation', $php . ' /opt/registrar/automation/validation.php', '5 * * * *');
     $addJob('validation-email', $php . ' /opt/registrar/automation/validation_email.php', '0 1 * * *');
     $addJob('errp-notify', $php . ' /opt/registrar/automation/errp_notify.php', '0 1 * * *');

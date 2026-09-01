@@ -439,6 +439,67 @@ final class FOSS extends AbstractDriver
         }
     }
 
+    public function getEppConfigurations(): array
+    {
+        $pdo = $this->getFossPdo();
+        $stmt = $pdo->query("
+            SELECT id, registrar, config
+            FROM tld_registrar
+            WHERE config IS NOT NULL
+              AND config <> ''
+            ORDER BY id
+        ");
+
+        $result = [];
+        $seen = [];
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $eppConfig = json_decode($row['config'] ?? '', true);
+
+            if (!is_array($eppConfig) || empty($eppConfig)) {
+                $this->log->warning(
+                    'Skipping invalid EPP configuration for FOSSBilling registrar ID '
+                    . (int)$row['id']
+                );
+                continue;
+            }
+
+            if (
+                empty($eppConfig['host'])
+                || empty($eppConfig['clid'])
+                || empty($eppConfig['pw'])
+                || empty($eppConfig['local_cert'])
+                || empty($eppConfig['local_pk'])
+            ) {
+                continue;
+            }
+
+            $registrar = trim((string)($row['registrar'] ?? 'namingo'));
+            if ($registrar === '') {
+                $registrar = 'namingo';
+            }
+
+            $key = strtolower($registrar)
+                . '|' . strtolower((string)$eppConfig['host'])
+                . '|' . (int)($eppConfig['port'] ?? 700)
+                . '|' . (string)$eppConfig['clid'];
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $result[] = [
+                'backend' => 'FOSS',
+                'registrar' => $registrar,
+                'registrar_id' => (int)$row['id'],
+                'config' => $eppConfig,
+            ];
+        }
+
+        return $result;
+    }
+
     public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $parts = explode('.', $domain);

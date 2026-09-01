@@ -12,4 +12,11 @@ abstract class AbstractDriver implements DriverInterface
         protected object $log
     ) {
     }
+
+    public function getEppConfigurations(): array
+    {
+        throw new \RuntimeException(
+            static::class . ' does not implement EPP account enumeration.'
+        );
+    }
 }

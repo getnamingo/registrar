@@ -479,6 +479,105 @@ final class LOOM extends AbstractDriver
         }
     }
 
+    public function getEppConfigurations(): array
+    {
+        $stmt = $this->pdo->query("
+            SELECT id, name, tld, api_endpoint, credentials, pricing
+            FROM providers
+            WHERE type = 'domain'
+              AND status IN ('active', 'testing')
+            ORDER BY id
+        ");
+
+        $result = [];
+        $seen = [];
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $credentials = json_decode($row['credentials'] ?? '', true);
+            if (!is_array($credentials)) {
+                continue;
+            }
+
+            $endpoint = trim((string)($row['api_endpoint'] ?? ''));
+            if ($endpoint === '') {
+                continue;
+            }
+
+            if (!str_contains($endpoint, '://')) {
+                $endpoint = 'ssl://' . $endpoint;
+            }
+
+            $parts = parse_url($endpoint);
+            $host = $parts['host'] ?? '';
+            $port = (int)($parts['port'] ?? 700);
+
+            if ($host === '') {
+                continue;
+            }
+
+            $tld = trim((string)($row['tld'] ?? ''));
+
+            if ($tld === '') {
+                $pricing = json_decode($row['pricing'] ?? '', true);
+                if (is_array($pricing)) {
+                    foreach (array_keys($pricing) as $candidate) {
+                        if (is_string($candidate) && trim($candidate) !== '') {
+                            $tld = $candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $registrar = $tld !== ''
+                ? \getRegistryExtensionByTld($tld)
+                : 'namingo';
+
+            $eppConfig = [
+                'host' => $host,
+                'port' => $port,
+               'tls_version' => !empty($credentials['ssl']) ? '1' : '0',
+                'verify_peer' => !empty($credentials['verify_peer']) ? '1' : '0',
+                'local_cert' => $credentials['cert_file'] ?? '',
+                'local_pk' => $credentials['key_file'] ?? '',
+                'cafile' => $credentials['cafile'] ?? '',
+                'passphrase' => $credentials['passphrase'] ?? '',
+                'clid' => $credentials['auth']['username'] ?? '',
+                'pw' => $credentials['auth']['password'] ?? '',
+                'registrarprefix' => $credentials['prefix'] ?? 'epp',
+                'login_extensions' => $credentials['login_extensions'] ?? '',
+            ];
+
+            if (
+               empty($eppConfig['clid'])
+                || empty($eppConfig['pw'])
+                || empty($eppConfig['local_cert'])
+                || empty($eppConfig['local_pk'])
+            ) {
+                continue;
+            }
+
+            $key = strtolower($registrar)
+                . '|' . strtolower($host)
+                . '|' . $port
+                . '|' . (string)$eppConfig['clid'];
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $result[] = [
+                'backend' => 'LOOM',
+                'registrar' => $registrar,
+               'registrar_id' => (int)$row['id'],
+                'config' => $eppConfig,
+            ];
+        }
+
+        return $result;
+    }
+
     public function createUrsTicket(string $domain, string $provider, string $date): bool
     {
         $stmt = $this->pdo->prepare("SELECT user_id FROM services WHERE service_name = ? AND type = 'domain' AND status = 'active' LIMIT 1");
