@@ -14,7 +14,9 @@ use RuntimeException;
  *
  * Normalize returned rows as follows:
  * - WDRP / ERRP: domain_name, expires_at, email
- * - validation rows: domain_name, registrant_email, validation
+ * - validation rows: every active, unexpired domain with domain_name,
+ *   registrant_email, validation, registered_at, verification_key and
+ *   contact_data/registrant_data arrays used for exact hashing
  * - expired domains: domain_name plus any backend keys needed by the update
  */
 class Custom extends AbstractDriver

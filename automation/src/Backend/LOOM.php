@@ -362,27 +362,45 @@ final class LOOM extends AbstractDriver
                 s.id AS id,
                 s.service_name AS service_name,
                 s.config AS config,
-                s.registered_at AS registered_at,
+                CASE WHEN LOWER(SUBSTRING_INDEX(COALESCE(o.service_type, ''), '.', -1)) = 'transfer'
+                    THEN COALESCE(s.created_at, o.paid_at, s.registered_at)
+                    ELSE s.registered_at END AS registered_at,
+                s.expires_at AS expires_at,
+                s.updated_at AS contact_updated_at,
                 u.id AS user_id,
                 u.validation AS validation,
+                u.validation_stamp AS validation_stamp,
                 u.validation_log AS validation_log,
-                COALESCE(uc.email, u.email) AS email
+                COALESCE(uc.email, u.email) AS email,
+                CASE WHEN LOWER(SUBSTRING_INDEX(COALESCE(o.service_type, ''), '.', -1)) = 'transfer'
+                    THEN 'transfer_in' ELSE 'registration' END AS trigger_hint
             FROM services s
             JOIN users u ON u.id = s.user_id
+            LEFT JOIN orders o ON o.id = s.order_id
             LEFT JOIN users_contact uc
               ON uc.user_id = u.id AND uc.type = 'owner'
             WHERE s.type = 'domain'
               AND s.status = 'active'
-              AND s.registered_at <= :registered_at
-              AND (u.validation = 0 OR u.validation IS NULL)
+              AND s.registered_at IS NOT NULL
+              AND s.expires_at > NOW()
         ");
-        $stmt->execute(['registered_at' => $registeredAt]);
+        $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
             $row['domain_name'] = $row['service_name'];
-            $row['registrant_email'] = $row['email'];
+            $config = json_decode((string)($row['config'] ?? ''), true);
+            $contacts = is_array($config['contacts'] ?? null) ? $config['contacts'] : [];
+            $registrant = is_array($contacts['registrant'] ?? null) ? $contacts['registrant'] : [];
+            if (empty($registrant['email'])) {
+                $registrant['email'] = $row['email'];
+            }
+            $contacts['registrant'] = $registrant;
+            $row['registrant_email'] = $registrant['email'] ?? $row['email'];
             $row['validation'] = (int)($row['validation'] ?? 0);
+            $row['verification_key'] = 'loom:' . $row['user_id'];
+            $row['registrant_data'] = $registrant;
+            $row['contact_data'] = $contacts;
         }
         unset($row);
 
@@ -396,7 +414,7 @@ final class LOOM extends AbstractDriver
             ?? $row['validation_log']
             ?? null;
 
-        if (!empty($existingToken)) {
+        if (empty($row['force_new_token']) && !empty($existingToken)) {
             return (string)$existingToken;
         }
 

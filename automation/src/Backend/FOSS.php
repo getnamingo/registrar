@@ -307,9 +307,14 @@ final class FOSS extends AbstractDriver
                     0,
                     CURRENT_TIMESTAMP
                 FROM service_domain sd
+                JOIN client_order co
+                  ON co.service_id = sd.id
+                 AND co.service_type = 'domain'
+                 AND co.status = 'active'
                 JOIN client c ON c.id = sd.client_id
                 LEFT JOIN domain_contact_validation dcv ON dcv.client_id = c.id
                 WHERE sd.registered_at IS NOT NULL
+                  AND sd.expires_at > NOW()
                   AND dcv.id IS NULL
             ");
             $stmt->execute();
@@ -325,25 +330,54 @@ final class FOSS extends AbstractDriver
                     sd.ns2,
                     c.id AS client_id,
                     c.email,
+                    CASE
+                        WHEN sd.action = 'transfer'
+                          OR co.config LIKE '%\"action\":\"transfer\"%'
+                            THEN COALESCE(co.activated_at, sd.updated_at, sd.registered_at)
+                        ELSE sd.registered_at
+                    END AS registered_at,
+                    sd.expires_at,
+                    sd.updated_at AS contact_updated_at,
+                    CASE
+                        WHEN sd.action = 'transfer'
+                          OR co.config LIKE '%\"action\":\"transfer\"%'
+                            THEN 'transfer_in'
+                        ELSE 'registration'
+                    END AS trigger_hint,
+                    dm.registrant_contact_id,
+                    dm.admin_contact_id,
+                    dm.tech_contact_id,
+                    dm.billing_contact_id,
+                    sd.contact_company,
+                    sd.contact_first_name,
+                    sd.contact_last_name,
+                    sd.contact_address1,
+                    sd.contact_address2,
+                    sd.contact_city,
+                    sd.contact_state,
+                    sd.contact_postcode,
+                    sd.contact_country,
+                    sd.contact_phone_cc,
+                    sd.contact_phone,
                     dcv.id AS validation_id,
                     dcv.is_validated AS custom_2,
                     dcv.is_validated AS validation,
                     dcv.validation_checked_at,
+                    dcv.validation_method,
                     dcv.validation_token,
                     dcv.validation_log
-                FROM domain_contact_validation dcv
-                JOIN client c ON c.id = dcv.client_id
-                JOIN (
-                    SELECT client_id, MIN(id) AS domain_id
-                    FROM service_domain
-                    WHERE registered_at IS NOT NULL
-                      AND registered_at < :registered_at
-                    GROUP BY client_id
-                ) eligible_domain ON eligible_domain.client_id = c.id
-                JOIN service_domain sd ON sd.id = eligible_domain.domain_id
-                WHERE dcv.is_validated = 0
+                FROM service_domain sd
+                JOIN client_order co
+                  ON co.service_id = sd.id
+                 AND co.service_type = 'domain'
+                 AND co.status = 'active'
+                JOIN client c ON c.id = sd.client_id
+                JOIN domain_contact_validation dcv ON dcv.client_id = c.id
+                LEFT JOIN domain_meta dm ON dm.domain_id = sd.id
+                WHERE sd.registered_at IS NOT NULL
+                  AND sd.expires_at > NOW()
             ");
-            $stmt->execute(['registered_at' => $registeredAt]);
+            $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             $this->log->warning('FOSSBilling contact validation table unavailable, falling back to legacy validation query: ' . $e->getMessage());
@@ -357,14 +391,50 @@ final class FOSS extends AbstractDriver
                     sd.id,
                     sd.ns1,
                     sd.ns2,
-                    c.custom_2
+                    c.id AS client_id,
+                    c.email,
+                    c.custom_1 AS token,
+                    c.custom_2 AS validation,
+                    CASE
+                        WHEN sd.action = 'transfer'
+                          OR co.config LIKE '%\"action\":\"transfer\"%'
+                            THEN COALESCE(co.activated_at, sd.updated_at, sd.registered_at)
+                        ELSE sd.registered_at
+                    END AS registered_at,
+                    sd.expires_at,
+                    sd.updated_at AS contact_updated_at,
+                    CASE
+                        WHEN sd.action = 'transfer'
+                          OR co.config LIKE '%\"action\":\"transfer\"%'
+                            THEN 'transfer_in'
+                        ELSE 'registration'
+                    END AS trigger_hint,
+                    dm.registrant_contact_id,
+                    dm.admin_contact_id,
+                    dm.tech_contact_id,
+                    dm.billing_contact_id,
+                    sd.contact_company,
+                    sd.contact_first_name,
+                    sd.contact_last_name,
+                    sd.contact_address1,
+                    sd.contact_address2,
+                    sd.contact_city,
+                    sd.contact_state,
+                    sd.contact_postcode,
+                    sd.contact_country,
+                    sd.contact_phone_cc,
+                    sd.contact_phone
                 FROM service_domain sd
-                INNER JOIN client c ON sd.client_id = c.id
-                WHERE sd.synced_at IS NULL
-                  AND sd.registered_at < :registered_at
-                  AND c.custom_2 = 0
+                JOIN client_order co
+                  ON co.service_id = sd.id
+                 AND co.service_type = 'domain'
+                 AND co.status = 'active'
+                JOIN client c ON sd.client_id = c.id
+                LEFT JOIN domain_meta dm ON dm.domain_id = sd.id
+                WHERE sd.registered_at IS NOT NULL
+                  AND sd.expires_at > NOW()
             ");
-            $stmt->execute(['registered_at' => $registeredAt]);
+            $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
@@ -372,6 +442,29 @@ final class FOSS extends AbstractDriver
             $row['domain_name'] = $this->buildDomainName($row);
             $row['registrant_email'] = $row['contact_email'] ?: ($row['email'] ?? null);
             $row['validation'] = (int)($row['validation'] ?? $row['custom_2'] ?? 0);
+            $row['verification_key'] = 'foss:' . ($row['validation_id'] ?? $row['client_id']);
+
+            $contact = [
+                'company' => (string)($row['contact_company'] ?? ''),
+                'first_name' => (string)($row['contact_first_name'] ?? ''),
+                'last_name' => (string)($row['contact_last_name'] ?? ''),
+                'address1' => (string)($row['contact_address1'] ?? ''),
+                'address2' => (string)($row['contact_address2'] ?? ''),
+                'city' => (string)($row['contact_city'] ?? ''),
+                'state' => (string)($row['contact_state'] ?? ''),
+                'postcode' => (string)($row['contact_postcode'] ?? ''),
+                'country' => (string)($row['contact_country'] ?? ''),
+                'phone_cc' => (string)($row['contact_phone_cc'] ?? ''),
+                'phone' => (string)($row['contact_phone'] ?? ''),
+                'email' => (string)($row['registrant_email'] ?? ''),
+            ];
+            $row['registrant_data'] = ['id' => (string)($row['registrant_contact_id'] ?? '')] + $contact;
+            $row['contact_data'] = [
+                'registrant' => $row['registrant_data'],
+                'administrative_id' => (string)($row['admin_contact_id'] ?? ''),
+                'technical_id' => (string)($row['tech_contact_id'] ?? ''),
+                'billing_id' => (string)($row['billing_contact_id'] ?? ''),
+            ];
         }
         unset($row);
 
@@ -385,7 +478,7 @@ final class FOSS extends AbstractDriver
             ?? $row['validation_log']
             ?? null;
 
-        if (!empty($existingToken)) {
+        if (empty($row['force_new_token']) && !empty($existingToken)) {
             return (string)$existingToken;
         }
 
@@ -394,11 +487,11 @@ final class FOSS extends AbstractDriver
         if (!empty($row['validation_id'])) {
             $stmt = $this->pdo->prepare("
                 UPDATE domain_contact_validation
-                SET validation_token = :token,
+                SET is_validated = 0,
+                    validation_token = :token,
                     validation_method = 'email',
                     validation_checked_at = NOW()
                 WHERE id = :id
-                  AND is_validated = 0
             ");
             $stmt->execute([
                 'token' => $token,
@@ -406,13 +499,14 @@ final class FOSS extends AbstractDriver
             ]);
         } else {
             $stmt = $this->pdo->prepare("
-                UPDATE service_domain
-                SET token = :token
+                UPDATE client
+                SET custom_1 = :token,
+                    custom_2 = 0
                 WHERE id = :id
             ");
             $stmt->execute([
                 'token' => $token,
-                'id' => $row['id'],
+                'id' => $row['client_id'],
             ]);
         }
 
@@ -425,7 +519,7 @@ final class FOSS extends AbstractDriver
             ? $this->config['contact_uri']
             : $this->config['registrar_url'];
 
-        return rtrim($baseUrl, '/') . '/validate?token=' . urlencode($token);
+        return rtrim($baseUrl, '/') . '/validation?token=' . urlencode($token);
     }
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void

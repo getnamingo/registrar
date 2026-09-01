@@ -294,6 +294,8 @@ final class WHMCS extends AbstractDriver
                     END
                 WHERE td.registrationdate IS NOT NULL
                   AND td.registrationdate <> '0000-00-00'
+                  AND td.status = 'Active'
+                  AND td.expirydate >= CURDATE()
                   AND ncv.id IS NULL
             ");
             $stmt->execute();
@@ -309,49 +311,104 @@ final class WHMCS extends AbstractDriver
                         WHEN ncv.contact_id > 0 THEN tct.email
                         ELSE tc.email
                     END AS email,
+                    COALESCE(NULLIF(rc.email, ''),
+                        CASE WHEN ncv.contact_id > 0 THEN tct.email ELSE tc.email END
+                    ) AS registrant_email,
+                    CASE WHEN LOWER(td.type) = 'transfer'
+                        THEN COALESCE(nd.trdate, TIMESTAMP(td.registrationdate))
+                        ELSE COALESCE(nd.crdate, TIMESTAMP(td.registrationdate))
+                    END AS registered_at,
+                    COALESCE(nd.exdate, TIMESTAMP(td.expirydate)) AS expires_at,
+                    COALESCE(nd.lastupdate, TIMESTAMP(td.registrationdate)) AS contact_updated_at,
+                    CASE WHEN LOWER(td.type) = 'transfer'
+                        THEN 'transfer_in' ELSE 'registration' END AS trigger_hint,
+                    rc.identifier AS registrant_identifier,
+                    rc.name AS registrant_name,
+                    rc.org AS registrant_org,
+                    rc.street1 AS registrant_street1,
+                    rc.street2 AS registrant_street2,
+                    rc.street3 AS registrant_street3,
+                    rc.city AS registrant_city,
+                    rc.sp AS registrant_sp,
+                    rc.pc AS registrant_pc,
+                    rc.cc AS registrant_cc,
+                    rc.voice AS registrant_voice,
+                    rc.fax AS registrant_fax,
+                    COALESCE(NULLIF(rc.email, ''),
+                        CASE WHEN ncv.contact_id > 0 THEN tct.email ELSE tc.email END
+                    ) AS registrant_contact_email,
+                    ac.identifier AS admin_identifier,
+                    ac.name AS admin_name,
+                    ac.org AS admin_org,
+                    ac.street1 AS admin_street1,
+                    ac.street2 AS admin_street2,
+                    ac.street3 AS admin_street3,
+                    ac.city AS admin_city,
+                    ac.sp AS admin_sp,
+                    ac.pc AS admin_pc,
+                    ac.cc AS admin_cc,
+                    ac.voice AS admin_voice,
+                    ac.fax AS admin_fax,
+                    ac.email AS admin_email,
+                    tec.identifier AS tech_identifier,
+                    tec.name AS tech_name,
+                    tec.org AS tech_org,
+                    tec.street1 AS tech_street1,
+                    tec.street2 AS tech_street2,
+                    tec.street3 AS tech_street3,
+                    tec.city AS tech_city,
+                    tec.sp AS tech_sp,
+                    tec.pc AS tech_pc,
+                    tec.cc AS tech_cc,
+                    tec.voice AS tech_voice,
+                    tec.fax AS tech_fax,
+                    tec.email AS tech_email,
+                    bc.identifier AS billing_identifier,
+                    bc.name AS billing_name,
+                    bc.org AS billing_org,
+                    bc.street1 AS billing_street1,
+                    bc.street2 AS billing_street2,
+                    bc.street3 AS billing_street3,
+                    bc.city AS billing_city,
+                    bc.sp AS billing_sp,
+                    bc.pc AS billing_pc,
+                    bc.cc AS billing_cc,
+                    bc.voice AS billing_voice,
+                    bc.fax AS billing_fax,
+                    bc.email AS billing_email,
                     ncv.id AS validation_id,
                     ncv.is_validated AS validation,
                     ncv.validation_checked_at AS validation_stamp,
+                    ncv.validation_method,
                     ncv.validation_token AS token,
                     ncv.validation_token,
                     ncv.validation_log
                 FROM namingo_contact_validation ncv
                 JOIN tblclients tc ON tc.id = ncv.client_id
+                JOIN tbldomains td ON td.userid = ncv.client_id
+                LEFT JOIN tblorders o ON o.id = td.orderid
                 LEFT JOIN tblcontacts tct
                     ON tct.id = ncv.contact_id
                    AND tct.userid = ncv.client_id
-                JOIN (
-                    SELECT
-                        d.userid,
-                        CASE
-                            WHEN o.contactid > 0 AND oct.id IS NOT NULL
-                                THEN oct.id
-                            ELSE 0
-                        END AS contact_id,
-                        MIN(d.id) AS domain_id
-                    FROM tbldomains d
-                    LEFT JOIN tblorders o
-                        ON o.id = d.orderid
-                    LEFT JOIN tblcontacts oct
-                        ON oct.id = o.contactid
-                       AND oct.userid = d.userid
-                    WHERE d.registrationdate IS NOT NULL
-                      AND d.registrationdate <> '0000-00-00'
-                      AND d.registrationdate < :registered_at
-                    GROUP BY
-                        d.userid,
-                        CASE
-                            WHEN o.contactid > 0 AND oct.id IS NOT NULL
-                                THEN oct.id
-                            ELSE 0
-                        END
-                ) eligible_domain
-                    ON eligible_domain.userid = ncv.client_id
-                   AND eligible_domain.contact_id = ncv.contact_id
-                JOIN tbldomains td ON td.id = eligible_domain.domain_id
-                WHERE ncv.is_validated = 0
+                LEFT JOIN tblcontacts oct
+                    ON oct.id = o.contactid
+                   AND oct.userid = ncv.client_id
+                LEFT JOIN namingo_domain nd ON LOWER(nd.name) = LOWER(td.domain)
+                LEFT JOIN namingo_contact rc ON rc.id = nd.registrant
+                LEFT JOIN namingo_contact ac ON ac.id = nd.admin
+                LEFT JOIN namingo_contact tec ON tec.id = nd.tech
+                LEFT JOIN namingo_contact bc ON bc.id = nd.billing
+                WHERE ncv.contact_id = CASE
+                        WHEN o.contactid > 0 AND oct.id IS NOT NULL
+                            THEN oct.id
+                        ELSE 0
+                    END
+                  AND td.registrationdate IS NOT NULL
+                  AND td.registrationdate <> '0000-00-00'
+                  AND td.status = 'Active'
+                  AND td.expirydate >= CURDATE()
             ");
-            $stmt->execute(['registered_at' => $registeredAt]);
+            $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             $this->log->warning('WHMCS contact validation table unavailable, falling back to legacy validation query: ' . $e->getMessage());
@@ -360,25 +417,97 @@ final class WHMCS extends AbstractDriver
                 SELECT
                     d.registrant,
                     d.name,
-                    d.id,
+                    td.id,
                     c.id AS cid,
                     c.email,
                     c.validation,
                     c.validation_stamp,
-                    c.validation_log
+                    c.validation_log,
+                    CASE WHEN LOWER(td.type) = 'transfer'
+                        THEN COALESCE(d.trdate, TIMESTAMP(td.registrationdate))
+                        ELSE d.crdate
+                    END AS registered_at,
+                    d.exdate AS expires_at,
+                    d.lastupdate AS contact_updated_at,
+                    CASE WHEN LOWER(td.type) = 'transfer'
+                        THEN 'transfer_in' ELSE 'registration' END AS trigger_hint,
+                    c.identifier AS registrant_identifier,
+                    c.name AS registrant_name,
+                    c.org AS registrant_org,
+                    c.street1 AS registrant_street1,
+                    c.street2 AS registrant_street2,
+                    c.street3 AS registrant_street3,
+                    c.city AS registrant_city,
+                    c.sp AS registrant_sp,
+                    c.pc AS registrant_pc,
+                    c.cc AS registrant_cc,
+                    c.voice AS registrant_voice,
+                    c.fax AS registrant_fax,
+                    c.email AS registrant_contact_email,
+                    ac.identifier AS admin_identifier,
+                    ac.name AS admin_name,
+                    ac.org AS admin_org,
+                    ac.street1 AS admin_street1,
+                    ac.street2 AS admin_street2,
+                    ac.street3 AS admin_street3,
+                    ac.city AS admin_city,
+                    ac.sp AS admin_sp,
+                    ac.pc AS admin_pc,
+                    ac.cc AS admin_cc,
+                    ac.voice AS admin_voice,
+                    ac.fax AS admin_fax,
+                    ac.email AS admin_email,
+                    tec.identifier AS tech_identifier,
+                    tec.name AS tech_name,
+                    tec.org AS tech_org,
+                    tec.street1 AS tech_street1,
+                    tec.street2 AS tech_street2,
+                    tec.street3 AS tech_street3,
+                    tec.city AS tech_city,
+                    tec.sp AS tech_sp,
+                    tec.pc AS tech_pc,
+                    tec.cc AS tech_cc,
+                    tec.voice AS tech_voice,
+                    tec.fax AS tech_fax,
+                    tec.email AS tech_email,
+                    bc.identifier AS billing_identifier,
+                    bc.name AS billing_name,
+                    bc.org AS billing_org,
+                    bc.street1 AS billing_street1,
+                    bc.street2 AS billing_street2,
+                    bc.street3 AS billing_street3,
+                    bc.city AS billing_city,
+                    bc.sp AS billing_sp,
+                    bc.pc AS billing_pc,
+                    bc.cc AS billing_cc,
+                    bc.voice AS billing_voice,
+                    bc.fax AS billing_fax,
+                    bc.email AS billing_email
                 FROM namingo_domain d
                 INNER JOIN namingo_contact c ON d.registrant = c.id
-                WHERE d.crdate < :registered_at
-                  AND c.validation = 0
+                LEFT JOIN namingo_contact ac ON d.admin = ac.id
+                LEFT JOIN namingo_contact tec ON d.tech = tec.id
+                LEFT JOIN namingo_contact bc ON d.billing = bc.id
+                INNER JOIN tbldomains td ON LOWER(td.domain) = LOWER(d.name)
+                WHERE td.status = 'Active'
+                  AND td.expirydate >= CURDATE()
             ");
-            $stmt->execute(['registered_at' => $registeredAt]);
+            $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         foreach ($rows as &$row) {
             $row['domain_name'] = $row['name'];
-            $row['registrant_email'] = $row['email'];
+            $row['registrant_email'] = $row['registrant_email'] ?? $row['email'];
             $row['validation'] = (int)($row['validation'] ?? 0);
+            $row['verification_key'] = 'whmcs:' . ($row['validation_id'] ?? $row['cid']);
+            $row['registrant_data'] = $this->validationContact($row, 'registrant');
+            $row['contact_data'] = [
+                'registrant' => $row['registrant_data'],
+                'administrative' => $this->validationContact($row, 'admin'),
+                'technical' => $this->validationContact($row, 'tech'),
+                'billing' => $this->validationContact($row, 'billing'),
+            ];
         }
         unset($row);
 
@@ -392,7 +521,7 @@ final class WHMCS extends AbstractDriver
             ?? $row['validation_log']
             ?? null;
 
-        if (!empty($existingToken)) {
+        if (empty($row['force_new_token']) && !empty($existingToken)) {
             return (string)$existingToken;
         }
 
@@ -401,11 +530,11 @@ final class WHMCS extends AbstractDriver
         if (!empty($row['validation_id'])) {
             $stmt = $this->pdo->prepare("
                 UPDATE namingo_contact_validation
-                SET validation_token = :token,
+                SET is_validated = 0,
+                    validation_token = :token,
                     validation_method = 'email',
                     validation_checked_at = CURRENT_TIMESTAMP(3)
                 WHERE id = :id
-                  AND is_validated = 0
             ");
             $stmt->execute([
                 'token' => $token,
@@ -414,9 +543,9 @@ final class WHMCS extends AbstractDriver
         } else {
             $stmt = $this->pdo->prepare("
                 UPDATE namingo_contact
-                SET validation_log = :token
+                SET validation = 0,
+                    validation_log = :token
                 WHERE id = :id
-                  AND validation = 0
             ");
             $stmt->execute([
                 'token' => $token,
@@ -436,6 +565,29 @@ final class WHMCS extends AbstractDriver
         return rtrim($baseUrl, '/')
             . '/index.php?m=namingo_registrar&page=validation&token='
             . urlencode($token);
+    }
+
+    private function validationContact(array $row, string $prefix): array
+    {
+        $emailKey = $prefix === 'registrant'
+            ? 'registrant_contact_email'
+            : $prefix . '_email';
+
+        return [
+            'identifier' => (string)($row[$prefix . '_identifier'] ?? ''),
+            'name' => (string)($row[$prefix . '_name'] ?? ''),
+            'organization' => (string)($row[$prefix . '_org'] ?? ''),
+            'street1' => (string)($row[$prefix . '_street1'] ?? ''),
+            'street2' => (string)($row[$prefix . '_street2'] ?? ''),
+            'street3' => (string)($row[$prefix . '_street3'] ?? ''),
+            'city' => (string)($row[$prefix . '_city'] ?? ''),
+            'state' => (string)($row[$prefix . '_sp'] ?? ''),
+            'postcode' => (string)($row[$prefix . '_pc'] ?? ''),
+            'country' => (string)($row[$prefix . '_cc'] ?? ''),
+            'phone' => (string)($row[$prefix . '_voice'] ?? ''),
+            'fax' => (string)($row[$prefix . '_fax'] ?? ''),
+            'email' => (string)($row[$emailKey] ?? ''),
+        ];
     }
 
     public function updateValidationNameservers(array $row, string $ns1, string $ns2): void
