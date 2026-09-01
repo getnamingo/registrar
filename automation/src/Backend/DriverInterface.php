@@ -6,6 +6,10 @@ interface DriverInterface
 {
     public function getWdrpDomains(string $currentDate): array;
 
+    public function hasRdrpNotification(int $domainId, int $year): bool;
+
+    public function storeRdrpNotification(array $data): void;
+
     public function getValidationEmailRows(): array;
 
     public function storeValidationEmailToken(array $row, string $token): bool;

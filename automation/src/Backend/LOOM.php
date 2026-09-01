@@ -244,6 +244,40 @@ final class LOOM extends AbstractDriver
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function hasRdrpNotification(int $domainId, int $year): bool
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT 1
+            FROM domain_registrar_notification
+            WHERE domain_id = ?
+              AND type = 'rdrp'
+              AND YEAR(sent_at) = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$domainId, $year]);
+
+        return (bool)$stmt->fetchColumn();
+    }
+
+    public function storeRdrpNotification(array $data): void
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO domain_registrar_notification
+                (domain_id, domain, type, recipient, subject, body, metadata, sent_at)
+            VALUES (?, ?, 'rdrp', ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $data['domain_id'],
+            $data['domain'],
+            $data['recipient'],
+            $data['subject'],
+            $data['body'],
+            json_encode($data['metadata'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            $data['sent_at'],
+        ]);
+    }
+
     public function getValidationEmailRows(): array
     {
         $stmt = $this->pdo->prepare("

@@ -90,7 +90,7 @@ try {
 
             $correctionUrl = str_replace('{{domain_name}}', rawurlencode($domainName), $registrationDataUpdateUrl);
 
-            if (is_file(rdrpArchivePath($domainName, $creationDate, $noticeYear))) {
+            if ($driver->hasRdrpNotification((int)$domain['domain_id'], $noticeYear)) {
                 continue;
             }
 
@@ -176,19 +176,20 @@ try {
                     continue;
                 }
 
-                archiveRdrpNotice(
-                    $domainName,
-                    $creationDate,
-                    $noticeYear,
-                    $to,
-                    $email['subject'],
-                    $email['body'],
-                    $email['html'],
-                    [
+                $driver->storeRdrpNotification([
+                    'domain_id' => (int)$domain['domain_id'],
+                    'domain' => $domainName,
+                    'recipient' => $to,
+                    'subject' => $email['subject'],
+                    'body' => $email['body'],
+                    'sent_at' => gmdate('Y-m-d H:i:s'),
+                    'metadata' => [
+                        'creation_date' => $creationDate,
+                        'html' => $email['html'],
                         'correction_url' => $correctionUrl,
                         'registration_agreement_url' => $registrationAgreementUrl,
-                    ]
-                );
+                    ],
+                ]);
 
                 $sent++;
 
