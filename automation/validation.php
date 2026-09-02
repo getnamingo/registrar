@@ -139,6 +139,22 @@ function validationState(PDO $pdo, int $id): array
     return $state;
 }
 
+function validationBillingRevalidationRequested(
+    array $row,
+    array $state,
+    DateTimeImmutable $now
+): bool {
+    if (($state['status'] ?? null) !== 'verified'
+        || (int)($row['validation'] ?? 0) !== 0
+        || empty($state['verified_at'])) {
+        return false;
+    }
+
+    $verifiedAt = validationDate($state['verified_at'], $now);
+    $checkedAt = $row['validation_checked_at'] ?? $row['validation_stamp'] ?? null;
+    return validationDate($checkedAt, $verifiedAt) > $verifiedAt;
+}
+
 function validationHasVerifiedHash(
     PDO $pdo,
     string $verificationKey,
@@ -572,6 +588,15 @@ function runValidation(): int
                 $commandMatched = true;
             }
             $forcedTrigger = $isTarget ? $trigger : null;
+            if ($forcedTrigger === null
+                && $state !== null
+                && validationBillingRevalidationRequested($row, $state, $now)) {
+                $forcedTrigger = 'manual';
+                $log->info(
+                    'Billing contact was marked unvalidated; reopened validation for '
+                        . $row['domain_name'] . '.'
+                );
+            }
 
             if ($state === null) {
                 $triggeredAt = validationDate($row['registered_at'] ?? null, $now);
