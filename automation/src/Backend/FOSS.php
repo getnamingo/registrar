@@ -801,6 +801,69 @@ final class FOSS extends AbstractDriver
         return $rows;
     }
 
+    public function getExpiredDomainPurgeCandidates(
+        string $expiredBefore,
+        int $limit = 500,
+        int $afterId = 0
+    ): array {
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT sd.*
+            FROM service_domain sd
+            WHERE sd.expires_at <= :expired_before
+              AND sd.id > :after_id
+            ORDER BY sd.id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':expired_before', $expiredBefore);
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($rows as &$row) {
+            $row['domain_name'] = $this->buildDomainName($row);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    protected function deleteExpiredDomainData(
+        array $row,
+        string $domain,
+        string $purgedAt
+    ): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE client_order
+            SET canceled_at = COALESCE(canceled_at, :canceled_at),
+                status = 'cancelled',
+                reason = CASE
+                    WHEN reason IS NULL OR reason = '' THEN 'domain deleted at registry'
+                    ELSE reason
+                END
+            WHERE service_id = :service_id
+              AND service_type = 'domain'
+              AND status <> 'cancelled'
+        ");
+        $stmt->execute([
+            'canceled_at' => $purgedAt,
+            'service_id' => (int)$row['id'],
+        ]);
+
+        $stmt = $this->pdo->prepare("
+            DELETE FROM service_domain
+            WHERE id = :id
+              AND expires_at = :expires_at
+        ");
+        $stmt->execute([
+            'id' => (int)$row['id'],
+            'expires_at' => (string)$row['expires_at'],
+        ]);
+
+        return $stmt->rowCount() === 1;
+    }
+
     public function getErrpDnsDomain(int $domainId): ?array
     {
         $stmt = $this->pdo->prepare("

@@ -105,6 +105,14 @@ interface DriverInterface
         int $afterId = 0
     ): array;
 
+    public function getExpiredDomainPurgeCandidates(
+        string $expiredBefore,
+        int $limit = 500,
+        int $afterId = 0
+    ): array;
+
+    public function purgeExpiredDomain(array $row, int $eppResultCode): bool;
+
     public function getErrpDnsDomain(int $domainId): ?array;
 
     public function updateErrpDomainNameservers(

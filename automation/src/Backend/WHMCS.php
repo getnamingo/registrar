@@ -886,6 +886,107 @@ final class WHMCS extends AbstractDriver
         return $rows;
     }
 
+    public function getExpiredDomainPurgeCandidates(
+        string $expiredBefore,
+        int $limit = 500,
+        int $afterId = 0
+    ): array {
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT nd.*
+            FROM namingo_domain nd
+            WHERE nd.exdate <= :expired_before
+              AND nd.id > :after_id
+            ORDER BY nd.id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':expired_before', $expiredBefore);
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($rows as &$row) {
+            $row['domain_name'] = $row['name'];
+            $row['expires_at'] = $row['exdate'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    protected function expiredDomainPurgeSnapshot(array $row): array
+    {
+        $contact = null;
+        $contactId = (int)($row['registrant'] ?? 0);
+
+        if ($contactId > 0) {
+            $stmt = $this->pdo->prepare("
+                SELECT *
+                FROM namingo_contact
+                WHERE id = :id
+                LIMIT 1
+            ");
+            $stmt->execute(['id' => $contactId]);
+            $contact = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        return parent::expiredDomainPurgeSnapshot([
+            'domain' => $row,
+            'registrant_contact' => $contact,
+        ]);
+    }
+
+    protected function deleteExpiredDomainData(
+        array $row,
+        string $domain,
+        string $purgedAt
+    ): bool {
+        $stmt = $this->pdo->prepare("
+            DELETE FROM namingo_domain
+            WHERE id = :id
+              AND LOWER(name) = LOWER(:domain)
+              AND exdate = :expires_at
+        ");
+        $stmt->execute([
+            'id' => (int)$row['id'],
+            'domain' => $domain,
+            'expires_at' => (string)$row['exdate'],
+        ]);
+
+        if ($stmt->rowCount() !== 1) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT id
+            FROM tbldomains
+            WHERE LOWER(domain) = LOWER(:domain)
+              AND status IN ('Active', 'Expired', 'Grace')
+              AND (expirydate IS NULL OR expirydate <= DATE(:expires_at))
+            ORDER BY id DESC
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->execute([
+            'domain' => $domain,
+            'expires_at' => (string)$row['exdate'],
+        ]);
+        $billingId = (int)($stmt->fetchColumn() ?: 0);
+
+        if ($billingId > 0) {
+            $stmt = $this->pdo->prepare("
+                UPDATE tbldomains
+                SET status = 'Cancelled'
+                WHERE id = :id
+                  AND status IN ('Active', 'Expired', 'Grace')
+            ");
+            $stmt->execute(['id' => $billingId]);
+        }
+
+        return true;
+    }
+
     public function getErrpDnsDomain(int $domainId): ?array
     {
         $stmt = $this->pdo->prepare("

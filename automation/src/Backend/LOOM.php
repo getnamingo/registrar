@@ -792,6 +792,75 @@ final class LOOM extends AbstractDriver
         return $rows;
     }
 
+    public function getExpiredDomainPurgeCandidates(
+        string $expiredBefore,
+        int $limit = 500,
+        int $afterId = 0
+    ): array {
+        $limit = max(1, min($limit, 1000));
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM services
+            WHERE type = 'domain'
+              AND expires_at <= :expired_before
+              AND id > :after_id
+            ORDER BY id ASC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':expired_before', $expiredBefore);
+        $stmt->bindValue(':after_id', max(0, $afterId), PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($rows as &$row) {
+            $row['domain_name'] = $row['service_name'];
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    protected function deleteExpiredDomainData(
+        array $row,
+        string $domain,
+        string $purgedAt
+    ): bool {
+        $orderId = (int)($row['order_id'] ?? 0);
+
+        if ($orderId > 0) {
+            $stmt = $this->pdo->prepare("
+                UPDATE orders
+                SET status = 'inactive'
+                WHERE id = :id
+                  AND service_type = 'domain'
+                  AND status IN ('active', 'pending')
+            ");
+            $stmt->execute(['id' => $orderId]);
+        }
+
+        $stmt = $this->pdo->prepare("
+            DELETE FROM domain_contact_map
+            WHERE domain_id = :domain_id
+        ");
+        $stmt->execute(['domain_id' => (int)$row['id']]);
+
+        $stmt = $this->pdo->prepare("
+            DELETE FROM services
+            WHERE id = :id
+              AND type = 'domain'
+              AND LOWER(service_name) = LOWER(:domain)
+              AND expires_at = :expires_at
+        ");
+        $stmt->execute([
+            'id' => (int)$row['id'],
+            'domain' => $domain,
+            'expires_at' => (string)$row['expires_at'],
+        ]);
+
+        return $stmt->rowCount() === 1;
+    }
+
     public function getErrpDnsDomain(int $domainId): ?array
     {
         $stmt = $this->pdo->prepare("
