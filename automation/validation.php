@@ -716,11 +716,13 @@ function runValidation(): int
         }
         foreach ($groups as $items) {
             $tokenHashes = [];
+            $issuedRegistrantHashes = [];
             $validated = false;
             $verificationMethod = 'email';
             foreach ($items as [$state, $row]) {
                 if (!empty($state['token_hash'])) {
                     $tokenHashes[$state['token_hash']] = true;
+                    $issuedRegistrantHashes[$state['registrant_data_hash']] = true;
                 }
                 $validated = $validated || (int)($row['validation'] ?? 0) === 1;
                 if (($row['validation_method'] ?? null) === 'manual') {
@@ -728,9 +730,20 @@ function runValidation(): int
                 }
             }
             if ($validated && count($tokenHashes) === 1) {
-                $tokenHash = (string)array_key_first($tokenHashes);
+                if (count($issuedRegistrantHashes) !== 1) {
+                    validationError(
+                        $log,
+                        'Refusing ambiguous validation: one token covers multiple registrant hashes.',
+                        $hadErrors
+                    );
+                    continue;
+                }
+                $registrantHash = (string)array_key_first($issuedRegistrantHashes);
                 foreach ($items as [$state, $row]) {
-                    if (!hash_equals((string)($state['token_hash'] ?? ''), $tokenHash)) {
+                    if (!hash_equals(
+                        (string)$state['registrant_data_hash'],
+                        $registrantHash
+                    )) {
                         continue;
                     }
                     validationUpdate($pdo, (int)$state['id'], [
