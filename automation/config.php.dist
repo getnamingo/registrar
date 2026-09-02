@@ -99,7 +99,6 @@ $config = array(
     'urs_repository_username' => getenv('URS_REPOSITORY_USERNAME') ?: '',
     'urs_repository_password' => getenv('URS_REPOSITORY_PASSWORD') ?: '',
     'urs_keyring_path' => '/opt/registrar/automation/urs-pgp-keys.gpg',
-    'urs_archive_path' => '/var/lib/namingo/urs',
 
     // Cron / Automation Configuration
     'cron_alert_email' => 'admin@example.com',
