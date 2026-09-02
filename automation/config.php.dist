@@ -85,6 +85,13 @@ $config = array(
     'registration_data_update_url' => 'https://example.com/account/domains',
     'registration_agreement_url' => 'https://example.com/legal/domain-registration-agreement',
 
+    // Restored Names Accuracy Policy. WHMCS/FOSSBilling normally infer gTLD
+    // applicability from their registrar configuration. Set an explicit list
+    // for LOOM/custom backends or to restrict enforcement further.
+    'restored_names_accuracy' => [
+        'tlds' => [], // e.g. ['com', 'net', 'org']
+    ],
+
     // URS Configuration
     'urs_imap_host' => '{your_imap_server:993/imap/ssl}INBOX',
     'urs_imap_username' => 'your_username',

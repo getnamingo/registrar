@@ -30,6 +30,8 @@ Open source ICANN-accredited domain registrar management system.
 
 - **Contact Validation**: Performs ICANN-required and NIS2-compliant registrant contact validation and verification workflows.
 
+- **Restored Names Accuracy Policy**: Keeps qualifying names on registrar hold after RGP restoration until post-deletion contact accuracy is verified.
+
 - **Transfer Management (IRTP/ITRP)**: Handles inter-registrar domain transfers with secure authorization and policy-compliant workflows.
 
 - **ICANN Transfer Notification**: Sends the standardized losing-registrar transfer confirmation from registry EPP poll events, with durable audit evidence.

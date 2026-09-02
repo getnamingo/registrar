@@ -51,6 +51,11 @@ $php = escapeshellarg(PHP_BINARY);
 $addJob('escrow', $php . ' /opt/registrar/automation/escrow.php', '0 17 * * 5');
 $addJob('epp-poll', $php . ' /opt/registrar/automation/epp_poll.php', '*/5 * * * *');
 $addJob('transfer-notify', $php . ' /opt/registrar/automation/transfer_notify.php', '*/5 * * * *');
+$addJob(
+    'restored-names-accuracy',
+    $php . ' /opt/registrar/automation/restored_names_accuracy.php',
+    '*/5 * * * *'
+);
 
 if ($cronJobConfig['tools']) {
     $addJob('wdrp', $php . ' /opt/registrar/automation/wdrp.php', '0 0 * * *');

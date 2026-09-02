@@ -215,6 +215,49 @@ function validationClose(PDO $pdo, int $id, DateTimeImmutable $now): void
     ]);
 }
 
+function validationPublishRestoredAccuracy(
+    object $driver,
+    array $row,
+    array $state,
+    object $log,
+    bool &$hadErrors
+): void {
+    if (($state['status'] ?? null) !== 'verified' || empty($state['verified_at'])) {
+        return;
+    }
+
+    try {
+        $domain = strtolower(rtrim(
+            validationDomainAscii((string)$row['domain_name']),
+            '.'
+        ));
+        $domainId = is_numeric($row['domain_id'] ?? null)
+            ? (int)$row['domain_id']
+            : null;
+        if ($driver->markRestoredAccuracyVerified(
+            $domain,
+            $domainId,
+            (string)$state['contact_data_hash'],
+            (string)$state['verified_at'],
+            (string)($state['verification_method'] ?? ''),
+            isset($state['verification_note'])
+                ? (string)$state['verification_note']
+                : null
+        )) {
+            $log->info(
+                "Published post-deletion contact verification for restored domain {$domain}."
+            );
+        }
+    } catch (Throwable $e) {
+        validationError(
+            $log,
+            'Restored Names Accuracy verification publish failed for '
+                . (string)$row['domain_name'] . ': ' . $e->getMessage(),
+            $hadErrors
+        );
+    }
+}
+
 function validationContactData(array $row): array
 {
     if (is_array($row['contact_data'] ?? null)) {
@@ -791,6 +834,32 @@ function runValidation(): int
                 && ((int)$state['client_hold_added'] === 1
                     || (int)$state['client_transfer_prohibited_added'] === 1)) {
                 validationRestore($pdo, $driver, $domains[$domainId], $state, $log, $hadErrors, $now);
+            }
+        }
+
+        // Publish only exact, current validation states. The restored-name
+        // workflow additionally requires verification to post-date deletion.
+        $restoredAccuracyDomains = array_fill_keys(
+            $driver->getActiveRestoredAccuracyDomains(),
+            true
+        );
+        $states = validationCurrentStates($pdo, $backend);
+        foreach ($states as $domainId => $state) {
+            if (!isset($domains[$domainId]) || $state['status'] !== 'verified') {
+                continue;
+            }
+            $restoredDomain = strtolower(rtrim(
+                validationDomainAscii((string)$domains[$domainId]['domain_name']),
+                '.'
+            ));
+            if (isset($restoredAccuracyDomains[$restoredDomain])) {
+                validationPublishRestoredAccuracy(
+                    $driver,
+                    $domains[$domainId],
+                    $state,
+                    $log,
+                    $hadErrors
+                );
             }
         }
     } catch (Throwable $e) {
