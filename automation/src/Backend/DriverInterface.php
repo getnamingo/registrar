@@ -28,6 +28,31 @@ interface DriverInterface
 
     public function getEppConfiguration(string $domain): array;
 
+    public function findRestoredAccuracyNotification(string $domain): ?array;
+
+    public function storeRestoredAccuracyNotification(array $data): int;
+
+    public function updateRestoredAccuracyNotificationMetadata(
+        int $id,
+        array $metadata
+    ): void;
+
+    public function getPendingRestoredAccuracyNotifications(
+        int $afterId = 0,
+        int $limit = 500
+    ): array;
+
+    public function getActiveRestoredAccuracyDomains(): array;
+
+    public function markRestoredAccuracyVerified(
+        string $domain,
+        ?int $domainId,
+        string $contactHash,
+        string $verifiedAt,
+        string $method,
+        ?string $note = null
+    ): bool;
+
     public function findEppPollNotification(
         string $recipient,
         string $accountKey,

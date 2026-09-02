@@ -553,3 +553,43 @@ URS notices and related files are archived under:
 ```
 
 unless `urs_archive_path` is changed in `config.php`.
+
+## 7. Restored Names Accuracy hooks
+
+The [ICANN Restored Names Accuracy Policy](https://www.icann.org/en/contracted-parties/consensus-policies/restored-names-accuracy-policy/restored-names-accuracy-policy-01-01-2020-en) applies when a name is deleted because of false contact data or non-response to registrar inquiries and is later restored from the Redemption Grace Period.
+
+After the registry accepts such a deletion, record its reason:
+
+```bash
+/usr/bin/php8.5 /opt/registrar/automation/restored_names_accuracy.php \
+  --deleted --domain=example.com --reason=false_contact_data \
+  --note="accuracy case/reference"
+```
+
+Use `--reason=non_response` for deletion following non-response. Do not emit this hook for other deletion reasons.
+
+The RGP restoration path must invoke the following hook immediately after every successful restoration:
+
+```bash
+/usr/bin/php8.5 /opt/registrar/automation/restored_names_accuracy.php \
+  --restored --domain=example.com
+```
+
+The hook returns a non-zero status unless registry `clientHold` can be confirmed. The mandatory five-minute cron retries every pending hold independently and never removes a pre-existing hold that this workflow did not add.
+
+The built-in validation job automatically publishes a release signal only for an exact verification completed after the qualifying deletion. An external contact-verification system can publish the same audited signal after the Registered Name Holder supplies updated and accurate data:
+
+```bash
+/usr/bin/php8.5 /opt/registrar/automation/restored_names_accuracy.php \
+  --verified --domain=example.com --note="ticket/verification reference"
+```
+
+The lifecycle is stored as notification type `restored_accuracy` in the existing backend table: `namingo_registrar_notifications` for WHMCS and `domain_registrar_notification` for FOSSBilling and LOOM. No database migration or additional table is required.
+
+WHMCS and FOSSBilling normally identify applicable gTLDs from their EPP registrar settings. LOOM and custom backends must configure the applicable TLDs explicitly:
+
+```php
+'restored_names_accuracy' => [
+    'tlds' => ['com', 'net', 'org'],
+],
+```
