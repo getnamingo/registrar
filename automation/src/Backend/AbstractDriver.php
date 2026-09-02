@@ -352,6 +352,76 @@ abstract class AbstractDriver implements DriverInterface
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function findUrsNotification(
+        string $messageHash,
+        string $caseHash
+    ): ?array {
+        $table = $this->notificationTable();
+        $stmt = $this->pdo->prepare("
+            SELECT id, domain, metadata, sent_at
+            FROM {$table}
+            WHERE type = 'urs'
+              AND (
+                    JSON_UNQUOTE(
+                        JSON_EXTRACT(metadata, '$.urs.message_hash')
+                    ) = :message_hash
+                 OR (
+                        :has_case_hash = 1
+                    AND JSON_UNQUOTE(
+                            JSON_EXTRACT(metadata, '$.urs.case_hash')
+                        ) = :case_hash
+                 )
+              )
+            ORDER BY id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([
+            'message_hash' => $messageHash,
+            'has_case_hash' => $caseHash !== '' ? 1 : 0,
+            'case_hash' => $caseHash,
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public function storeUrsNotification(array $data): int
+    {
+        $table = $this->notificationTable();
+        $stmt = $this->pdo->prepare("
+            INSERT INTO {$table} (
+                domain_id,
+                domain,
+                type,
+                recipient,
+                subject,
+                body,
+                metadata,
+                sent_at
+            ) VALUES (
+                NULL,
+                :domain,
+                'urs',
+                :recipient,
+                :subject,
+                :body,
+                :metadata,
+                :sent_at
+            )
+        ");
+        $stmt->execute([
+            'domain' => (string)$data['domain'],
+            'recipient' => (string)$data['recipient'],
+            'subject' => (string)$data['subject'],
+            'body' => (string)$data['body'],
+            'metadata' => $this->encodeNotificationMetadata($data['metadata']),
+            'sent_at' => (string)$data['sent_at'],
+        ]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
     public function findErrpDnsState(
         int $domainId,
         string $expirationDate

@@ -41,15 +41,9 @@ if (
 }
 
 $keyringPath = $config['urs_keyring_path'] ?? '/opt/registrar/automation/urs-pgp-keys.gpg';
-$archiveRoot = rtrim($config['urs_archive_path'] ?? '/var/lib/namingo/urs', '/');
 
 if (!is_file($keyringPath) || filemtime($keyringPath) < time() - 93600) {
     $log->error('URS provider keyring is missing or older than 26 hours.');
-    exit(1);
-}
-
-if (!is_dir($archiveRoot) && !mkdir($archiveRoot, 0750, true) && !is_dir($archiveRoot)) {
-    $log->error('Cannot create URS archive directory: ' . $archiveRoot);
     exit(1);
 }
 
@@ -101,50 +95,65 @@ try {
             ? strtolower($caseNumber . '|' . $action . '|' . implode(',', $domains))
             : '';
 
-        if (isUrsProcessed($archiveRoot, $messageId, $caseKey)) {
+        // Preserve the complete RFC822/MIME message, including attachments,
+        // in the existing registrar-notifications table.
+        $rawMessage = (string)imap_fetchheader($inbox, $emailId, FT_INTERNAL)
+            . (string)imap_body($inbox, $emailId, FT_INTERNAL | FT_PEEK);
+        $messageHash = hash(
+            'sha256',
+            $messageId !== '' ? $messageId : $rawMessage
+        );
+        $caseHash = $caseKey !== '' ? hash('sha256', $caseKey) : '';
+
+        if ($driver->findUrsNotification($messageHash, $caseHash) !== null) {
             imap_setflag_full($inbox, (string)$emailId, '\\Seen');
             $log->info("Skipped duplicate URS notice for email ID $emailId.");
             continue;
         }
 
-        // Preserve the complete RFC822/MIME message. Attachments remain
-        // intact inside the .eml and are also extracted below for convenience.
-        $rawMessage = (string)imap_fetchheader($inbox, $emailId, FT_INTERNAL)
-            . (string)imap_body($inbox, $emailId, FT_INTERNAL | FT_PEEK);
-
-        $archiveId = $messageId !== ''
-            ? $messageId
-            : ($caseKey !== '' ? $caseKey : hash('sha256', $rawMessage));
-
-        try {
-            $archivePath = archiveUrsMessage(
-                $inbox,
-                $emailId,
-                $rawMessage,
-                $archiveRoot,
-                $archiveId
-            );
-        } catch (Throwable $e) {
-            $log->error("Could not archive URS email ID $emailId: " . $e->getMessage());
+        $encodedMessage = base64_encode($rawMessage);
+        if (strlen($encodedMessage) > 16777215) {
+            $log->error("URS email ID $emailId exceeds the notification body limit.");
             continue;
         }
 
-        if ($archivePath === null) {
-            $log->error("Could not archive URS email ID $emailId; leaving it unprocessed.");
-            continue;
-        }
-
-        // Keep the existing driver API small: provider context is already
-        // written into the ticket message by all three backends.
-        $providerContext = $provider . '; action=' . $action;
-        if ($caseNumber !== '') {
-            $providerContext .= '; case=' . $caseNumber;
-        }
-        $providerContext .= '; archive=' . $archivePath;
-
         try {
-            // All domains in one notice succeed or none do.
+            // The notice and all of its support tickets succeed or none do.
             $dbh->beginTransaction();
+
+            $notificationId = $driver->storeUrsNotification([
+                'domain' => $domains[0],
+                'recipient' => (string)$config['urs_imap_username'],
+                'subject' => function_exists('mb_strcut')
+                    ? mb_strcut($subject, 0, 255, 'UTF-8')
+                    : substr($subject, 0, 255),
+                'body' => $encodedMessage,
+                'metadata' => [
+                    'urs' => [
+                        'version' => 1,
+                        'provider' => $provider,
+                        'action' => $action,
+                        'case_number' => $caseNumber !== '' ? $caseNumber : null,
+                        'domains' => $domains,
+                        'message_id' => $messageId !== '' ? $messageId : null,
+                        'message_hash' => $messageHash,
+                        'case_hash' => $caseHash !== '' ? $caseHash : null,
+                        'received_at' => $date,
+                        'signature_verified' => true,
+                        'content_type' => 'message/rfc822',
+                        'content_encoding' => 'base64',
+                        'raw_sha256' => hash('sha256', $rawMessage),
+                        'raw_bytes' => strlen($rawMessage),
+                    ],
+                ],
+                'sent_at' => $date,
+            ]);
+
+            $providerContext = $provider . '; action=' . $action;
+            if ($caseNumber !== '') {
+                $providerContext .= '; case=' . $caseNumber;
+            }
+            $providerContext .= '; notification=' . $notificationId;
 
             foreach ($domains as $domain) {
                 if (!$driver->createUrsTicket($domain, $providerContext, $date)) {
@@ -159,13 +168,6 @@ try {
             }
 
             $log->error('URS ticket creation failed: ' . $e->getMessage());
-            continue;
-        }
-
-        // Only after durable DB tickets exist do we record the dedupe state
-        // and mark the source message as processed.
-        if (!markUrsProcessed($archiveRoot, $messageId, $caseKey)) {
-            $log->error("URS tickets were created but processed markers could not be written for email ID $emailId.");
             continue;
         }
 
@@ -444,190 +446,6 @@ function extractUrsCaseNumber(string $text): string
     }
 
     return '';
-}
-
-function archiveUrsMessage(
-    IMAP\Connection $inbox,
-    int $emailId,
-    string $rawMessage,
-    string $archiveRoot,
-    string $archiveId
-): ?string {
-    $path = $archiveRoot
-        . '/messages/'
-        . gmdate('Y/m/d')
-        . '/'
-        . hash('sha256', strtolower($archiveId));
-
-    if (!is_dir($path) && !mkdir($path, 0750, true) && !is_dir($path)) {
-        return null;
-    }
-
-    $tmp = $path . '/message.eml.tmp';
-
-    if (
-        file_put_contents($tmp, $rawMessage, LOCK_EX) === false
-        || !rename($tmp, $path . '/message.eml')
-    ) {
-        @unlink($tmp);
-        return null;
-    }
-
-    $structure = imap_fetchstructure($inbox, $emailId);
-    if ($structure) {
-        saveAttachments(
-            $inbox,
-            $emailId,
-            $structure,
-            $path . '/attachments'
-        );
-    }
-
-    return $path;
-}
-
-function saveAttachments(
-    IMAP\Connection $inbox,
-    int $emailId,
-    object $part,
-    string $directory,
-    string $partNumber = ''
-): void {
-    if (!empty($part->parts)) {
-        foreach ($part->parts as $index => $child) {
-            $childNumber = $partNumber === ''
-                ? (string)($index + 1)
-                : $partNumber . '.' . ($index + 1);
-
-            saveAttachments(
-                $inbox,
-                $emailId,
-                $child,
-                $directory,
-                $childNumber
-            );
-        }
-
-        return;
-    }
-
-    $filename = mimePartFilename($part);
-    if ($filename === '') {
-        return;
-    }
-
-    if (
-        !is_dir($directory)
-        && !mkdir($directory, 0750, true)
-        && !is_dir($directory)
-    ) {
-        throw new RuntimeException(
-            'Cannot create URS attachment directory: ' . $directory
-        );
-    }
-
-    $safeName = preg_replace(
-        '/[^A-Za-z0-9._-]+/',
-        '_',
-        basename(decodeMimeHeader($filename))
-    ) ?: 'attachment.bin';
-
-    $section = $partNumber !== '' ? $partNumber : '1';
-    $content = decodeMimeBody(
-        (string)imap_fetchbody($inbox, $emailId, $section, FT_PEEK),
-        (int)($part->encoding ?? 0)
-    );
-
-    if (
-        file_put_contents(
-            $directory . '/' . str_replace('.', '-', $section) . '-' . $safeName,
-            $content,
-            LOCK_EX
-        ) === false
-    ) {
-        throw new RuntimeException(
-            'Cannot archive URS attachment: ' . $safeName
-        );
-    }
-}
-
-function mimePartFilename(object $part): string
-{
-    foreach (['dparameters', 'parameters'] as $property) {
-        foreach (($part->{$property} ?? []) as $parameter) {
-            if (
-                in_array(
-                    strtolower((string)($parameter->attribute ?? '')),
-                    ['filename', 'name'],
-                    true
-                )
-            ) {
-                return (string)($parameter->value ?? '');
-            }
-        }
-    }
-
-    return '';
-}
-
-function isUrsProcessed(
-    string $archiveRoot,
-    string $messageId,
-    string $caseKey
-): bool {
-    $processedDir = $archiveRoot . '/processed';
-
-    return (
-        $messageId !== ''
-        && is_file(
-            $processedDir . '/message-' . hash('sha256', $messageId)
-        )
-    ) || (
-        $caseKey !== ''
-        && is_file(
-            $processedDir . '/case-' . hash('sha256', $caseKey)
-        )
-    );
-}
-
-function markUrsProcessed(
-    string $archiveRoot,
-    string $messageId,
-    string $caseKey
-): bool {
-    $processedDir = $archiveRoot . '/processed';
-
-    if (
-        !is_dir($processedDir)
-        && !mkdir($processedDir, 0750, true)
-        && !is_dir($processedDir)
-    ) {
-        return false;
-    }
-
-    if (
-        $messageId !== ''
-        && file_put_contents(
-            $processedDir . '/message-' . hash('sha256', $messageId),
-            "\n",
-            LOCK_EX
-        ) === false
-    ) {
-        return false;
-    }
-
-    if (
-        $caseKey !== ''
-        && file_put_contents(
-            $processedDir . '/case-' . hash('sha256', $caseKey),
-            "\n",
-            LOCK_EX
-        ) === false
-    ) {
-        return false;
-    }
-
-    return true;
 }
 
 function decodeMimeBody(string $body, int $encoding): string

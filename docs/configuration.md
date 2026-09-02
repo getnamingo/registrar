@@ -506,7 +506,6 @@ The default configuration contains:
 'urs_repository_username' => getenv('URS_REPOSITORY_USERNAME') ?: '',
 'urs_repository_password' => getenv('URS_REPOSITORY_PASSWORD') ?: '',
 'urs_keyring_path' => '/opt/registrar/automation/urs-pgp-keys.gpg',
-'urs_archive_path' => '/var/lib/namingo/urs',
 ```
 
 Configure the IMAP mailbox that receives URS notices using:
@@ -546,13 +545,14 @@ After the initial setup, Namingo Registrar's automation scheduler periodically r
 'cron_tools' => true,
 ```
 
-URS notices and related files are archived under:
+Verified URS notices are stored as notification type `urs` in the existing
+registrar-notifications table. The complete RFC822/MIME message, including
+attachments, is base64-encoded in `body`; provider, case, action, domains,
+signature verification, and deduplication hashes are stored in `metadata`.
 
-```text
-/var/lib/namingo/urs
-```
-
-unless `urs_archive_path` is changed in `config.php`.
+The table is `namingo_registrar_notifications` for WHMCS and
+`domain_registrar_notification` for FOSSBilling and LOOM. No filesystem
+archive or additional database table is required.
 
 ## 7. Restored Names Accuracy hooks
 

@@ -69,6 +69,13 @@ interface DriverInterface
 
     public function createUrsTicket(string $domain, string $provider, string $date): bool;
 
+    public function findUrsNotification(
+        string $messageHash,
+        string $caseHash
+    ): ?array;
+
+    public function storeUrsNotification(array $data): int;
+
     public function getErrpDomains(): array;
 
     public function hasErrpNotification(
