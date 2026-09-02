@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>Domain Expired</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f6f7fb;
+            color: #182033;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 32px 20px;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(99, 102, 241, .10), transparent 30rem),
+                radial-gradient(circle at 85% 80%, rgba(14, 165, 233, .08), transparent 28rem),
+                #f6f7fb;
+        }
+
+        main {
+            width: min(680px, 100%);
+            background: rgba(255, 255, 255, .94);
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            padding: clamp(28px, 6vw, 56px);
+            box-shadow: 0 24px 70px rgba(24, 32, 51, .10);
+        }
+
+        .mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: .02em;
+            color: #4f46e5;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 999px;
+            background: #f59e0b;
+            box-shadow: 0 0 0 7px rgba(245, 158, 11, .12);
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            font-size: clamp(38px, 7vw, 62px);
+            line-height: .98;
+            letter-spacing: -.045em;
+        }
+
+        p {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.65;
+            color: #556074;
+        }
+
+        .notice {
+            margin: 30px 0;
+            padding: 22px 24px;
+            border-radius: 16px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+        }
+
+        .notice strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #182033;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 0 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .primary {
+            background: #182033;
+            color: #fff;
+        }
+
+        .secondary {
+            color: #374151;
+            border: 1px solid #d1d5db;
+            background: #fff;
+        }
+
+        footer {
+            margin-top: 34px;
+            padding-top: 22px;
+            border-top: 1px solid #eef0f4;
+            font-size: 13px;
+            color: #8a93a3;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <div class="mark"><span class="dot"></span> Domain status notice</div>
+
+    <h1>This domain has expired.</h1>
+
+    <p>
+        The registration for this domain name has expired and its normal DNS service has been temporarily interrupted.
+    </p>
+
+    <div class="notice">
+        <strong>Are you the domain registrant?</strong>
+        <p>Sign in to your registrar account and renew the domain, if it is still eligible for renewal. If you need assistance, contact your registrar's support team.</p>
+    </div>
+
+    <div class="actions">
+        <!-- Replace these two URLs before deployment. -->
+        <a class="primary" href="https://registrar.example.com/clientarea/">Renew domain</a>
+        <a class="secondary" href="https://registrar.example.com/contact/">Contact support</a>
+    </div>
+
+    <footer>
+        This page is displayed because the domain registration has expired. Normal DNS service will be restored after successful renewal when applicable.
+    </footer>
+</main>
+</body>
+</html>
