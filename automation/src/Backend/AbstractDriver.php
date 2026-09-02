@@ -564,6 +564,250 @@ abstract class AbstractDriver implements DriverInterface
         ]);
     }
 
+    final public function purgeExpiredDomain(
+        array $row,
+        int $eppResultCode
+    ): bool {
+        if (!in_array($eppResultCode, [2201, 2303], true)) {
+            throw new \InvalidArgumentException(
+                'A domain may only be purged after registry absence is confirmed.'
+            );
+        }
+
+        $domainId = (int)($row['id'] ?? 0);
+        $domain = strtolower(rtrim(trim((string)(
+            $row['domain_name'] ?? ''
+        )), '.'));
+        $rawExpiration = trim((string)($row['expires_at'] ?? ''));
+
+        if ($domainId < 1 || $domain === '' || $rawExpiration === '') {
+            throw new \InvalidArgumentException('Malformed domain purge candidate.');
+        }
+
+        try {
+            $expiration = (new \DateTimeImmutable(
+                $rawExpiration,
+                new \DateTimeZone('UTC')
+            ))
+                ->setTimezone(new \DateTimeZone('UTC'))
+                ->format('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            throw new \InvalidArgumentException(
+                "Invalid expiration date for {$domain}.",
+                0,
+                $e
+            );
+        }
+
+        if ($this->pdo->inTransaction()) {
+            throw new \RuntimeException(
+                'Domain purge cannot run inside an existing transaction.'
+            );
+        }
+
+        $purgedAt = gmdate('Y-m-d H:i:s');
+        $reason = $eppResultCode === 2303
+            ? 'registry_object_does_not_exist'
+            : 'registry_no_longer_sponsoring_client';
+
+        $this->pdo->beginTransaction();
+
+        try {
+            $snapshot = $this->expiredDomainPurgeSnapshot($row);
+
+            if (!$this->deleteExpiredDomainData($row, $domain, $purgedAt)) {
+                $this->pdo->rollBack();
+
+                return false;
+            }
+
+            $retainUntil = (new \DateTimeImmutable(
+                $purgedAt,
+                new \DateTimeZone('UTC')
+            ))->modify('+15 months')->format('Y-m-d H:i:s');
+            $this->storeErrpNotification([
+                'domain_id' => $domainId,
+                'domain' => $domain,
+                'type' => 'domain_purge',
+                'recipient' => '',
+                'subject' => 'Expired domain purge record',
+                'body' => '',
+                'metadata' => [
+                    'policy' => 'ICANN Registration Data Policy 12',
+                    'state' => 'purged',
+                    'reason' => $reason,
+                    'registry_result_code' => $eppResultCode,
+                    'expires_at' => $expiration,
+                    'purged_at' => $purgedAt,
+                    'retain_until' => $retainUntil,
+                    'record' => $snapshot,
+                ],
+                'sent_at' => $purgedAt,
+            ]);
+            $this->closeErrpDnsStateAfterPurge(
+                $domainId,
+                $expiration,
+                $eppResultCode,
+                $reason,
+                $purgedAt
+            );
+            $this->closeRestoredAccuracyStateAfterPurge(
+                $domain,
+                $eppResultCode,
+                $reason,
+                $purgedAt
+            );
+            $this->pdo->commit();
+
+            return true;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $e;
+        }
+    }
+
+    protected function expiredDomainPurgeSnapshot(array $row): array
+    {
+        return $this->redactDomainPurgeSnapshot($row);
+    }
+
+    protected function deleteExpiredDomainData(
+        array $row,
+        string $domain,
+        string $purgedAt
+    ): bool {
+        throw new \RuntimeException(
+            static::class . ' does not implement expired-domain deletion.'
+        );
+    }
+
+    private function closeErrpDnsStateAfterPurge(
+        int $domainId,
+        string $expiration,
+        int $eppResultCode,
+        string $reason,
+        string $purgedAt
+    ): void {
+        $state = $this->findErrpDnsState($domainId, $expiration);
+
+        if ($state === null) {
+            return;
+        }
+
+        $metadata = json_decode((string)($state['metadata'] ?? ''), true);
+
+        if (!is_array($metadata)) {
+            throw new \RuntimeException(
+                "Invalid ERRP DNS state for purged domain {$domainId}."
+            );
+        }
+
+        if (in_array(
+            (string)($metadata['state'] ?? ''),
+            ['restored', 'closed', 'not_applicable'],
+            true
+        )) {
+            return;
+        }
+
+        $metadata['state'] = 'closed';
+        $metadata['closed_reason'] = $reason;
+        $metadata['registry_result_code'] = $eppResultCode;
+        $metadata['closed_at'] = str_replace(' ', 'T', $purgedAt) . 'Z';
+        $metadata['updated_at'] = $metadata['closed_at'];
+        $metadata['last_error'] = null;
+
+        $this->updateErrpDnsState((int)$state['id'], $metadata);
+    }
+
+    private function closeRestoredAccuracyStateAfterPurge(
+        string $domain,
+        int $eppResultCode,
+        string $reason,
+        string $purgedAt
+    ): void {
+        $state = $this->findRestoredAccuracyNotification($domain);
+
+        if ($state === null) {
+            return;
+        }
+
+        $metadata = json_decode((string)($state['metadata'] ?? ''), true);
+
+        if (!is_array($metadata)) {
+            throw new \RuntimeException(
+                "Invalid Restored Names Accuracy state for {$domain}."
+            );
+        }
+
+        $metadata['state'] = 'closed';
+        $metadata['closed_reason'] = $reason;
+        $metadata['registry_result_code'] = $eppResultCode;
+        $metadata['closed_at'] = str_replace(' ', 'T', $purgedAt) . 'Z';
+        $metadata['last_error'] = null;
+
+        $this->updateRestoredAccuracyNotificationMetadata(
+            (int)$state['id'],
+            $metadata
+        );
+    }
+
+    private function redactDomainPurgeSnapshot(
+        mixed $value,
+        string $key = ''
+    ): mixed {
+        $normalizedKey = strtolower((string)preg_replace(
+            '/[^a-z0-9]/i',
+            '',
+            $key
+        ));
+        if (
+            $normalizedKey !== ''
+            && preg_match(
+                '/(?:authcode|authinfo|authinfopw|password|passwd|passphrase|secret|token|transfercode|^pw$)$/',
+                $normalizedKey
+            )
+        ) {
+            return '[redacted]';
+        }
+
+        if (is_string($value)) {
+            $trimmed = ltrim($value);
+
+            if ($trimmed !== '' && in_array($trimmed[0], ['{', '['], true)) {
+                try {
+                    $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+
+                    if (is_array($decoded)) {
+                        return $this->redactDomainPurgeSnapshot($decoded, $key);
+                    }
+                } catch (\JsonException) {
+                    // Preserve non-JSON text as stored by the billing system.
+                }
+            }
+
+            return $value;
+        }
+
+        if (!is_array($value)) {
+            return $value;
+        }
+
+        $redacted = [];
+
+        foreach ($value as $childKey => $childValue) {
+            $redacted[$childKey] = $this->redactDomainPurgeSnapshot(
+                $childValue,
+                (string)$childKey
+            );
+        }
+
+        return $redacted;
+    }
+
     protected function notificationTable(): string
     {
         return 'registrar_notifications';

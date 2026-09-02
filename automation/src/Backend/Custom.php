@@ -108,6 +108,14 @@ class Custom extends AbstractDriver
         throw $this->notImplemented(__FUNCTION__);
     }
 
+    public function getExpiredDomainPurgeCandidates(
+        string $expiredBefore,
+        int $limit = 500,
+        int $afterId = 0
+    ): array {
+        throw $this->notImplemented(__FUNCTION__);
+    }
+
     public function getErrpDnsDomain(int $domainId): ?array
     {
         throw $this->notImplemented(__FUNCTION__);
