@@ -107,6 +107,135 @@ function errpDnsSameNameservers(array $first, array $second): bool
     return $first === $second;
 }
 
+function errpDnsDsRecordKey(array $record): string
+{
+    return implode(':', [
+        (int)$record['keyTag'],
+        (int)$record['alg'],
+        (int)$record['digestType'],
+        strtoupper((string)$record['digest']),
+    ]);
+}
+
+function errpDnsDsRecords(mixed $values): array
+{
+    if ($values === null || $values === '' || $values === []) {
+        return [];
+    }
+
+    if (!is_array($values)) {
+        throw new RuntimeException('Registry DS data is not an array.');
+    }
+
+    if (array_key_exists('keyTag', $values)) {
+        $values = [$values];
+    }
+
+    $result = [];
+
+    foreach ($values as $record) {
+        if (!is_array($record)) {
+            throw new RuntimeException('Registry DS record is malformed.');
+        }
+
+        $normalized = [];
+
+        foreach (
+            ['keyTag' => 65535, 'alg' => 255, 'digestType' => 255]
+            as $field => $maximum
+        ) {
+            $value = filter_var(
+                $record[$field] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 0, 'max_range' => $maximum]]
+            );
+
+            if ($value === false) {
+                throw new RuntimeException('Registry DS record is invalid.');
+            }
+
+            $normalized[$field] = $value;
+        }
+
+        $digest = strtoupper((string)preg_replace(
+            '/\s+/', '', trim((string)($record['digest'] ?? ''))
+        ));
+
+        if (
+            $digest === ''
+            || strlen($digest) % 2 !== 0
+            || !preg_match('/\A[0-9A-F]+\z/', $digest)
+        ) {
+            throw new RuntimeException('Registry DS record is invalid.');
+        }
+
+        $normalized['digest'] = $digest;
+        $result[errpDnsDsRecordKey($normalized)] = $normalized;
+    }
+
+    ksort($result, SORT_STRING);
+
+    return array_values($result);
+}
+
+function errpDnsKeyRecords(mixed $values): array
+{
+    if ($values === null || $values === '' || $values === []) {
+        return [];
+    }
+
+    if (!is_array($values)) {
+        throw new RuntimeException('Registry DNSKEY data is not an array.');
+    }
+
+    if (array_key_exists('flags', $values)) {
+        $values = [$values];
+    }
+
+    $result = [];
+
+    foreach ($values as $record) {
+        if (!is_array($record)) {
+            throw new RuntimeException('Registry DNSKEY record is malformed.');
+        }
+
+        ksort($record, SORT_STRING);
+        $result[json_encode(
+            $record,
+            JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        )] = $record;
+    }
+
+    ksort($result, SORT_STRING);
+
+    return array_values($result);
+}
+
+function errpDnsDsDifference(array $first, array $second): array
+{
+    $secondKeys = array_fill_keys(
+        array_map('errpDnsDsRecordKey', errpDnsDsRecords($second)),
+        true
+    );
+
+    return array_values(array_filter(
+        errpDnsDsRecords($first),
+        static fn (array $record): bool =>
+            !isset($secondKeys[errpDnsDsRecordKey($record)])
+    ));
+}
+
+function errpDnsSameDsRecords(array $first, array $second): bool
+{
+    return errpDnsDsDifference($first, $second) === []
+        && errpDnsDsDifference($second, $first) === [];
+}
+
+function errpDnsSameKeyRecords(array $first, array $second): bool
+{
+    return errpDnsKeyRecords($first) === errpDnsKeyRecords($second);
+}
+
 function errpDnsInterruptionNameservers(array $config): array
 {
     $configured = $config['errp']['nameservers'] ?? [];
@@ -235,12 +364,44 @@ function errpDnsEppParams(string $domain, array $nameservers): array
     return $params;
 }
 
+function errpDnsEppConfiguration(array $eppConfig): array
+{
+    $profile = strtolower(trim((string)(
+        $eppConfig['registrar'] ?? 'namingo'
+    )));
+
+    if (!in_array($profile, ['namingo', 'generic'], true)) {
+        return $eppConfig;
+    }
+
+    $raw = $eppConfig['config']['login_extensions'] ?? [];
+    $extensions = is_array($raw)
+        ? array_values(array_filter(array_map('trim', $raw)))
+        : array_values(array_filter(array_map(
+            'trim',
+            preg_split('/[,\s]+/', (string)$raw) ?: []
+        )));
+    $secDns = 'urn:ietf:params:xml:ns:secDNS-1.1';
+
+    if ($extensions === []) {
+        $extensions[] = 'urn:ietf:params:xml:ns:rgp-1.0';
+    }
+
+    if (!in_array($secDns, $extensions, true)) {
+        $extensions[] = $secDns;
+    }
+
+    $eppConfig['config']['login_extensions'] = $extensions;
+
+    return $eppConfig;
+}
+
 function errpDnsDomainInfo(string $domain, array $eppConfig): array
 {
     $epp = null;
 
     try {
-        $epp = epp_client($eppConfig);
+        $epp = epp_client(errpDnsEppConfiguration($eppConfig));
         $response = $epp->domainInfo([
             'domainname' => errpDnsAscii($domain),
         ]);
@@ -264,7 +425,7 @@ function errpDnsChangeRegistry(
     $epp = null;
 
     try {
-        $epp = epp_client($eppConfig);
+        $epp = epp_client(errpDnsEppConfiguration($eppConfig));
         $response = $epp->domainUpdateNS(
             errpDnsEppParams($domain, $nameservers)
         );
@@ -272,6 +433,47 @@ function errpDnsChangeRegistry(
 
         if ($error !== null) {
             throw new RuntimeException($error);
+        }
+    } finally {
+        epp_client_logout($epp);
+    }
+}
+
+function errpDnsChangeRegistryDs(
+    string $domain,
+    array $records,
+    string $command,
+    array $eppConfig
+): void {
+    $records = errpDnsDsRecords($records);
+
+    if ($records === []) {
+        return;
+    }
+
+    if (!in_array($command, ['add', 'rem'], true)) {
+        throw new InvalidArgumentException('Invalid DNSSEC EPP command.');
+    }
+
+    $epp = null;
+
+    try {
+        $epp = epp_client(errpDnsEppConfiguration($eppConfig));
+
+        foreach ($records as $record) {
+            $response = $epp->domainUpdateDNSSEC([
+                'domainname' => errpDnsAscii($domain),
+                'command' => $command,
+                'keyTag_1' => $record['keyTag'],
+                'alg_1' => $record['alg'],
+                'digestType_1' => $record['digestType'],
+                'digest_1' => $record['digest'],
+            ]);
+            $error = errpDnsEppError($response, false);
+
+            if ($error !== null) {
+                throw new RuntimeException($error);
+            }
         }
     } finally {
         epp_client_logout($epp);
@@ -287,6 +489,43 @@ function errpDnsRegistryNameservers(array $domainInfo): array
     }
 
     return [];
+}
+
+function errpDnsRegistryDsRecords(array $domainInfo): array
+{
+    return errpDnsDsRecords($domainInfo['dsData'] ?? []);
+}
+
+function errpDnsRegistryKeyRecords(array $domainInfo): array
+{
+    return errpDnsKeyRecords($domainInfo['keyData'] ?? []);
+}
+
+function errpDnsDnssecSnapshot(array $domainInfo): array
+{
+    $dsRecords = errpDnsRegistryDsRecords($domainInfo);
+    $keyRecords = errpDnsRegistryKeyRecords($domainInfo);
+    $interface = match (true) {
+        $dsRecords !== [] && $keyRecords !== [] => 'mixed',
+        $keyRecords !== [] => 'key_data',
+        $dsRecords !== [] => 'ds_data',
+        default => 'none',
+    };
+
+    return [
+        'interface' => $interface,
+        'state' => match ($interface) {
+            'ds_data' => 'active',
+            'none' => 'not_present',
+            default => 'unsupported',
+        },
+        'original_ds_data' => $dsRecords,
+        'original_key_data' => $keyRecords,
+        'snapshot_source' => 'registry_domain_info',
+        'snapshot_at' => errpDnsNow(),
+        'removed_at' => null,
+        'restored_at' => null,
+    ];
 }
 
 function errpDnsRegistryStatuses(array $domainInfo): array
@@ -356,6 +595,63 @@ function errpDnsSave(
     $driver->updateErrpDnsState($stateId, $metadata);
 }
 
+function errpDnsEnsureDnssecSnapshot(
+    DriverInterface $driver,
+    string $domainName,
+    int $stateId,
+    array &$metadata
+): void {
+    if (array_key_exists('dnssec', $metadata)) {
+        if (!is_array($metadata['dnssec'])) {
+            throw new RuntimeException('ERRP DNSSEC state metadata is invalid.');
+        }
+
+        // Validate stored records before they are ever used in an EPP update.
+        errpDnsDsRecords($metadata['dnssec']['original_ds_data'] ?? []);
+        errpDnsKeyRecords($metadata['dnssec']['original_key_data'] ?? []);
+        return;
+    }
+
+    // Backward-compatible upgrade for active states created before DNSSEC
+    // snapshots were introduced. Persist this before changing any DS data.
+    $eppConfig = $driver->getEppConfiguration($domainName);
+    $domainInfo = errpDnsDomainInfo($domainName, $eppConfig);
+    $metadata['dnssec'] = errpDnsDnssecSnapshot($domainInfo);
+    errpDnsSave(
+        $driver,
+        $stateId,
+        $metadata,
+        (string)($metadata['state'] ?? 'pending')
+    );
+}
+
+function errpDnsNeedsInterruption(array $metadata): bool
+{
+    $state = (string)($metadata['state'] ?? '');
+
+    if ($state === 'pending') {
+        return true;
+    }
+
+    if ($state !== 'interrupted') {
+        return false;
+    }
+
+    if (!is_array($metadata['dnssec'] ?? null)) {
+        return true;
+    }
+
+    $dnssec = $metadata['dnssec'];
+
+    return (
+        errpDnsDsRecords($dnssec['original_ds_data'] ?? []) !== []
+        && (string)($dnssec['state'] ?? '') !== 'removed'
+    ) || (
+        errpDnsKeyRecords($dnssec['original_key_data'] ?? []) !== []
+        && (string)($dnssec['state'] ?? '') !== 'preserved'
+    );
+}
+
 function errpDnsInterrupt(
     DriverInterface $driver,
     array $domain,
@@ -371,7 +667,148 @@ function errpDnsInterrupt(
         (int)($metadata['attempts']['interrupt'] ?? 0) + 1;
 
     try {
+        errpDnsEnsureDnssecSnapshot(
+            $driver,
+            $domainName,
+            $stateId,
+            $metadata
+        );
+
         $eppConfig = $driver->getEppConfiguration($domainName);
+        $dnssec =& $metadata['dnssec'];
+        $originalDs = errpDnsDsRecords(
+            $dnssec['original_ds_data'] ?? []
+        );
+        $originalKeys = errpDnsKeyRecords(
+            $dnssec['original_key_data'] ?? []
+        );
+
+        if ($originalKeys !== []) {
+            // Tembo currently exposes DNSKEY data but its update method uses
+            // the DS Data Interface. Never replace NS while DNSKEY-derived DS
+            // data would remain at the parent.
+            if ((string)($metadata['state'] ?? '') === 'interrupted') {
+                $registryNameservers = errpDnsNameservers(
+                    $metadata['original_registry_nameservers'] ?? []
+                );
+                $localNameservers = errpDnsNameservers(
+                    $metadata['original_local_nameservers'] ?? []
+                ) ?: $registryNameservers;
+
+                if ($registryNameservers === []) {
+                    throw new RuntimeException(
+                        'Cannot roll back an interrupted DNSKEY-interface domain without its original nameservers.'
+                    );
+                }
+
+                errpDnsChangeRegistry(
+                    $domainName,
+                    $registryNameservers,
+                    $eppConfig
+                );
+                $driver->updateErrpDomainNameservers(
+                    $domain,
+                    $localNameservers
+                );
+                $metadata['restored_at'] = errpDnsNow();
+                $dnssec['state'] = 'preserved';
+                $dnssec['restored_at'] = errpDnsNow();
+                $log->warning(
+                    "Rolled back ERRP DNS interruption for {$domainName}: "
+                    . 'the registry uses the unsupported DNSKEY interface.'
+                );
+            }
+
+            $metadata['closed_reason'] =
+                'dnssec_key_data_interface_unsupported';
+            errpDnsSave(
+                $driver,
+                $stateId,
+                $metadata,
+                'not_applicable'
+            );
+            return;
+        }
+
+        $domainInfo = errpDnsDomainInfo($domainName, $eppConfig);
+        $currentKeys = errpDnsRegistryKeyRecords($domainInfo);
+
+        if ($currentKeys !== []) {
+            throw new RuntimeException(
+                'Registry DNSKEY data appeared after the ERRP snapshot; nameservers were not changed.'
+            );
+        }
+
+        $currentDs = errpDnsRegistryDsRecords($domainInfo);
+        $dnssecState = (string)($dnssec['state'] ?? '');
+        $unexpectedDs = errpDnsDsDifference($currentDs, $originalDs);
+
+        if ($unexpectedDs !== []) {
+            throw new RuntimeException(
+                'Registry DS data changed after the ERRP snapshot; nameservers were not changed.'
+            );
+        }
+
+        if (
+            $dnssecState === 'removed'
+            && $currentDs !== []
+        ) {
+            throw new RuntimeException(
+                'Registry DS data was re-added after ERRP removal; nameservers were not changed.'
+            );
+        }
+
+        if (
+            !in_array($dnssecState, ['removing', 'removed'], true)
+            && !errpDnsSameDsRecords($currentDs, $originalDs)
+        ) {
+            throw new RuntimeException(
+                'Registry DS data changed before ERRP removal; nameservers were not changed.'
+            );
+        }
+
+        if ($currentDs !== []) {
+            if ($dnssecState !== 'removing') {
+                $dnssec['state'] = 'removing';
+                $dnssec['removal_started_at'] = errpDnsNow();
+                errpDnsSave(
+                    $driver,
+                    $stateId,
+                    $metadata,
+                    (string)($metadata['state'] ?? 'pending')
+                );
+            }
+
+            errpDnsChangeRegistryDs(
+                $domainName,
+                $currentDs,
+                'rem',
+                $eppConfig
+            );
+        }
+
+        $remainingInfo = errpDnsDomainInfo($domainName, $eppConfig);
+
+        if (
+            errpDnsRegistryDsRecords($remainingInfo) !== []
+            || errpDnsRegistryKeyRecords($remainingInfo) !== []
+        ) {
+            throw new RuntimeException(
+                'Registry DNSSEC data remains after removal; nameservers were not changed.'
+            );
+        }
+
+        if ($originalDs !== []) {
+            $dnssec['state'] = 'removed';
+            $dnssec['removed_at'] = $dnssec['removed_at'] ?? errpDnsNow();
+            errpDnsSave(
+                $driver,
+                $stateId,
+                $metadata,
+                (string)($metadata['state'] ?? 'pending')
+            );
+        }
+
         errpDnsChangeRegistry($domainName, $nameservers, $eppConfig);
 
         // Local state changes only after the registry confirms the update.
@@ -384,7 +821,7 @@ function errpDnsInterrupt(
             $driver,
             $stateId,
             $metadata,
-            'pending',
+            (string)($metadata['state'] ?? 'pending'),
             $e,
             'interrupt'
         );
@@ -417,6 +854,13 @@ function errpDnsRestore(
             );
         }
 
+        errpDnsEnsureDnssecSnapshot(
+            $driver,
+            $domainName,
+            $stateId,
+            $metadata
+        );
+
         $eppConfig = $driver->getEppConfiguration($domainName);
         errpDnsChangeRegistry(
             $domainName,
@@ -424,6 +868,120 @@ function errpDnsRestore(
             $eppConfig
         );
         $driver->updateErrpDomainNameservers($domain, $localNameservers);
+
+        // Restore the secure delegation only after the original authoritative
+        // nameservers are back. This prevents validators from following a DS
+        // record to the unsigned interruption service.
+        $dnssec =& $metadata['dnssec'];
+        $originalDs = errpDnsDsRecords(
+            $dnssec['original_ds_data'] ?? []
+        );
+        $originalKeys = errpDnsKeyRecords(
+            $dnssec['original_key_data'] ?? []
+        );
+        $domainInfo = errpDnsDomainInfo($domainName, $eppConfig);
+        $currentDs = errpDnsRegistryDsRecords($domainInfo);
+        $currentKeys = errpDnsRegistryKeyRecords($domainInfo);
+
+        if ($originalKeys !== []) {
+            if (
+                !errpDnsSameKeyRecords($currentKeys, $originalKeys)
+                || errpDnsDsDifference($currentDs, $originalDs) !== []
+                || errpDnsDsDifference($originalDs, $currentDs) !== []
+            ) {
+                throw new RuntimeException(
+                    'Registry DNSSEC data changed before restoration; the current data was left untouched.'
+                );
+            }
+
+            $dnssec['state'] = 'preserved';
+        } else {
+            if ($currentKeys !== []) {
+                throw new RuntimeException(
+                    'Unexpected registry DNSKEY data was left untouched during restoration.'
+                );
+            }
+
+            $dnssecState = (string)($dnssec['state'] ?? '');
+
+            if (
+                $originalDs === []
+                && $currentDs !== []
+            ) {
+                throw new RuntimeException(
+                    'Unexpected registry DS data was left untouched during restoration.'
+                );
+            }
+
+            if (
+                $originalDs !== []
+                && $dnssecState === 'active'
+            ) {
+                if (!errpDnsSameDsRecords($currentDs, $originalDs)) {
+                    throw new RuntimeException(
+                        'Registry DS data changed before restoration; the current data was left untouched.'
+                    );
+                }
+
+                // Renewal happened before this state removed its DS records,
+                // or this is a legacy interruption. Preserve the intact set.
+                $dnssec['state'] = 'preserved';
+            } elseif ($originalDs !== []) {
+                if (
+                    !in_array(
+                        $dnssecState,
+                        ['removing', 'removed', 'restoring'],
+                        true
+                    )
+                    || errpDnsDsDifference($currentDs, $originalDs) !== []
+                    || ($dnssecState === 'removed' && $currentDs !== [])
+                ) {
+                    throw new RuntimeException(
+                        'Registry DS data changed before restoration; the current data was left untouched.'
+                    );
+                }
+
+                if ($dnssecState !== 'restoring') {
+                    $dnssec['state'] = 'restoring';
+                    $dnssec['restoration_started_at'] = errpDnsNow();
+                    errpDnsSave(
+                        $driver,
+                        $stateId,
+                        $metadata,
+                        (string)($metadata['state'] ?? 'interrupted')
+                    );
+                }
+
+                $missingDs = errpDnsDsDifference($originalDs, $currentDs);
+
+                if ($missingDs !== []) {
+                    errpDnsChangeRegistryDs(
+                        $domainName,
+                        $missingDs,
+                        'add',
+                        $eppConfig
+                    );
+                }
+
+                $restoredInfo = errpDnsDomainInfo($domainName, $eppConfig);
+                $restoredDs = errpDnsRegistryDsRecords($restoredInfo);
+
+                if (
+                    errpDnsRegistryKeyRecords($restoredInfo) !== []
+                    || !errpDnsSameDsRecords($restoredDs, $originalDs)
+                ) {
+                    throw new RuntimeException(
+                        'Registry DS data could not be verified after restoration.'
+                    );
+                }
+
+                $dnssec['state'] = 'restored';
+            } else {
+                $dnssec['state'] = 'not_present';
+            }
+        }
+
+        $dnssec['restored_at'] = errpDnsNow();
         $metadata['restored_at'] = errpDnsNow();
         errpDnsSave($driver, $stateId, $metadata, 'restored');
         $log->info("ERRP DNS resolution restored after renewal for {$domainName}.");
@@ -485,7 +1043,7 @@ function errpDnsProcessStates(
                     );
                 } elseif (
                     !empty($domain['errp_active'])
-                    && (string)($metadata['state'] ?? '') === 'pending'
+                    && errpDnsNeedsInterruption($metadata)
                 ) {
                     errpDnsInterrupt(
                         $driver,
@@ -563,17 +1121,19 @@ function errpDnsDiscover(
 
                 $domainInfo = errpDnsDomainInfo($domainName, $eppConfig);
                 $registryNameservers = errpDnsRegistryNameservers($domainInfo);
+                $registryAlreadyInterrupted = errpDnsSameNameservers(
+                    $registryNameservers,
+                    $interruptionNameservers
+                );
                 $localNameservers = errpDnsNameservers(
                     $domain['nameservers'] ?? []
                 );
                 $originalLocalNameservers = $localNameservers;
                 $snapshotSource = 'registry';
+                $recoverableExistingInterruption = false;
 
                 if (
-                    errpDnsSameNameservers(
-                        $registryNameservers,
-                        $interruptionNameservers
-                    )
+                    $registryAlreadyInterrupted
                     && !errpDnsSameNameservers(
                         $localNameservers,
                         $interruptionNameservers
@@ -582,6 +1142,7 @@ function errpDnsDiscover(
                 ) {
                     $registryNameservers = $localNameservers;
                     $snapshotSource = 'local_fallback';
+                    $recoverableExistingInterruption = true;
                 } elseif (
                     errpDnsSameNameservers(
                         $localNameservers,
@@ -601,6 +1162,7 @@ function errpDnsDiscover(
 
                 $statuses = errpDnsRegistryStatuses($domainInfo);
                 $terminalStatus = errpDnsTerminalStatus($statuses);
+                $dnssec = errpDnsDnssecSnapshot($domainInfo);
                 $metadata = [
                     'policy' => 'ICANN ERRP 2.2.2-2.2.6',
                     'state' => 'pending',
@@ -611,6 +1173,7 @@ function errpDnsDiscover(
                     'interruption_nameservers' => $interruptionNameservers,
                     'registry_statuses' => $statuses,
                     'snapshot_source' => $snapshotSource,
+                    'dnssec' => $dnssec,
                     'attempts' => [],
                     'created_at' => errpDnsNow(),
                     'updated_at' => errpDnsNow(),
@@ -625,6 +1188,23 @@ function errpDnsDiscover(
                     $metadata['state'] = 'not_applicable';
                     $metadata['closed_reason'] =
                         'original_registry_nameservers_unavailable';
+                } elseif (
+                    in_array(
+                        (string)$dnssec['interface'],
+                        ['key_data', 'mixed'],
+                        true
+                    )
+                ) {
+                    if ($recoverableExistingInterruption) {
+                        // A legacy run already changed NS. Persist the
+                        // recovered original path, then let the interrupt
+                        // handler roll it back without touching DNSKEY data.
+                        $metadata['state'] = 'interrupted';
+                    } else {
+                        $metadata['state'] = 'not_applicable';
+                        $metadata['closed_reason'] =
+                            'dnssec_key_data_interface_unsupported';
+                    }
                 } elseif (
                     errpDnsSameNameservers(
                         $registryNameservers,
@@ -645,7 +1225,7 @@ function errpDnsDiscover(
                     'sent_at' => gmdate('Y-m-d H:i:s'),
                 ]);
 
-                if ($metadata['state'] === 'pending') {
+                if (errpDnsNeedsInterruption($metadata)) {
                     errpDnsInterrupt(
                         $driver,
                         $domain,
@@ -656,7 +1236,7 @@ function errpDnsDiscover(
                 } else {
                     $log->warning(
                         "ERRP DNS state not applied for {$domainName}: "
-                        . $metadata['closed_reason']
+                        . ($metadata['closed_reason'] ?? 'not required')
                     );
                 }
             } catch (Throwable $e) {
