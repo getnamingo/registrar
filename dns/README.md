@@ -155,7 +155,9 @@ Do not enable catch-all On-Demand TLS merely for this feature unless the operati
 
 A domain with a DS record at the parent can fail DNSSEC validation after its authoritative nameservers are replaced if the interruption service is not serving a matching signed zone. In that case validating resolvers may return `SERVFAIL` before a browser can reach this page.
 
-DNSSEC handling therefore belongs in the registrar-side ERRP interruption/restoration workflow: any required DS/DNSSEC state must be handled safely and restored together with the registrant's original DNS configuration. Do not assume that changing nameservers alone is sufficient for DNSSEC-enabled domains.
+`automation/errp_dns.php` handles this in the registrar-side lifecycle. It snapshots the parent DS records in the existing `errp_dns` notification metadata, removes and verifies them before replacing the nameservers, restores the original nameservers after renewal, and only then restores and verifies the original DS records. Each step is retry-safe and the original snapshot remains durable throughout the interruption.
+
+The EPP client's DNSSEC update operation uses the RFC 5910 DS Data Interface. If a registry returns DNSKEY data through the Key Data Interface instead, the domain is not interrupted. A legacy interruption discovered with that interface is rolled back to its recovered original nameservers without altering DNSKEY data.
 
 ## ERRP page requirement
 
