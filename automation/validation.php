@@ -81,7 +81,8 @@ function validationError(object $log, string $message, bool &$hadErrors): void
 function validationUpdate(PDO $pdo, int $id, array $fields): void
 {
     $allowed = [
-        'status', 'token_hash', 'token_issued_at', 'email_sent_at',
+        'status', 'contact_data_hash', 'registrant_data_hash', 'token_hash',
+        'token_issued_at', 'email_sent_at',
         'reminder_sent_at', 'verified_at', 'verification_method',
         'verification_note', 'client_hold_added',
         'client_transfer_prohibited_added', 'suspended_at', 'restored_at',
@@ -138,22 +139,33 @@ function validationState(PDO $pdo, int $id): array
     return $state;
 }
 
-function validationHasVerifiedHash(PDO $pdo, string $hash): bool
+function validationHasVerifiedHash(
+    PDO $pdo,
+    string $verificationKey,
+    string $hash
+): bool
 {
     $stmt = $pdo->prepare(
         'SELECT 1 FROM ' . VALIDATION_TABLE . ' verified
-         WHERE verified.contact_data_hash = :hash
+         WHERE verified.verification_key = :verification_key
+           AND verified.registrant_data_hash = :hash
            AND verified.verified_at IS NOT NULL
            AND NOT EXISTS (
                SELECT 1 FROM ' . VALIDATION_TABLE . ' challenge
-               WHERE challenge.contact_data_hash = :challenge_hash
+               WHERE challenge.verification_key = :challenge_verification_key
+                 AND challenge.registrant_data_hash = :challenge_hash
                  AND challenge.verified_at IS NULL
                  AND challenge.triggered_at >= verified.verified_at
            )
          ORDER BY verified.verified_at DESC
          LIMIT 1'
     );
-    $stmt->execute(['hash' => $hash, 'challenge_hash' => $hash]);
+    $stmt->execute([
+        'verification_key' => $verificationKey,
+        'hash' => $hash,
+        'challenge_verification_key' => $verificationKey,
+        'challenge_hash' => $hash,
+    ]);
     return (bool)$stmt->fetchColumn();
 }
 
@@ -544,6 +556,8 @@ function runValidation(): int
             $contactData = validationContactData($row);
             $registrantData = validationRegistrantData($row, $contactData);
             $contactHash = validationHash($contactData);
+            $legacyRegistrantHash = validationHash($registrantData);
+            unset($registrantData['id'], $registrantData['identifier']);
             $registrantHash = validationHash($registrantData);
             $state = $states[$domainId] ?? null;
 
@@ -582,7 +596,11 @@ function runValidation(): int
                         validationFormat($verifiedAt),
                         'Imported from the billing system during per-domain migration.'
                     );
-                } elseif (validationHasVerifiedHash($pdo, $contactHash)) {
+                } elseif (validationHasVerifiedHash(
+                    $pdo,
+                    (string)$row['verification_key'],
+                    $registrantHash
+                )) {
                     $state = validationInsert(
                         $pdo, $backend, $row, $contactHash, $registrantHash,
                         $event, $triggeredAt, 'verified', 'reused_hash',
@@ -595,8 +613,34 @@ function runValidation(): int
                     );
                 }
             } else {
-                $hashChanged = !hash_equals((string)$state['contact_data_hash'], $contactHash);
-                if ($hashChanged || $forcedTrigger !== null) {
+                if ($forcedTrigger === null
+                    && !hash_equals((string)$state['registrant_data_hash'], $registrantHash)
+                    && hash_equals((string)$state['registrant_data_hash'], $legacyRegistrantHash)) {
+                    // Internal registry contact IDs are not contact information.
+                    // Migrate the old hash without invalidating unchanged data.
+                    validationUpdate($pdo, (int)$state['id'], [
+                        'registrant_data_hash' => $registrantHash,
+                    ]);
+                    $state['registrant_data_hash'] = $registrantHash;
+                }
+                $hashChanged = !hash_equals(
+                    (string)$state['registrant_data_hash'],
+                    $registrantHash
+                );
+                $verificationChanged = !hash_equals(
+                    (string)$state['verification_key'],
+                    (string)$row['verification_key']
+                );
+                if (!$hashChanged && !$verificationChanged
+                    && !hash_equals((string)$state['contact_data_hash'], $contactHash)) {
+                    // Other contact roles do not require Registered Name Holder
+                    // re-verification, but keep the complete audit hash current.
+                    validationUpdate($pdo, (int)$state['id'], [
+                        'contact_data_hash' => $contactHash,
+                    ]);
+                    $state['contact_data_hash'] = $contactHash;
+                }
+                if ($hashChanged || $verificationChanged || $forcedTrigger !== null) {
                     $state = validationRestore($pdo, $driver, $row, $state, $log, $hadErrors, $now);
                     $holdAdded = (int)$state['client_hold_added'];
                     $transferAdded = (int)$state['client_transfer_prohibited_added'];
@@ -613,7 +657,12 @@ function runValidation(): int
                     if ($eventTime > $now) {
                         $eventTime = $now;
                     }
-                    $reuse = $forcedTrigger === null && validationHasVerifiedHash($pdo, $contactHash);
+                    $reuse = $forcedTrigger === null
+                        && validationHasVerifiedHash(
+                            $pdo,
+                            (string)$row['verification_key'],
+                            $registrantHash
+                        );
                     $pdo->beginTransaction();
                     try {
                         validationClose($pdo, (int)$state['id'], $now);
@@ -702,8 +751,8 @@ function runValidation(): int
             }
         }
 
-        // Existing billing endpoints are contact-scoped. Issue one exact hash at
-        // a time for each contact identity so another domain cannot validate it.
+        // Existing billing endpoints are contact-scoped. Issue one exact
+        // Registered Name Holder hash at a time for each contact identity.
         $states = validationCurrentStates($pdo, $backend);
         $groups = [];
         foreach ($states as $domainId => $state) {
@@ -715,17 +764,20 @@ function runValidation(): int
         foreach ($groups as $items) {
             $candidate = validationTokenCandidate($items[0][1]);
             $candidateHash = $candidate !== null ? hash('sha256', $candidate) : null;
-            $usableContactHash = null;
+            $usableRegistrantHash = null;
             foreach ($items as [$state]) {
                 if (!empty($state['token_hash']) && $candidateHash !== null
                     && hash_equals((string)$state['token_hash'], $candidateHash)) {
-                    $usableContactHash = (string)$state['contact_data_hash'];
+                    $usableRegistrantHash = (string)$state['registrant_data_hash'];
                     break;
                 }
             }
             foreach ($items as [$state]) {
-                if ($usableContactHash !== null && empty($state['token_hash'])
-                    && hash_equals((string)$state['contact_data_hash'], $usableContactHash)) {
+                if ($usableRegistrantHash !== null && empty($state['token_hash'])
+                    && hash_equals(
+                        (string)$state['registrant_data_hash'],
+                        $usableRegistrantHash
+                    )) {
                     validationUpdate($pdo, (int)$state['id'], [
                         'token_hash' => $candidateHash,
                         'token_issued_at' => validationFormat($now),
@@ -733,7 +785,7 @@ function runValidation(): int
                     continue;
                 }
                 if (!empty($state['token_hash'])) {
-                    if ($usableContactHash !== null
+                    if ($usableRegistrantHash !== null
                         && hash_equals((string)$state['token_hash'], (string)$candidateHash)) {
                         continue;
                     }
@@ -745,7 +797,7 @@ function runValidation(): int
                     ]);
                 }
             }
-            if ($usableContactHash !== null) {
+            if ($usableRegistrantHash !== null) {
                 continue;
             }
 
@@ -756,8 +808,8 @@ function runValidation(): int
                 $tokenHash = hash('sha256', $token);
                 foreach ($items as [$state]) {
                     if (!hash_equals(
-                        (string)$state['contact_data_hash'],
-                        (string)$representativeState['contact_data_hash']
+                        (string)$state['registrant_data_hash'],
+                        (string)$representativeState['registrant_data_hash']
                     )) {
                         continue;
                     }
