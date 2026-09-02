@@ -10,6 +10,11 @@ use Pinga\Tembo\EppRegistryFactory;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
+// Let WHMCS load its matching Monolog classes before the logger is created.
+if (strcasecmp(trim((string)($config['escrow']['backend'] ?? '')), 'WHMCS') === 0) {
+    require_once '/var/www/whmcs/init.php';
+}
+
 function epp_client($config)
 {
     $profile = $config['registrar'] ?? 'namingo';
