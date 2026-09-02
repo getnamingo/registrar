@@ -1,9 +1,9 @@
 # Add this site block to your existing /etc/caddy/Caddyfile.
-# Replace both example IPs with the addresses used by CoreDNS.
-# Binding to the interruption IPs prevents this catch-all site from
-# interfering with the registrar's normal Caddy virtual hosts.
+# Replace both example IPs with the dedicated interruption IP addresses.
+# The hostless http:// address accepts any expired domain Host header, while
+# bind confines the catch-all listener to the interruption addresses.
 
-http://203.0.113.10, http://203.0.113.11 {
+http:// {
     bind 203.0.113.10 203.0.113.11
 
     root * /var/www/namingo-expired
@@ -14,7 +14,7 @@ http://203.0.113.10, http://203.0.113.11 {
 
     header {
         Cache-Control "no-store, max-age=0"
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
