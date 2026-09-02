@@ -1,0 +1,26 @@
+.:53 {
+    # Replace these with the two public IP addresses assigned to this host.
+    bind 203.0.113.10 203.0.113.11
+
+    # Every interrupted domain resolves to the web interruption service.
+    template IN A {
+        answer "{{ .Name }} 60 IN A 203.0.113.10"
+    }
+
+    # If the host has IPv6, add an AAAA template instead of returning NOERROR.
+    template IN AAAA {
+        rcode NOERROR
+    }
+
+    # Avoid directing mail to the interruption web host.
+    template IN MX {
+        answer "{{ .Name }} 60 IN MX 0 ."
+    }
+
+    # Return authoritative empty answers for record types not explicitly served.
+    template ANY ANY {
+        rcode NOERROR
+    }
+
+    errors
+}
