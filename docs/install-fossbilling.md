@@ -415,68 +415,34 @@ Once you have successfully configured all automation scripts, you are ready to i
 * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
-## 13. ICANN Registrar Module:
+## 13. ICANN Registrar Modules:
 
 ```bash
 git clone https://github.com/getnamingo/fossbilling-registrar
 mv fossbilling-registrar/Registrar /var/www/modules/
-```
 
-- Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation".
-
-## 14. Domain Contact Validation:
-
-### 14.1. Administrator Interface
-
-```bash
 git clone https://github.com/getnamingo/fossbilling-contact-validation
 mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
-```
 
-- Go to Extensions > Overview in the admin panel and activate "Domain Contact Validation".
-
-### 14.2. Client Interface
-
-```bash
 git clone https://github.com/getnamingo/fossbilling-validation
 mv fossbilling-validation/Validation /var/www/modules/
-```
 
-- Go to Extensions > Overview in the admin panel and activate "Domain Contact Verification".
+git clone https://github.com/getnamingo/fossbilling-contact
+mv fossbilling-contact/Contact /var/www/modules/
 
-## 15. TMCH Claims Notice Support:
+git clone https://github.com/getnamingo/fossbilling-whois
+mv fossbilling-whois/Whois /var/www/modules/
+mv fossbilling-whois/check.php /var/www/
 
-```bash
 git clone https://github.com/getnamingo/fossbilling-tmch
 mv fossbilling-tmch/Tmch /var/www/modules/
 ```
 
-- Go to Extensions > Overview in the admin panel and activate "TMCH Claims Notice Support".
-
-- Still this needs to be integrated with your workflow.
-
-## 16. WHOIS & RDAP Client:
-
-```bash
-git clone https://github.com/getnamingo/fossbilling-whois
-mv fossbilling-whois/Whois /var/www/modules/
-mv fossbilling-whois/check.php /var/www/
-```
-
-- Go to Extensions > Overview in the admin panel and activate "WHOIS & RDAP Client".
+- Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation", "Registrant Validation Management", "Registrant Contact Verification", "Registrant Contact Form", "WHOIS & RDAP Client", "TMCH Claims Notice".
 
 - Edit the `/var/www/check.php` file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses.
 
-## 17. Domain Registrant Contact:
-
-```bash
-git clone https://github.com/getnamingo/fossbilling-contact
-mv fossbilling-contact/Contact /var/www/modules/
-```
-
-- Go to Extensions > Overview in the admin panel and activate "Domain Registrant Contact".
-
-## 18. Installing FOSSBilling EPP Registrar Module:
+## 14. Installing FOSSBilling EPP Registrar Module:
 
 For every registry backend your registrar wants to support, you need a separate installation of the FOSSBilling EPP Registrar module. Each module can handle one or more TLDs that share the same configuration details.
 
@@ -498,7 +464,7 @@ Add the following cron job:
 
 This command schedules the synchronization script to run once every 12 hours (at midnight and noon).
 
-### 18.1. Module Activation
+### 14.1. Module Activation
 
 1. Within FOSSBilling, go to **System -> Domain Registration -> New Domain Registrar** and activate the new domain registrar.
 
@@ -507,17 +473,17 @@ If you are configuring a gTLD, make sure to enable "**Enable Minimum Data Set**"
 
 3. Add a new Top Level Domain (TLD) using your module from the "**New Top Level Domain**" tab. Make sure to configure all necessary details, such as pricing, within this tab.
 
-### 18.2. Executing OT&E Tests:
+### 14.2. Executing OT&E Tests:
 
 To execute the required OT&E tests by various registries, you can use our EPP client at [https://github.com/getnamingo/epp-client](https://github.com/getnamingo/epp-client)
 
-## 19. Installing FOSSBilling DNS Hosting Extensions:
+## 15. Installing FOSSBilling DNS Hosting Extensions:
 
 To offer DNS hosting to your customers, you will need to install the FOSSBilling DNS Hosting extension.
 
 Navigate to https://github.com/getnamingo/fossbilling-dns and follow the installation instructions.
 
-## 20. Further Settings:
+## 16. Further Settings:
 
 1. **Footer Compliance Links**
 
@@ -581,5 +547,5 @@ Navigate to **Extensions → Overview** in the FOSSBilling admin area and enable
 
 Once activated, configure your MoSAPI credentials under **System → Settings**, then view registrar status and METRICA data via the **Extensions** menu.
 
-5. **Backup**
-   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.
+> [!NOTE]
+> Once you have completed the steps in this section, continue with the instructions in [`configuration.md`](configuration.md).

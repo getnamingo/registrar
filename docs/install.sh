@@ -501,8 +501,17 @@ install_rdap_and_whois_services() {
 
     if [ "$panel" = "foss" ]; then
         cd /tmp
+        git clone https://github.com/getnamingo/fossbilling-registrar
+        mv fossbilling-registrar/Registrar /var/www/modules/
+
+        git clone https://github.com/getnamingo/fossbilling-contact-validation
+        mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
+
         git clone https://github.com/getnamingo/fossbilling-validation
         mv fossbilling-validation/Validation /var/www/modules/
+
+        git clone https://github.com/getnamingo/fossbilling-contact
+        mv fossbilling-contact/Contact /var/www/modules/
 
         git clone https://github.com/getnamingo/fossbilling-tmch
         mv fossbilling-tmch/Tmch /var/www/modules/
@@ -513,15 +522,6 @@ install_rdap_and_whois_services() {
 
         sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
         sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
-        
-        git clone https://github.com/getnamingo/fossbilling-contact
-        mv fossbilling-contact/Contact /var/www/modules/
-
-        git clone https://github.com/getnamingo/fossbilling-registrar
-        mv fossbilling-registrar/Registrar /var/www/modules/
-
-        git clone https://github.com/getnamingo/fossbilling-contact-validation
-        mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
     elif [ "$panel" = "whmcs" ]; then
         cd /tmp
         git clone https://github.com/getnamingo/whmcs-namingo-registrar
@@ -929,16 +929,17 @@ echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "   Click Settings next to Tide and adjust the theme as needed."
 echo
-echo "3. Install FOSSBilling extensions for EPP and DNS as outlined in steps 18 and 19 of install-fossbilling.md."
+echo "3. Install FOSSBilling extensions for EPP and DNS as outlined in steps 14 and 15 of install-fossbilling.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "4. In Extensions > Overview, activate the registrar extensions:"
-    echo "   - Domain Contact Validation"
-    echo "   - TMCH Claims Notice Support"
-    echo "   - WHOIS & RDAP Client"
-    echo "   - Domain Registrant Contact"
     echo "   - ICANN Registrar Accreditation"
+    echo "   - Registrant Validation Management"
+    echo "   - Registrant Contact Verification"
+    echo "   - Registrant Contact Form"
+    echo "   - WHOIS & RDAP Client"
+    echo "   - TMCH Claims Notice"
     echo
     echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
@@ -948,8 +949,8 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "6. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. Complete the registrar contact, website, escrow and compliance configuration"
-    echo "   described in install-fossbilling.md (sections 12.1 and 20)."
+    echo "7. Complete the registrar contact, website, escrow, and compliance configuration"
+    echo "   described in Sections 12 and 16 of install-fossbilling.md and in configuration.md."
     echo
 fi
 
