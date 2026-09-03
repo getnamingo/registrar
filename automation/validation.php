@@ -25,7 +25,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 const VALIDATION_DAYS = 15;
 const VALIDATION_REMINDER_DAYS = 3;
-const VALIDATION_TABLE = 'namingo_domain_validation';
+define(
+    'VALIDATION_TABLE',
+    strcasecmp((string) ($config['escrow']['backend'] ?? 'FOSS'), 'WHMCS') === 0
+        ? 'namingo_domain_validation'
+        : 'domain_validation'
+);
 
 function validationCanonicalize(mixed $value): mixed
 {
