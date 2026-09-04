@@ -323,7 +323,7 @@ final class FOSS extends AbstractDriver
                 SELECT
                     sd.sld,
                     sd.tld,
-                    COALESCE(NULLIF(sd.contact_email, ''), c.email) AS contact_email,
+                    c.email AS contact_email,
                     dcv.validation_token AS token,
                     sd.id,
                     sd.ns1,
@@ -337,7 +337,7 @@ final class FOSS extends AbstractDriver
                         ELSE sd.registered_at
                     END AS registered_at,
                     sd.expires_at,
-                    sd.updated_at AS contact_updated_at,
+                    c.updated_at AS contact_updated_at,
                     CASE
                         WHEN sd.action = 'transfer'
                           OR co.config LIKE '%\"action\":\"transfer\"%'
@@ -348,17 +348,17 @@ final class FOSS extends AbstractDriver
                     dm.admin_contact_id,
                     dm.tech_contact_id,
                     dm.billing_contact_id,
-                    sd.contact_company,
-                    sd.contact_first_name,
-                    sd.contact_last_name,
-                    sd.contact_address1,
-                    sd.contact_address2,
-                    sd.contact_city,
-                    sd.contact_state,
-                    sd.contact_postcode,
-                    sd.contact_country,
-                    sd.contact_phone_cc,
-                    sd.contact_phone,
+                    c.company AS contact_company,
+                    c.first_name AS contact_first_name,
+                    c.last_name AS contact_last_name,
+                    c.address_1 AS contact_address1,
+                    c.address_2 AS contact_address2,
+                    c.city AS contact_city,
+                    c.state AS contact_state,
+                    c.postcode AS contact_postcode,
+                    c.country AS contact_country,
+                    c.phone_cc AS contact_phone_cc,
+                    c.phone AS contact_phone,
                     dcv.id AS validation_id,
                     dcv.is_validated AS custom_2,
                     dcv.is_validated AS validation,
@@ -386,7 +386,7 @@ final class FOSS extends AbstractDriver
                 SELECT
                     sd.sld,
                     sd.tld,
-                    sd.contact_email,
+                    c.email AS contact_email,
                     sd.token,
                     sd.id,
                     sd.ns1,
@@ -402,7 +402,7 @@ final class FOSS extends AbstractDriver
                         ELSE sd.registered_at
                     END AS registered_at,
                     sd.expires_at,
-                    sd.updated_at AS contact_updated_at,
+                    c.updated_at AS contact_updated_at,
                     CASE
                         WHEN sd.action = 'transfer'
                           OR co.config LIKE '%\"action\":\"transfer\"%'
@@ -413,17 +413,17 @@ final class FOSS extends AbstractDriver
                     dm.admin_contact_id,
                     dm.tech_contact_id,
                     dm.billing_contact_id,
-                    sd.contact_company,
-                    sd.contact_first_name,
-                    sd.contact_last_name,
-                    sd.contact_address1,
-                    sd.contact_address2,
-                    sd.contact_city,
-                    sd.contact_state,
-                    sd.contact_postcode,
-                    sd.contact_country,
-                    sd.contact_phone_cc,
-                    sd.contact_phone
+                    c.company AS contact_company,
+                    c.first_name AS contact_first_name,
+                    c.last_name AS contact_last_name,
+                    c.address_1 AS contact_address1,
+                    c.address_2 AS contact_address2,
+                    c.city AS contact_city,
+                    c.state AS contact_state,
+                    c.postcode AS contact_postcode,
+                    c.country AS contact_country,
+                    c.phone_cc AS contact_phone_cc,
+                    c.phone AS contact_phone
                 FROM service_domain sd
                 JOIN client_order co
                   ON co.service_id = sd.id
