@@ -808,10 +808,12 @@ function runValidation(): int
             $candidate = validationTokenCandidate($items[0][1]);
             $candidateHash = $candidate !== null ? hash('sha256', $candidate) : null;
             $usableRegistrantHash = null;
+            $usableState = null;
             foreach ($items as [$state]) {
                 if (!empty($state['token_hash']) && $candidateHash !== null
                     && hash_equals((string)$state['token_hash'], $candidateHash)) {
                     $usableRegistrantHash = (string)$state['registrant_data_hash'];
+                    $usableState = $state;
                     break;
                 }
             }
@@ -824,6 +826,8 @@ function runValidation(): int
                     validationUpdate($pdo, (int)$state['id'], [
                         'token_hash' => $candidateHash,
                         'token_issued_at' => validationFormat($now),
+                        'email_sent_at' => $usableState['email_sent_at'] ?? null,
+                        'reminder_sent_at' => $usableState['reminder_sent_at'] ?? null,
                     ]);
                     continue;
                 }
@@ -874,6 +878,7 @@ function runValidation(): int
         }
 
         $states = validationCurrentStates($pdo, $backend);
+        $attemptedNotifications = [];
         foreach ($states as $domainId => $state) {
             if (!isset($domains[$domainId]) || !in_array($state['status'], ['pending', 'suspended'], true)) {
                 continue;
@@ -890,28 +895,51 @@ function runValidation(): int
 
             $template = validationEmailIsDue($state, $now);
             if ($template !== null && $token !== null) {
-                $to = trim((string)($row['registrant_email'] ?? ''));
-                if ($to === '') {
-                    validationUpdate($pdo, (int)$state['id'], ['last_error' => 'Missing registrant email']);
-                    validationError($log, "Validation email is missing for {$row['domain_name']}.", $hadErrors);
-                } else {
-                    try {
-                        $email = render_email_template($template, [
-                            'domain_name' => $row['domain_name'],
-                            'validation_url' => $driver->getValidationUrl($token),
-                        ], $config);
-                        if (!send_email($to, $email['subject'], $email['body'], $config, $log, $email['html'])) {
-                            throw new RuntimeException('Email delivery failed');
+                $notificationKey = (string)$state['verification_key']
+                    . ':' . (string)$state['registrant_data_hash']
+                    . ':' . $template;
+                if (!isset($attemptedNotifications[$notificationKey])) {
+                    // The validation endpoint and token are contact-scoped.
+                    // Send only once for all domains sharing this exact
+                    // Registered Name Holder challenge.
+                    $attemptedNotifications[$notificationKey] = true;
+                    $to = trim((string)($row['registrant_email'] ?? ''));
+                    if ($to === '') {
+                        validationUpdate($pdo, (int)$state['id'], ['last_error' => 'Missing registrant email']);
+                        validationError($log, "Validation email is missing for {$row['domain_name']}.", $hadErrors);
+                    } else {
+                        try {
+                            $email = render_email_template($template, [
+                                'domain_name' => $row['domain_name'],
+                                'validation_url' => $driver->getValidationUrl($token),
+                            ], $config);
+                            if (!send_email($to, $email['subject'], $email['body'], $config, $log, $email['html'])) {
+                                throw new RuntimeException('Email delivery failed');
+                            }
+                            $notificationField = $template === 'validation_email'
+                                ? 'email_sent_at'
+                                : 'reminder_sent_at';
+                            $sentAt = validationFormat($now);
+                            foreach ($states as $groupState) {
+                                if (!in_array($groupState['status'], ['pending', 'suspended'], true)
+                                    || (string)$groupState['verification_key']
+                                        !== (string)$state['verification_key']
+                                    || !hash_equals(
+                                        (string)$groupState['registrant_data_hash'],
+                                        (string)$state['registrant_data_hash']
+                                    )) {
+                                    continue;
+                                }
+                                validationUpdate($pdo, (int)$groupState['id'], [
+                                    $notificationField => $sentAt,
+                                    'last_error' => null,
+                                ]);
+                            }
+                        } catch (Throwable $e) {
+                            $message = "Validation email failed for {$row['domain_name']}: {$e->getMessage()}";
+                            validationUpdate($pdo, (int)$state['id'], ['last_error' => $message]);
+                            validationError($log, $message, $hadErrors);
                         }
-                        validationUpdate($pdo, (int)$state['id'], [
-                            $template === 'validation_email' ? 'email_sent_at' : 'reminder_sent_at'
-                                => validationFormat($now),
-                            'last_error' => null,
-                        ]);
-                    } catch (Throwable $e) {
-                        $message = "Validation email failed for {$row['domain_name']}: {$e->getMessage()}";
-                        validationUpdate($pdo, (int)$state['id'], ['last_error' => $message]);
-                        validationError($log, $message, $hadErrors);
                     }
                 }
             }
