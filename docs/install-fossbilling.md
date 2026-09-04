@@ -1,6 +1,6 @@
 # Namingo Registrar: Installation Guide (FOSSBilling)
 
-This guide is for setting up **FOSSBilling 0.8.7** with **PHP 8.5** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
+This guide is for setting up **FOSSBilling 0.8.6** with **PHP 8.5** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
 
 ## 1. Install the required packages:
 
@@ -292,7 +292,7 @@ wget "http://www.adminer.org/latest.php" -O /var/www/adm.php
 
 ```bash
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.7/FOSSBilling-0.8.7.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.6/FOSSBilling-0.8.6.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 ```
 
@@ -316,7 +316,7 @@ Proceed with the installation as prompted on https://%%DOMAIN%%. If the installe
 Clone the tide theme repository:
 
 ```bash
-git clone https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.3 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 chmod 755 /var/www/themes/tide/assets
 chmod 755 /var/www/themes/tide/config/settings_data.json
 chown www-data:www-data /var/www/themes/tide/assets
@@ -330,7 +330,7 @@ Activate the Tide theme from the admin panel, `System -> Settings -> Themes`, by
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.4 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.5 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```

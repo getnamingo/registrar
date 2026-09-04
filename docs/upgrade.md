@@ -174,6 +174,69 @@ After all upgrades are complete:
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
 
+## Upgrade to Namingo Registrar v1.2.5
+
+### Step 1: Billing Platform Requirements
+
+Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
+
+- **WHMCS:** v9.0.8 or later. WHMCS v8.13.7 may also work, but it is not officially supported and should be used at your own risk.
+- **FOSSBilling:** v0.8.6 or later
+- **Loom:** latest available version
+
+Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
+
+### Step 2: Upgrade to Namingo Registrar v1.2.5
+
+Download and run the **v1.2.5** upgrade script:
+
+```bash
+./upgrade.sh
+```
+
+### Step 3: Upgrade the Namingo Registrar Module
+
+Upgrade the module for your billing platform to the latest available version:
+
+- **WHMCS:** https://github.com/getnamingo/whmcs-namingo-registrar
+- **FOSSBilling:** https://github.com/getnamingo/fossbilling-registrar
+
+Follow the installation and upgrade instructions provided in the relevant repository.
+
+### Step 4: Install and Configure the Contact Validation Module
+
+Install and configure the Contact Validation module for your billing platform:
+
+- **WHMCS:** https://github.com/getnamingo/whmcs-contact-validation
+- **FOSSBilling:** https://github.com/getnamingo/fossbilling-contact-validation
+
+Follow the instructions provided in the relevant repository and verify that registrant contact validation is functioning correctly before proceeding.
+
+### Step 5: Upgrade the Namingo EPP Module(s)
+
+Upgrade the Namingo EPP module(s) for your billing platform to the latest available version:
+
+- **WHMCS:** https://namingo.org/whmcs-module
+- **FOSSBilling:** https://namingo.org/foss-module/
+
+Follow the upgrade instructions provided for the relevant platform.
+
+### Step 6: Upgrade Namingo Modules for FOSSBilling
+
+If running FOSSBilling, ensure the following modules are also upgraded to their latest versions by following the instructions in each repository:
+
+- Validation Module  
+  https://github.com/getnamingo/fossbilling-validation
+
+- TMCH Module  
+  https://github.com/getnamingo/fossbilling-tmch
+
+- Whois Module  
+  https://github.com/getnamingo/fossbilling-whois
+
+- Contact Module  
+  https://github.com/getnamingo/fossbilling-contact
+  
 ## Upgrade to Namingo Registrar v1.2.4
 
 ### Step 1: Billing Platform Requirements
@@ -191,7 +254,7 @@ Follow the platform’s official upgrade instructions before continuing. When up
 Download and run the **v1.2.4** upgrade script:
 
 ```bash
-./update124.sh
+./upgrade.sh
 ```
 
 ### Step 3: Upgrade Tide theme to v1.2.3
