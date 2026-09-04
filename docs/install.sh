@@ -341,7 +341,7 @@ install_php_packages() {
   local package
 
   case "$panel" in
-    foss|loom|pnlcs)
+    foss|loom|custom|pnlcs)
       version="8.5"
       extras=(apcu ds igbinary imagick redis uuid)
       ;;
@@ -428,6 +428,7 @@ set_php_ini_value() {
 
 install_rdap_and_whois_services() {
     local panel="${1:-foss}"
+    local configure_db="${2:-yes}"
 
     log "Installing RDAP & WHOIS services..."
 
@@ -450,17 +451,21 @@ install_rdap_and_whois_services() {
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
-    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
-    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    escaped_pass=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
-    sed -i "s|'db_password' => .*|'db_password' => '$escaped_pass',|" config.php
-    sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
+    if [[ "$configure_db" == "yes" ]]; then
+        sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+        sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+        escaped_pass=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+        sed -i "s|'db_password' => .*|'db_password' => '$escaped_pass',|" config.php
+        sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
+    fi
 
     # Copy and enable the WHOIS service
     cp whois.service /etc/systemd/system/
     systemctl daemon-reload
-    systemctl start whois.service
-    systemctl enable whois.service
+    if [[ "$panel" != "custom" ]]; then
+        systemctl start whois.service
+        systemctl enable whois.service
+    fi
 
     # Setup for RDAP service
     cd /opt/registrar/rdap
@@ -468,17 +473,21 @@ install_rdap_and_whois_services() {
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
-    sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
-    sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
-    db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
-    sed -i "s|'db_password' => .*|'db_password' => '$db_pass_escaped',|" config.php
-    sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
+    if [[ "$configure_db" == "yes" ]]; then
+        sed -i "s|'db_database' => .*|'db_database' => 'registrar',|" config.php
+        sed -i "s|'db_username' => .*|'db_username' => '$db_user',|" config.php
+        db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+        sed -i "s|'db_password' => .*|'db_password' => '$db_pass_escaped',|" config.php
+        sed -i "s|'backend' => .*|'backend' => '$panel',|" config.php
+    fi
 
     # Copy and enable the RDAP service
     cp rdap.service /etc/systemd/system/
     systemctl daemon-reload
-    systemctl start rdap.service
-    systemctl enable rdap.service
+    if [[ "$panel" != "custom" ]]; then
+        systemctl start rdap.service
+        systemctl enable rdap.service
+    fi
 
     # Setup for automation
     cd /opt/registrar/automation
@@ -486,11 +495,13 @@ install_rdap_and_whois_services() {
     mv config.php.dist config.php
 
     # Edit config.php with the database credentials
-    sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
-    db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
-    sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass_escaped'/g" config.php
-    panel_upper=$(printf '%s' "$panel" | tr '[:lower:]' '[:upper:]')
-    sed -i "s|'backend' => .*|'backend' => '$panel_upper',|" config.php
+    if [[ "$configure_db" == "yes" ]]; then
+        sed -i "s/'username' => getenv('DB_USERNAME')/'username' => '$db_user'/g" config.php
+        db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
+        sed -i "s/'password' => getenv('DB_PASSWORD')/'password' => '$db_pass_escaped'/g" config.php
+        panel_upper=$(printf '%s' "$panel" | tr '[:lower:]' '[:upper:]')
+        sed -i "s|'backend' => .*|'backend' => '$panel_upper',|" config.php
+    fi
 
     # Install Escrow RDE Client
     cd /opt/registrar/automation
@@ -547,8 +558,10 @@ install_rdap_and_whois_services() {
         </IfModule>\
         ' "$HTACCESS"
         fi
-    else
+    elif [ "$panel" = "loom" ]; then
         echo "LOOM selected, no modules."
+    else
+        echo "Custom billing selected, no modules."
     fi
 
     mkdir -p /opt/registrar/escrow/process
@@ -584,8 +597,9 @@ echo
 echo "  1) FOSSBilling – free & open-source"
 echo "  2) WHMCS       – commercial billing platform"
 echo "  3) Loom        – lightweight panel (beta)"
+echo "  4) Custom      – use your own billing platform"
 if [[ "$ALPHA_FEATURES" -eq 1 ]]; then
-  echo "  4) PNLCS       – open-source billing platform (alpha)"
+  echo "  5) PNLCS       – open-source billing platform (alpha)"
 fi
 echo "  c) Cancel"
 echo
@@ -597,9 +611,9 @@ if [[ -n "$choice" ]]; then
     *) die "NAMINGO_BILLING_SYSTEM supports only fossbilling for unattended installation." ;;
   esac
 elif [[ "$ALPHA_FEATURES" -eq 1 ]]; then
-  read -rp "Enter your choice [1/2/3/4/c]: " choice
+  read -rp "Enter your choice [1/2/3/4/5/c]: " choice
 else
-  read -rp "Enter your choice [1/2/3/c]: " choice
+  read -rp "Enter your choice [1/2/3/4/c]: " choice
 fi
 
 case "$choice" in
@@ -1612,6 +1626,103 @@ fi
 echo "Namingo Registrar is ready for final configuration."
         ;;
     4)
+        echo "Custom billing platform selected."
+        echo
+
+        read -p "Enter your registrar domain (e.g., example.com): " registrar_domain
+        parse_domain registrar_domain
+
+        read -p "Install MariaDB locally? (Y/N): " install_mariadb
+        case "${install_mariadb,,}" in
+            y|yes) install_mariadb="yes" ;;
+            n|no) install_mariadb="no" ;;
+            *) die "Invalid choice. Use Y or N." ;;
+        esac
+
+        install_rdap_whois="Y"
+
+        apt update -y
+        apt install -y ufw bzip2 ca-certificates curl git gnupg lsb-release openssl net-tools unzip wget whois
+        install_php_repo
+        configure_firewall
+
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+
+        if [[ "$install_mariadb" == "yes" ]]; then
+            mkdir -p /etc/apt/keyrings
+            curl -o /etc/apt/keyrings/mariadb-keyring.asc 'https://mariadb.org/mariadb_release_signing_key.pgp'
+            cat > /etc/apt/sources.list.d/mariadb.sources <<EOF
+X-Repolib-Name: MariaDB
+Types: deb
+URIs: https://deb.mariadb.org/11.8/${MARIADB_DISTRO}
+Suites: ${MARIADB_SUITE}
+Components: ${MARIADB_COMPONENTS}
+Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
+EOF
+        fi
+
+        apt update -y
+        apt install -y caddy
+        if [[ "$install_mariadb" == "yes" ]]; then
+            apt install -y mariadb-client mariadb-server
+        fi
+        install_php_packages custom
+        install_composer php8.5
+        systemctl restart php8.5-fpm
+
+        if [[ "$install_mariadb" == "yes" ]]; then
+            db_user="$(generate_db_username)"
+            db_pass="$(generate_password)"
+            configure_mariadb registrar
+        fi
+
+        cat > /etc/caddy/Caddyfile <<EOF
+rdap.${domain_name} {
+    reverse_proxy localhost:7500
+    encode zstd gzip
+    file_server
+    header -Server
+    header * {
+        Referrer-Policy "no-referrer"
+        Strict-Transport-Security max-age=31536000;
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Content-Security-Policy "default-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; form-action 'self'; worker-src 'none'; frame-src 'none';"
+        Permissions-Policy "accelerometer=(), autoplay=(), camera=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(self), usb=();"
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type"
+    }
+}
+EOF
+
+        systemctl enable caddy
+        systemctl restart caddy
+
+        install_rdap_and_whois_services "custom" "$install_mariadb"
+
+        echo
+        echo "Namingo Registrar components are installed but have not been started."
+        if [[ "$install_mariadb" == "yes" ]]; then
+            echo "MariaDB database: registrar"
+            echo "MariaDB user:     $db_user"
+            echo "MariaDB password: $db_pass"
+            echo "The component config files were updated with these credentials."
+        else
+            echo "MariaDB was not installed; the component config files retain their defaults."
+        fi
+        echo
+        echo "Next steps:"
+        echo "1. Read Sections 7-9 of /opt/registrar/docs/install-custom.md and connect your custom billing system."
+        echo "2. After integration and configuration are complete, enable and start WHOIS and RDAP:"
+        echo "   systemctl enable --now whois.service"
+        echo "   systemctl enable --now rdap.service"
+        echo "3. Then enable automation by adding:"
+        echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+        ;;
+    5)
         [[ "$ALPHA_FEATURES" -eq 1 ]] || die "PNLCS alpha installer is disabled. Re-run with --alpha."
 
         echo "PNLCS selected (alpha)."

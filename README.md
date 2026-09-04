@@ -48,45 +48,43 @@ Open source ICANN-accredited domain registrar management system.
 
 **Minimum requirement:** a VPS running Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13, with at least 1 CPU core, 2 GB RAM, and 10 GB hard drive space.
 
-To get started, copy the command below and paste it into your server terminal:
+The recommended way to install Namingo Registrar is with the automated installer:
 
 ```bash
 bash <(wget -qO- https://namingo.org/registrar-install.sh)
 ```
 
-For detailed installation steps, see:
+After installation, continue with:
 
-- [install-fossbilling.md](docs/install-fossbilling.md) – for FOSSBilling setup  
-- [install-whmcs.md](docs/install-whmcs.md) – for WHMCS setup
-- [install-loom.md](docs/install-loom.md) – for Loom setup ***(beta)***
-- [install-custom.md](docs/install-custom.md) – for Custom Billing Platform setup ***(beta)***
-- [configuration.md](docs/configuration.md) – configuration
+- [configuration.md](docs/configuration.md) – required post-installation configuration
 
-Need help migrating between **FOSSBilling, WHMCS, Loom, or a custom billing platform**? Contact us at [help@namingo.org](mailto:help@namingo.org) to discuss your migration options.
+Platform-specific manuals are available for reference or troubleshooting:
+
+- [install-fossbilling.md](docs/install-fossbilling.md)
+- [install-whmcs.md](docs/install-whmcs.md)
+- [install-loom.md](docs/install-loom.md) – ***beta***
+- [install-custom.md](docs/install-custom.md)
+
+For migration assistance between **FOSSBilling, WHMCS, Loom, or a custom platform**, contact [help@namingo.org](mailto:help@namingo.org).
 
 ### Upgrade
 
 > [!IMPORTANT]
-> Namingo Registrar v1.2.3 is the last version using the legacy sequential upgrade scripts.
+> Billing systems and integration modules are **not** upgraded automatically.
 >
-> Starting with v1.2.4, all upgrades use the universal [`upgrade.sh`](docs/upgrade.sh) script.
+> See the **[Upgrade Guide](docs/upgrade.md)** for billing and module upgrade instructions.
 
-> [!WARNING]
-> Upgrading Namingo Registrar does **not** automatically upgrade integrated billing systems such as FOSSBilling, WHMCS, Loom, or custom integrations.
->
-> See the full **[Upgrade Guide](docs/upgrade.md)** for billing-system requirements, legacy upgrade paths, and version-specific notes.
+#### Current releases
 
-#### v1.2.3 and later
-
-Upgrade to the latest Namingo Registrar release with:
+Upgrade to the latest release with:
 
 ```bash
 bash <(wget -qO- https://namingo.org/registrar-upgrade.sh)
 ```
 
-#### Older than v1.2.3
+#### Legacy releases
 
-Use the legacy sequential upgrade scripts until you reach **v1.2.3**, then use the universal upgrader for all future releases. See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
+Upgrade sequentially to **v1.2.3**, then use the universal upgrader. See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
 
 ## Support
 
