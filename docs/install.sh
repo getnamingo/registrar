@@ -1281,11 +1281,8 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "6. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. Complete the required registrar website, contact, terms, privacy"
-    echo "   and ICANN compliance information."
-    echo
-    echo "8. Configure escrow and backup according to install-whmcs.md"
-    echo "   (sections 12.1 and 16)."
+    echo "7. Complete the registrar contact, website, escrow, and compliance configuration"
+    echo "   described in Sections 12 and 16 of install-whmcs.md and in configuration.md."
     echo
 fi
 
@@ -1302,7 +1299,7 @@ echo "Namingo Registrar is ready for final configuration."
                     echo "Please install Namingo Registrar manually by following:"
                     echo "  install-whmcs.md"
                     echo
-                    echo "For WHMCS 9.0.7 already installed on a VPS/server with root access,"
+                    echo "For WHMCS 9.0.8 already installed on a VPS/server with root access,"
                     echo "review Section 1.3, Section 4.1, and Section 9 onwards."
                     echo
                     echo "Note: Shared hosting is not supported."
@@ -1607,11 +1604,8 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "6. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. Complete the required registrar website, contact, terms, privacy"
-    echo "   and ICANN compliance information."
-    echo
-    echo "8. Configure escrow and backup according to install-loom.md"
-    echo "   (sections 11 and 12)."
+    echo "7. Complete the registrar contact, website, escrow, and compliance configuration"
+    echo "   described in Sections 11 and 12 of install-loom.md and in configuration.md."
     echo
 fi
 

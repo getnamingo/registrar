@@ -346,5 +346,5 @@ Once you have successfully configured all automation scripts, you are ready to i
 
 3. Configure ICANN MoSAPI Integration in the `.env` file.
 
-4. **Backup**
-   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.
+> [!NOTE]
+> Once you have completed the steps in this section, continue with the instructions in [`configuration.md`](configuration.md).

@@ -1,8 +1,8 @@
 # Namingo Registrar: Installation Guide (WHMCS)
 
-This guide is for setting up **WHMCS 9.0.7** with **PHP 8.3** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
+This guide is for setting up **WHMCS 9.0.8** with **PHP 8.3** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
 
-> **Important:** If **WHMCS 9.0.7** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
+> **Important:** If **WHMCS 9.0.8** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
@@ -590,5 +590,5 @@ chmod -R 755 /var/www/whmcs/modules/addons/mosapi_monitor
 
 - Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **"ICANN MoSAPI"**, activate the module, and then configure it from its respective configuration menu.
 
-5. **Backup**
-   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.
+> [!NOTE]
+> Once you have completed the steps in this section, continue with the instructions in [`configuration.md`](configuration.md).

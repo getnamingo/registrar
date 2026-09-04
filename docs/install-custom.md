@@ -352,5 +352,5 @@ To execute the required OT&E tests by various registries, you can use our EPP cl
    - Registered address  
    - Name of the Chief Executive Officer (CEO)
 
-3. **Backup**
-   Update your database details in `automation/backup.json` (in both required sections) and confirm that the `cron.php` cronjob is active to automate backups.
+> [!NOTE]
+> Once you have completed the steps in this section, continue with the instructions in [`configuration.md`](configuration.md).
