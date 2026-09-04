@@ -26,6 +26,8 @@ interface DriverInterface
 
     public function markValidationReminderSent(array $row, mixed $eppResult): void;
 
+    public function markValidationMigrated(array $row): void;
+
     public function getEppConfiguration(string $domain): array;
 
     public function findRestoredAccuracyNotification(string $domain): ?array;

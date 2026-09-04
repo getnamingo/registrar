@@ -25,6 +25,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 const VALIDATION_DAYS = 15;
 const VALIDATION_REMINDER_DAYS = 3;
+const VALIDATION_MIGRATION_CUTOFF = '2026-08-19 00:00:00';
 define(
     'VALIDATION_TABLE',
     strcasecmp((string) ($config['escrow']['backend'] ?? 'FOSS'), 'WHMCS') === 0
@@ -539,6 +540,10 @@ function runValidation(): int
         }
 
         $now = validationNow();
+        $migrationCutoff = new DateTimeImmutable(
+            VALIDATION_MIGRATION_CUTOFF,
+            new DateTimeZone('UTC')
+        );
         $rows = $driver->getValidationRows(validationFormat($now));
         $domains = [];
         foreach ($rows as $row) {
@@ -625,6 +630,23 @@ function runValidation(): int
                         $event, $triggeredAt, 'verified', 'legacy_import',
                         validationFormat($verifiedAt),
                         'Imported from the billing system during per-domain migration.'
+                    );
+                } elseif (
+                    in_array(strtoupper($backend), ['FOSS', 'WHMCS', 'LOOM'], true)
+                    && $triggeredAt < $migrationCutoff
+                ) {
+                    // Rollout migration: contacts attached to registrations/transfers
+                    // predating the cutoff are accepted without sending a bulk
+                    // validation campaign. Any later registrant-data change,
+                    // bounce/inaccuracy trigger, or manual trigger still reopens
+                    // validation through the normal paths below.
+                    $driver->markValidationMigrated($row);
+                    $verifiedAt = validationNow();
+                    $state = validationInsert(
+                        $pdo, $backend, $row, $contactHash, $registrantHash,
+                        $event, $triggeredAt, 'verified', 'migration_cutoff',
+                        validationFormat($verifiedAt),
+                        'Imported without notification because the registration/transfer predates the validation rollout cutoff.'
                     );
                 } elseif (validationHasVerifiedHash(
                     $pdo,

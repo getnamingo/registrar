@@ -15,6 +15,11 @@ abstract class AbstractDriver implements DriverInterface
     ) {
     }
 
+    public function markValidationMigrated(array $row): void
+    {
+        // Custom backends may keep migration state only in the central table.
+    }
+
     public function getEppConfigurations(): array
     {
         throw new \RuntimeException(

@@ -548,6 +548,34 @@ final class FOSS extends AbstractDriver
         $stmt->execute(['id' => $row['id']]);
     }
 
+    public function markValidationMigrated(array $row): void
+    {
+        if (!empty($row['validation_id'])) {
+            $stmt = $this->pdo->prepare("
+                UPDATE domain_contact_validation
+                SET is_validated = 1,
+                    validation_checked_at = NOW(),
+                    validation_method = 'migration_cutoff',
+                    validation_token = NULL
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                'id' => $row['validation_id'],
+            ]);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare("
+            UPDATE client
+            SET custom_2 = 1,
+                custom_1 = NULL
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            'id' => $row['client_id'],
+        ]);
+    }
+
     public function markValidationReminderSent(array $row, mixed $eppResult): void
     {
         if (empty($row['validation_id'])) {

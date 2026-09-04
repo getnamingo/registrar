@@ -600,6 +600,35 @@ final class WHMCS extends AbstractDriver
         // WHMCS tbldomains has no reliable native EPP clientHold field.
     }
 
+    public function markValidationMigrated(array $row): void
+    {
+        if (!empty($row['validation_id'])) {
+            $stmt = $this->pdo->prepare("
+                UPDATE namingo_contact_validation
+                SET is_validated = 1,
+                    validation_checked_at = CURRENT_TIMESTAMP(3),
+                    validation_method = 'migration_cutoff',
+                    validation_token = NULL
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                'id' => $row['validation_id'],
+            ]);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare("
+            UPDATE namingo_contact
+            SET validation = 1,
+                validation_stamp = NOW(),
+                validation_log = NULL
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            'id' => $row['cid'],
+        ]);
+    }
+
     public function markValidationReminderSent(array $row, mixed $eppResult): void
     {
         if (!empty($row['validation_id'])) {

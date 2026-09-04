@@ -482,6 +482,20 @@ final class LOOM extends AbstractDriver
         ]);
     }
 
+    public function markValidationMigrated(array $row): void
+    {
+        $stmt = $this->pdo->prepare("
+            UPDATE users
+            SET validation = 1,
+                validation_stamp = NOW(3),
+                validation_log = NULL
+            WHERE id = :user_id
+        ");
+        $stmt->execute([
+            'user_id' => $row['user_id'],
+        ]);
+    }
+
     public function markValidationReminderSent(array $row, mixed $eppResult): void
     {
         $stmt = $this->pdo->prepare("
