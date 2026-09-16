@@ -11,7 +11,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Let WHMCS load its matching Monolog classes before the logger is created.
-if (strcasecmp(trim((string)($config['escrow']['backend'] ?? '')), 'WHMCS') === 0) {
+if (strcasecmp(trim((string)($config['escrow']['backend'] ?? '')), 'WHMCS') === 0 && is_file('/var/www/whmcs/init.php')) {
     require_once '/var/www/whmcs/init.php';
 }
 
