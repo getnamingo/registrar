@@ -11,12 +11,65 @@ set -euo pipefail
 #   NAMINGO_PANEL_PASSWORD
 #   NAMINGO_SSH_PORT            default: 22
 #   NAMINGO_CONFIGURE_FIREWALL  yes|no (default: yes)
+#   NAMINGO_EPP_PROFILES       space-separated profiles; overrides the mode defaults
 
 # ---------- Helpers ----------
 log() { printf "\n\033[1;32m[%s]\033[0m %s\n" "$(date +%H:%M:%S)" "$*"; }
 warn() { printf "\n\033[1;33m[WARN]\033[0m %s\n" "$*"; }
 err() { printf "\n\033[1;31m[ERR]\033[0m %s\n" "$*" >&2; }
 die() { err "$*"; exit 1; }
+
+install_epp_profiles() {
+    local billing=$1 path=$2 profile installer url
+    local profiles="${NAMINGO_EPP_PROFILES:-}"
+    [[ -n "$profiles" ]] || {
+        if [[ "${install_rdap_whois:-N}" == "Y" ]]; then
+            profiles="verisign identity central"
+        else
+            profiles="central"
+        fi
+    }
+    case "$billing" in
+        fossbilling) url="https://raw.githubusercontent.com/getnamingo/fossbilling-epp-registrar/main/install-fossbilling-epp.sh" ;;
+        whmcs) url="https://raw.githubusercontent.com/getnamingo/whmcs-epp-registrar/main/install-whmcs-epp.sh" ;;
+        *) die "Unsupported EPP billing system: $billing" ;;
+    esac
+    installer=$(mktemp)
+    curl -fsSL "$url" -o "$installer" || { rm -f "$installer"; die "Could not download $billing EPP installer"; }
+    # Deliberately split the operator-supplied profile list on whitespace.
+    local -a selected
+    read -r -a selected <<< "$profiles"
+    for profile in "${selected[@]}"; do
+        [[ "$profile" =~ ^[a-z][a-z0-9]*$ ]] || { rm -f "$installer"; die "Invalid EPP profile: $profile"; }
+        log "Installing $billing EPP profile: $profile"
+        bash "$installer" "$profile" "$path" || { rm -f "$installer"; die "EPP profile installation failed: $profile"; }
+    done
+    rm -f "$installer"
+}
+
+install_dns_module() {
+    local billing=$1 path=$2 repo module
+    case "$billing" in
+        fossbilling) repo="fossbilling-dns"; module="Servicedns" ;;
+        whmcs) repo="whmcs-dns"; module="whmcs_dns" ;;
+        *) die "Unsupported DNS billing system: $billing" ;;
+    esac
+
+    log "Installing $billing DNS module"
+    rm -rf "/tmp/$repo"
+    git clone --depth 1 "https://github.com/getnamingo/$repo" "/tmp/$repo"
+
+    case "$billing" in
+        fossbilling)
+            mv "/tmp/$repo/$module" "$path/modules/"
+            ;;
+        whmcs)
+            mv "/tmp/$repo/$module" "$path/modules/addons/"
+            ;;
+    esac
+
+    rm -rf "/tmp/$repo"
+}
 
 # ---------- Command-line options ----------
 REGISTRAR_SOURCE="release"
@@ -926,6 +979,9 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     install_rdap_and_whois_services "foss"
 fi
 
+install_epp_profiles fossbilling /var/www
+install_dns_module fossbilling /var/www
+
 # Final summary
 show_install_summary \
     "FOSSBilling" \
@@ -943,7 +999,7 @@ echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "   Click Settings next to Tide and adjust the theme as needed."
 echo
-echo "3. Install FOSSBilling extensions for EPP and DNS as outlined in steps 14 and 15 of install-fossbilling.md."
+echo "3. Configure the installed EPP and DNS extensions as outlined in steps 14 and 15 of install-fossbilling.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
@@ -1266,6 +1322,9 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     install_rdap_and_whois_services "whmcs"
 fi
 
+install_epp_profiles whmcs /var/www/whmcs
+install_dns_module whmcs /var/www/whmcs
+
 # Final summary
 show_install_summary \
     "WHMCS" \
@@ -1280,7 +1339,7 @@ echo
 echo "2. Verify that all required client and contact profile fields are mandatory"
 echo "   before accepting domain registrations."
 echo
-echo "3. Install WHMCS extensions for EPP and DNS as outlined in steps 14 and 15 of install-whmcs.md."
+echo "3. Configure the installed EPP and DNS extensions as outlined in steps 14 and 15 of install-whmcs.md."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
