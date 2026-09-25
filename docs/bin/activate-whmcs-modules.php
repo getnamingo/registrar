@@ -14,6 +14,10 @@ try {
     printf("Activating modules:");
 
     foreach ($modules as $module) {
+        if (!is_dir('/var/www/whmcs/modules/addons/' . $module)) {
+            continue;
+        }
+
         $result = localAPI('ActivateModule', [
             'moduleType' => 'addon',
             'moduleName' => $module,

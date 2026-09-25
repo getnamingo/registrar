@@ -938,7 +938,9 @@ chown -R www-data:www-data /var/www/data
 find /var/www/data -type d -exec chmod 755 {} \;
 find /var/www/data -type f -exec chmod 644 {} \;
 
-wget https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
+php8.5 /tmp/configure-client-fields.php
+rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
@@ -982,6 +984,10 @@ fi
 install_epp_profiles fossbilling /var/www
 install_dns_module fossbilling /var/www
 
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-fossbilling-modules.php -O /tmp/activate-fossbilling-modules.php
+php8.5 /tmp/activate-fossbilling-modules.php
+rm -f /tmp/activate-fossbilling-modules.php
+
 # Final summary
 show_install_summary \
     "FOSSBilling" \
@@ -990,11 +996,8 @@ show_install_summary \
     "/var/www/config.php" \
     "https://$panel_domain_name/${ADMINER_SLUG}"
 
-echo "1. Open the FOSSBilling admin page to complete the installation:"
+echo "1. Log in to the FOSSBilling admin panel:"
 echo "   https://$panel_domain_name/admin"
-echo "   Complete the installation, then log in with your admin account."
-echo "   After logging in, return to this terminal and run:"
-echo "   php /tmp/configure-client-fields.php"
 echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "   Click Settings next to Tide and adjust the theme as needed."
@@ -1003,23 +1006,15 @@ echo "3. Configure the installed EPP and DNS extensions as outlined in steps 14 
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "4. In Extensions > Overview, activate the registrar extensions:"
-    echo "   - ICANN Registrar Accreditation"
-    echo "   - Registrant Validation Management"
-    echo "   - Registrant Contact Verification"
-    echo "   - Registrant Contact Form"
-    echo "   - WHOIS & RDAP Client"
-    echo "   - TMCH Claims Notice"
-    echo
-    echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
+    echo "4. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "6. Add the registrar automation cron job:"
+    echo "5. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. Complete the registrar contact, website, escrow, and compliance configuration"
+    echo "6. Complete the registrar contact, website, escrow, and compliance configuration"
     echo "   described in Sections 12 and 16 of install-fossbilling.md and in configuration.md."
     echo
 fi
@@ -1325,6 +1320,10 @@ fi
 install_epp_profiles whmcs /var/www/whmcs
 install_dns_module whmcs /var/www/whmcs
 
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-whmcs-modules.php -O /tmp/activate-whmcs-modules.php
+php8.3 /tmp/activate-whmcs-modules.php
+rm -f /tmp/activate-whmcs-modules.php
+
 # Final summary
 show_install_summary \
     "WHMCS" \
@@ -1343,18 +1342,15 @@ echo "3. Configure the installed EPP and DNS extensions as outlined in steps 14 
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "4. In the WHMCS admin panel, go to Settings > Apps & Integrations and activate:"
-    echo "   Namingo Registrar and WHMCS Contact Validation."
-    echo
-    echo "5. Review the registrar, RDAP, WHOIS and escrow configuration:"
+    echo "4. Review the registrar, RDAP, WHOIS and escrow configuration:"
     echo "   - /opt/registrar/whois/config.php"
     echo "   - /opt/registrar/rdap/config.php"
     echo "   - /opt/registrar/automation/config.php"
     echo
-    echo "6. Add the registrar automation cron job:"
+    echo "5. Add the registrar automation cron job:"
     echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
-    echo "7. Complete the registrar contact, website, escrow, and compliance configuration"
+    echo "6. Complete the registrar contact, website, escrow, and compliance configuration"
     echo "   described in Sections 12 and 16 of install-whmcs.md and in configuration.md."
     echo
 fi

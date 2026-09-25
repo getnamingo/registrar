@@ -21,6 +21,10 @@ try {
     printf("Activating modules:");
 
     foreach ($modules as $module) {
+        if (!is_dir('/var/www/modules/' . ucfirst($module))) {
+            continue;
+        }
+
         if ($extensions->isExtensionActive('mod', $module)) {
             printf(" %s[active]", $module);
             continue;
