@@ -15,6 +15,7 @@ $modules = [
 ];
 
 try {
+    $di['translate']();
     $di['is_cron'] = true;
     $extensions = $di['mod_service']('extension');
 

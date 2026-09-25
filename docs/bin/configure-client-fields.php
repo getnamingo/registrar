@@ -5,6 +5,7 @@ declare(strict_types=1);
 require '/var/www/load.php';
 
 try {
+    $di['translate']();
     $di['is_cron'] = true;
 
     $hooks = $di['mod_service']('hook');
