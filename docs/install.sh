@@ -1015,21 +1015,23 @@ echo
 echo "2. To configure the Tide theme, go to the admin panel: System -> Settings -> Themes."
 echo "   Click Settings next to Tide and adjust the theme as needed."
 echo
-echo "3. Configure the installed EPP and DNS extensions as outlined in steps 14 and 15 of install-fossbilling.md."
+echo "3. Configure your domain registrar under System -> Domain Registration."
+echo "   Enter the EPP/SSL settings, enable Minimum Data Set for gTLDs, then add and price the TLD."
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-    echo "4. Review the registrar, RDAP, WHOIS and escrow configuration:"
-    echo "   - /opt/registrar/whois/config.php"
-    echo "   - /opt/registrar/rdap/config.php"
-    echo "   - /opt/registrar/automation/config.php"
-    echo
-    echo "5. Add the registrar automation cron job:"
-    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-    echo
-    echo "6. Complete the registrar contact, website, escrow, and compliance configuration"
-    echo "   described in Sections 12 and 16 of install-fossbilling.md and in configuration.md."
-    echo
+	echo "4. Complete the registrar setup described in Section 16 of install-fossbilling.md"
+	echo "   and in configuration.md, then review:"
+	echo "   - /opt/registrar/whois/config.php"
+	echo "   - /opt/registrar/rdap/config.php"
+	echo "   - /opt/registrar/automation/config.php"
+	echo
+	echo "5. Restart the registrar services after making configuration changes:"
+	echo "   systemctl restart whois rdap"
+	echo
+	echo "6. Add the registrar automation cron job:"
+	echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+	echo
 fi
 
 echo "Namingo Registrar is ready for final configuration."
