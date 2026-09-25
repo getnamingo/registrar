@@ -740,7 +740,7 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmo
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
 
 apt update -y
-apt install -y mariadb-client mariadb-server caddy
+DEBIAN_FRONTEND=noninteractive apt install -y mariadb-client mariadb-server caddy
 install_php_packages foss
 install_composer php8.5
 
@@ -891,7 +891,7 @@ sed -i "s|'user' => getenv('DB_USER') ?: 'foo'|'user' => '$db_user'|" /var/www/c
 db_pass_escaped=$(printf '%s' "$db_pass" | sed 's/[&\\/]/\\&/g')
 sed -i "s|'password' => getenv('DB_PASS') ?: 'bar'|'password' => '$db_pass_escaped'|" /var/www/config.php
 
-cron_job="*/5 * * * * php /var/www/cron.php"
+cron_job="*/5 * * * * /usr/bin/php8.5 -q /var/www/cron.php"
 
 tmp_cron="$(mktemp 2>/dev/null)" || {
   echo "[!] Failed to create temp file (mktemp)."
@@ -1099,7 +1099,7 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
-apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server python3-certbot-apache
+DEBIAN_FRONTEND=noninteractive apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server python3-certbot-apache
 install_php_packages whmcs
 install_composer php8.3
 
@@ -1482,7 +1482,7 @@ Signed-By: /etc/apt/keyrings/mariadb-keyring.asc
 EOF
 
 apt update -y
-apt install -y caddy mariadb-client mariadb-server
+DEBIAN_FRONTEND=noninteractive apt install -y caddy mariadb-client mariadb-server
 install_php_packages loom
 install_composer php8.5
 
@@ -1842,7 +1842,7 @@ EOF
         curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
         apt update -y
-        apt install -y caddy mariadb-client mariadb-server nodejs supervisor cron
+        DEBIAN_FRONTEND=noninteractive apt install -y caddy mariadb-client mariadb-server nodejs supervisor cron
         install_php_packages pnlcs
         install_composer php8.5
 
