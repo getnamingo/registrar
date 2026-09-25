@@ -877,6 +877,13 @@ chown -R www-data:www-data /var/www
 # Rename config file
 mv /var/www/config-sample.php /var/www/config.php
 
+# Freeze FOSSBilling encryption salt
+foss_salt="$(openssl rand -hex 16)"
+sed -i "s|bin2hex(random_bytes(16))|'$foss_salt'|" /var/www/config.php
+
+foss_instance_id="$(cat /proc/sys/kernel/random/uuid)"
+sed -i "s|XXXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXX|$foss_instance_id|" /var/www/config.php
+
 # Update configuration in config.php
 sed -i "s|'url' => 'localhost/'|'url' => '$panel_domain_name/'|" /var/www/config.php
 sed -i "s|'name' => .*|'name' => 'registrar',|" /var/www/config.php
