@@ -6,6 +6,7 @@ require '/var/www/load.php';
 
 $modules = [
     'servicedns',
+    'domainx',
     'registrar',
     'domaincontactvalidation',
     'validation',

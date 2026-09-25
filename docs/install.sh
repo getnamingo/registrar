@@ -991,6 +991,12 @@ fi
 install_epp_profiles fossbilling /var/www
 install_dns_module fossbilling /var/www
 
+log "Installing DomainX module"
+rm -rf /tmp/fossbilling-domainx
+git clone --depth 1 https://github.com/getnamingo/fossbilling-domainx /tmp/fossbilling-domainx
+mv /tmp/fossbilling-domainx/Domainx /var/www/modules/
+rm -rf /tmp/fossbilling-domainx
+
 wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-fossbilling-modules.php -O /tmp/activate-fossbilling-modules.php
 php8.5 /tmp/activate-fossbilling-modules.php
 rm -f /tmp/activate-fossbilling-modules.php
