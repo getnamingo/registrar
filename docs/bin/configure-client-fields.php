@@ -3,14 +3,36 @@
 declare(strict_types=1);
 
 require '/var/www/load.php';
-$di = require '/var/www/di.php';
-$di['translate']();
 
-$fields = ['last_name', 'country', 'city', 'address_1', 'postcode', 'phone'];
+try {
+    $di['is_cron'] = true;
 
-$extensionService = $di['mod_service']('extension');
-$config = $extensionService->getConfig('mod_client');
-$config['required'] = $fields;
-$extensionService->setConfig($config);
+    $hooks = $di['mod_service']('hook');
+    if (!$hooks->batchConnect()) {
+        throw new RuntimeException('Could not initialize FOSSBilling event listeners.');
+    }
 
-echo '[OK] Required client fields configured.' . PHP_EOL;
+    $fields = [
+        'last_name',
+        'country',
+        'city',
+        'address_1',
+        'postcode',
+        'phone',
+    ];
+
+    $extensions = $di['mod_service']('extension');
+
+    $config = $extensions->getConfig('mod_client');
+    $config['required'] = $fields;
+    $extensions->setConfig($config);
+
+    // Match the final state written by the normal FOSSBilling installer.
+    (new \FOSSBilling\UpdateFinalization())->writeCompleteState();
+
+    echo "FOSSBilling initialized and client fields configured.\n";
+
+} catch (Throwable $e) {
+    fwrite(STDERR, "FOSSBilling initialization failed: " . $e->getMessage() . PHP_EOL);
+    exit(1);
+}
