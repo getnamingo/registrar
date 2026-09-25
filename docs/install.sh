@@ -869,6 +869,11 @@ wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.6/FOSSBill
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
+# Install Namingo branding
+curl -fsSL https://namingo.org/assets/favicon.ico -o /var/www/public/branding/favicon.ico
+curl -fsSL https://namingo.org/assets/logo.svg -o /var/www/public/branding/logo.svg
+curl -fsSL https://namingo.org/assets/logo-dark.svg -o /var/www/public/branding/logo-dark.svg
+
 # Make Directories Writable
 chmod -R 755 /var/www/config-sample.php
 mkdir -p /var/www/data/log/event
