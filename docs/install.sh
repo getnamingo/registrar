@@ -23,7 +23,7 @@ install_epp_profiles() {
     local billing=$1 path=$2 profile installer url
     local profiles="${NAMINGO_EPP_PROFILES:-}"
     [[ -n "$profiles" ]] || {
-        if [[ "${install_rdap_whois:-N}" == "Y" ]]; then
+        if [[ "${install_rdap_whois:-N}" =~ ^[Yy]$ ]]; then
             profiles="central core dns godaddy google hello identity org ryce tucows verisign zdns hostmaster iis afnic eurid cocca switch namingo"
         else
             profiles="namingo afnic eurid cocca switch"
