@@ -974,6 +974,9 @@ if [ -f "$settings_file" ]; then
       -e 's/Welcome to Tide/Welcome to Namingo Registrar/g' \
       -e 's/"footer_link_1_enabled":"0"/"footer_link_1_enabled":"1"/g' \
       -e 's/"footer_link_2_enabled":"0"/"footer_link_2_enabled":"1"/g' \
+      -e 's/"announcement_bar_color":"[^"]*"/"announcement_bar_color":"3"/g' \
+      -e 's/"theme_color_enabled":"[^"]*"/"theme_color_enabled":"1"/g' \
+      -e 's/"theme_color":"[^"]*"/"theme_color":"4"/g' \
       "$settings_file"
 else
     echo "Error: $settings_file not found!"
@@ -1025,18 +1028,18 @@ echo "   Enter the EPP/SSL settings, enable Minimum Data Set for gTLDs, then add
 echo
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
-	echo "4. Complete the registrar setup described in Section 16 of install-fossbilling.md"
-	echo "   and in configuration.md, then review:"
-	echo "   - /opt/registrar/whois/config.php"
-	echo "   - /opt/registrar/rdap/config.php"
-	echo "   - /opt/registrar/automation/config.php"
-	echo
-	echo "5. Restart the registrar services after making configuration changes:"
-	echo "   systemctl restart whois rdap"
-	echo
-	echo "6. Add the registrar automation cron job:"
-	echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
-	echo
+    echo "4. Complete the registrar setup described in Section 16 of install-fossbilling.md"
+    echo "   and in configuration.md, then review:"
+    echo "   - /opt/registrar/whois/config.php"
+    echo "   - /opt/registrar/rdap/config.php"
+    echo "   - /opt/registrar/automation/config.php"
+    echo
+    echo "5. Restart the registrar services after making configuration changes:"
+    echo "   systemctl restart whois rdap"
+    echo
+    echo "6. Add the registrar automation cron job:"
+    echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo
 fi
 
 echo "Namingo Registrar is ready for final configuration."
