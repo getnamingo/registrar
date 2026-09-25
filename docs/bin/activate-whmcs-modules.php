@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+$serverName = getenv('WHMCS_SERVER_NAME');
+if ($serverName) {
+    $_SERVER['SERVER_NAME'] = $serverName;
+    $_SERVER['HTTP_HOST'] = $serverName;
+    $_SERVER['HTTPS'] = 'on';
+    $_SERVER['SERVER_PORT'] = '443';
+}
+
 require '/var/www/whmcs/init.php';
 
 $modules = [

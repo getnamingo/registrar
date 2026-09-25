@@ -1344,7 +1344,7 @@ install_epp_profiles whmcs /var/www/whmcs
 install_dns_module whmcs /var/www/whmcs
 
 wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-whmcs-modules.php -O /tmp/activate-whmcs-modules.php
-php8.3 /tmp/activate-whmcs-modules.php
+WHMCS_SERVER_NAME="$panel_domain_name" php8.3 /tmp/activate-whmcs-modules.php
 rm -f /tmp/activate-whmcs-modules.php
 
 # Final summary
