@@ -865,7 +865,7 @@ wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 # Download and Extract FOSSBilling
 log "Installing FOSSBilling"
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.6/FOSSBilling-0.8.6.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.7/FOSSBilling-0.8.7.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
@@ -956,7 +956,7 @@ rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
-git clone --branch v1.2.3 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.5 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
 chmod 755 /var/www/themes/tide/assets
