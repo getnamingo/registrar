@@ -48,27 +48,44 @@ install_epp_profiles() {
 }
 
 install_dns_module() {
-    local billing=$1 path=$2 repo module
-    case "$billing" in
-        fossbilling) repo="fossbilling-dns"; module="Servicedns" ;;
-        whmcs) repo="whmcs-dns"; module="whmcs_dns" ;;
-        *) die "Unsupported DNS billing system: $billing" ;;
-    esac
-
-    log "Installing $billing DNS module"
-    rm -rf "/tmp/$repo"
-    git clone --depth 1 "https://github.com/getnamingo/$repo" "/tmp/$repo"
+    local billing=$1 path=$2 repo module version
 
     case "$billing" in
         fossbilling)
-            mv "/tmp/$repo/$module" "$path/modules/"
+            repo="fossbilling-dns"
+            module="Servicedns"
+            version="1.2.6"
             ;;
         whmcs)
-            mv "/tmp/$repo/$module" "$path/modules/addons/"
+            repo="whmcs-dns"
+            module="whmcs_dns"
+            version="1.0.1"
+            ;;
+        *)
+            die "Unsupported DNS billing system: $billing"
             ;;
     esac
 
-    rm -rf "/tmp/$repo"
+    log "Installing $billing DNS module"
+
+    rm -rf "/tmp/$repo-v$version"
+    rm -f "/tmp/$repo-v$version.tar.gz"
+
+    cd /tmp
+    wget -q "https://github.com/getnamingo/$repo/releases/download/v$version/$repo-v$version.tar.gz"
+    tar xzf "$repo-v$version.tar.gz"
+
+    case "$billing" in
+        fossbilling)
+            mv "/tmp/$repo-v$version/$module" "$path/modules/"
+            ;;
+        whmcs)
+            mv "/tmp/$repo-v$version/$module" "$path/modules/addons/"
+            ;;
+    esac
+
+    rm -rf "/tmp/$repo-v$version"
+    rm -f "/tmp/$repo-v$version.tar.gz"
 }
 
 # ---------- Command-line options ----------
