@@ -316,7 +316,7 @@ Proceed with the installation as prompted on https://%%DOMAIN%%. If the installe
 Clone the tide theme repository:
 
 ```bash
-git clone --branch v1.2.5 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.6 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 chmod 755 /var/www/themes/tide/assets
 chmod 755 /var/www/themes/tide/config/settings_data.json
 chown www-data:www-data /var/www/themes/tide/assets
@@ -330,7 +330,7 @@ Activate the Tide theme from the admin panel, `System -> Settings -> Themes`, by
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.5 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.6 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```

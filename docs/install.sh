@@ -494,8 +494,8 @@ install_rdap_and_whois_services() {
         echo "Cloning Namingo Registrar from main"
         git clone https://github.com/getnamingo/registrar /opt/registrar
     else
-        echo "Cloning Namingo Registrar v1.2.5"
-        git clone --branch v1.2.5 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+        echo "Cloning Namingo Registrar v1.2.6"
+        git clone --branch v1.2.6 --single-branch https://github.com/getnamingo/registrar /opt/registrar
     fi
 
     # Setup for WHOIS service
@@ -641,7 +641,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.5 ===="
+echo "==== Namingo Registrar v1.2.6 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
@@ -956,7 +956,7 @@ rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
-git clone --branch v1.2.5 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.6 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
 chmod 755 /var/www/themes/tide/assets
