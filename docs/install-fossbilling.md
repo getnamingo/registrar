@@ -95,12 +95,33 @@ systemctl restart php8.5-fpm
         /config.php
 
     # Block sensitive file extensions
-    @blockedExtensions path_regexp blockedExtensions (?i)\.(ini|sh|inc|bak|twig|sql)$
+    @blockedExtensions path_regexp blockedExtensions (?i)\.(ini|sh|inc|bak|twig|sql|conf|lock|log|old|ya?ml|htaccess|htpasswd)$
+
+    # Block access to per-theme configuration directories,
+    # including nested theme paths.
+    @blockedThemeConfig path_regexp blockedThemeConfig (?i)^/themes/([^/]+/)+config/
 
     # Block hidden files and directories, except ACME files
     @hiddenFiles {
         path_regexp hiddenFiles (^|/)\.[^/]+
         not path /.well-known /.well-known/*
+    }
+
+    # Only these FOSSBilling PHP entry points may execute.
+    @allowedPhp path \
+        /index.php \
+        /ipn.php \
+        /install/index.php \
+        /install/install.php
+
+    # Block direct access/execution of every other PHP file.
+    @blockedPhp {
+        path_regexp blockedPhp (?i)\.php(/|$)
+        not path \
+            /index.php \
+            /ipn.php \
+            /install/index.php \
+            /install/install.php
     }
 
     # FOSSBilling root route
@@ -120,7 +141,9 @@ systemctl restart php8.5-fpm
     route {
         respond @blockedPaths 403
         respond @blockedExtensions 403
+        respond @blockedThemeConfig 403
         respond @hiddenFiles 403
+        respond @blockedPhp 403
 
         # FOSSBilling URL rewriting
         rewrite @rootRoute /index.php?{query}&_url=/
@@ -128,7 +151,7 @@ systemctl restart php8.5-fpm
         rewrite @frontController /index.php?{query}&_url={path}
 
         # Change this socket to match your installed PHP version
-        php_fastcgi unix//run/php/php8.5-fpm.sock {
+        php_fastcgi @allowedPhp unix//run/php/php8.5-fpm.sock {
             capture_stderr
         }
 
