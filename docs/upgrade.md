@@ -174,6 +174,58 @@ After all upgrades are complete:
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
 
+## Upgrade to Namingo Registrar v1.2.7
+
+### Step 1: Billing Platform Requirements
+
+Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirement:
+
+- **WHMCS:** v9.0.9 or later. WHMCS v8.13.7 may also work, but it is not officially supported and should be used at your own risk.
+- **FOSSBilling:** v0.8.8 or later
+- **Loom:** latest available version
+
+Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
+
+### Step 2: Upgrade to Namingo Registrar v1.2.7
+
+Download and run the **v1.2.7** upgrade script:
+
+```bash
+./upgrade.sh
+```
+
+### Step 3: Upgrade the Namingo EPP Module(s)
+
+Upgrade the Namingo EPP module(s) for your billing platform to the latest available version:
+
+- **WHMCS:** https://namingo.org/whmcs-module
+- **FOSSBilling:** https://namingo.org/foss-module/
+
+Follow the upgrade instructions provided for the relevant platform.
+
+### Step 4: Upgrade the Namingo DNS Module(s)
+
+Upgrade the Namingo DNS module(s) for your billing platform to the latest available version:
+
+- **WHMCS:** https://github.com/getnamingo/whmcs-dns
+- **FOSSBilling:** https://github.com/getnamingo/fossbilling-dns
+
+Follow the upgrade instructions provided for the relevant platform.
+
+### Step 5: Upgrade Tide theme to v1.2.7
+
+> **Required only if you are also upgrading FOSSBilling to v0.8.8.**
+
+FOSSBilling **v0.8.8 requires Tide v1.2.7**. If your installation uses the Tide theme, you must upgrade Tide together with FOSSBilling.
+
+Follow the official Tide upgrade instructions:
+
+https://github.com/getnamingo/tide#upgrade
+
+Make sure the installed theme version is **Tide v1.2.7** before putting the upgraded registrar back into production.
+
+If you are **not upgrading to FOSSBilling v0.8.8**, skip this step.
+
 ## Upgrade to Namingo Registrar v1.2.6
 
 ### Step 1: Billing Platform Requirements
