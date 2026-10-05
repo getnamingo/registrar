@@ -11,8 +11,104 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
 // Let WHMCS load its matching Monolog classes before the logger is created.
-if (strcasecmp(trim((string)($config['escrow']['backend'] ?? '')), 'WHMCS') === 0 && is_file('/var/www/whmcs/init.php')) {
-    require_once '/var/www/whmcs/init.php';
+if (strcasecmp(trim((string)($config['escrow']['backend'] ?? '')), 'WHMCS') === 0 && is_file($config['whmcs']['init_path'] ?? '/var/www/whmcs/init.php')) {
+    require_once ($config['whmcs']['init_path'] ?? '/var/www/whmcs/init.php');
+}
+
+function whmcs_decrypt_setting(string $value, array $config): string
+{
+    if ($value === '') {
+        return '';
+    }
+
+    if (function_exists('decrypt')) {
+        return (string)\decrypt($value);
+    }
+
+    $api = $config['whmcs'] ?? [];
+    if (
+        strtolower((string)parse_url($api['api_url'] ?? '', PHP_URL_SCHEME)) !== 'https'
+        || empty($api['api_identifier'])
+        || empty($api['api_secret'])
+    ) {
+        throw new RuntimeException('Local WHMCS is unavailable; configure whmcs.api_url (HTTPS), api_identifier and api_secret.');
+    }
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('Remote WHMCS requires the PHP cURL extension.');
+    }
+
+    $ch = curl_init($api['api_url']);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query([
+            'action' => 'DecryptPassword',
+            'identifier' => $api['api_identifier'],
+            'secret' => $api['api_secret'],
+            'password2' => $value,
+            'responsetype' => 'json',
+        ]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    if (!is_string($response) || $httpCode !== 200) {
+        throw new RuntimeException('WHMCS DecryptPassword request failed (HTTP ' . $httpCode . ').');
+    }
+
+    $result = json_decode($response, true);
+    if (
+        !is_array($result)
+        || ($result['result'] ?? '') !== 'success'
+        || !isset($result['password'])
+        || !is_string($result['password'])
+    ) {
+        throw new RuntimeException('WHMCS DecryptPassword failed; check API credentials, permissions and IP access restrictions.');
+    }
+
+    return $result['password'];
+}
+
+function whmcs_registrar_settings(PDO $pdo, array $config, string $registrar): array
+{
+    // Cache only remote settings; preserve local WHMCS's original live queries.
+    static $cache = [];
+    $local = function_exists('decrypt');
+    $key = spl_object_id($pdo) . ':' . $registrar;
+    if (!$local && isset($cache[$key])) {
+        return $cache[$key];
+    }
+
+    if ($local) {
+        $rows = \WHMCS\Database\Capsule::table('tblregistrars')
+            ->where('registrar', $registrar)
+            ->pluck('value', 'setting')
+            ->all();
+    } else {
+        $stmt = $pdo->prepare('SELECT setting, value FROM tblregistrars WHERE registrar = :registrar');
+        $stmt->execute(['registrar' => $registrar]);
+        $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+    if ($rows === []) {
+        throw new RuntimeException("Registrar not found or not configured in WHMCS: {$registrar}");
+    }
+
+    $settings = [];
+    foreach ($rows as $setting => $value) {
+        $settings[$setting] = whmcs_decrypt_setting((string)$value, $config);
+    }
+
+    if (!$local) {
+        $cache[$key] = $settings;
+    }
+    return $settings;
 }
 
 function epp_client($config)

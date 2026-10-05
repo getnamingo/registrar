@@ -14,6 +14,14 @@ $config = array(
         'password' => getenv('DB_PASSWORD'),
         'dbname' => 'registrar',
     ),
+    'whmcs' => array(
+        'init_path' => '/var/www/whmcs/init.php', // Local installation takes precedence.
+        // Used only when the local bootstrap is absent. db above must still
+        // connect to the live WHMCS database. Allow DecryptPassword for this API role.
+        'api_url' => 'https://billing.example.com/includes/api.php',
+        'api_identifier' => getenv('WHMCS_API_IDENTIFIER') ?: '',
+        'api_secret' => getenv('WHMCS_API_SECRET') ?: '',
+    ),
     'email' => array(
         'from' => 'no-reply@example.com',
         'reply-to' => 'support@example.com',

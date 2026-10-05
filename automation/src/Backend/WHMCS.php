@@ -652,24 +652,11 @@ final class WHMCS extends AbstractDriver
 
     public function getEppConfiguration(string $domain): array
     {
-        require_once '/var/www/whmcs/init.php';
-
         $tld = \getLastTldFromDomain($domain);
         $registrar = \getRegistryExtensionByTld($tld);
 
         try {
-            $rows = \WHMCS\Database\Capsule::table('tblregistrars')
-                ->where('registrar', $registrar)
-                ->pluck('value', 'setting');
-
-            if ($rows->isEmpty()) {
-                throw new \RuntimeException("Registrar not found or not configured in WHMCS: {$registrar}");
-            }
-
-            $config = [];
-            foreach ($rows as $setting => $value) {
-                $config[$setting] = $value !== '' ? \decrypt($value) : '';
-            }
+            $config = \whmcs_registrar_settings($this->pdo, $this->config, $registrar);
 
             if (empty($config)) {
                 throw new \RuntimeException("Registrar config is empty for WHMCS registrar: {$registrar}");
@@ -702,26 +689,22 @@ final class WHMCS extends AbstractDriver
 
     public function getEppConfigurations(): array
     {
-        require_once '/var/www/whmcs/init.php';
-
-        $registrars = \WHMCS\Database\Capsule::table('tblregistrars')
-            ->select('registrar')
-            ->distinct()
-            ->orderBy('registrar')
-            ->pluck('registrar');
+        if (function_exists('decrypt')) {
+            $registrars = \WHMCS\Database\Capsule::table('tblregistrars')
+                ->select('registrar')
+                ->distinct()
+                ->orderBy('registrar')
+                ->pluck('registrar');
+        } else {
+            $registrars = $this->pdo->query('SELECT DISTINCT registrar FROM tblregistrars ORDER BY registrar')
+                ->fetchAll(PDO::FETCH_COLUMN);
+        }
 
         $result = [];
 
         foreach ($registrars as $registrar) {
             try {
-                $rows = \WHMCS\Database\Capsule::table('tblregistrars')
-                    ->where('registrar', $registrar)
-                    ->pluck('value', 'setting');
-
-                $eppConfig = [];
-                foreach ($rows as $setting => $value) {
-                    $eppConfig[$setting] = $value !== '' ? \decrypt($value) : '';
-                }
+                $eppConfig = \whmcs_registrar_settings($this->pdo, $this->config, (string)$registrar);
 
                 if (
                     empty($eppConfig['host'])
@@ -740,6 +723,10 @@ final class WHMCS extends AbstractDriver
                     'config' => $eppConfig,
                 ];
             } catch (Throwable $e) {
+                // Do not report a successful poll run when the remote API failed.
+                if (!function_exists('decrypt')) {
+                    throw $e;
+                }
                 $this->log->warning(
                     'Skipping WHMCS registrar ' . (string)$registrar
                     . ': ' . $e->getMessage()
