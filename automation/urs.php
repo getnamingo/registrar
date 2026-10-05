@@ -1,10 +1,16 @@
 <?php
-/**
- * Namingo Registrar URS
+
+/*
+ * Namingo Registrar
  *
- * Written in 2024-2026 by Taras Kondratyuk (https://namingo.org/)
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
  *
- * @license MIT
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
+ *
+ * SPDX-License-Identifier: MIT
  */
 
 declare(strict_types=1);

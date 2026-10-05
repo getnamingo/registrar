@@ -1,17 +1,25 @@
 <?php
-/**
+
+/*
  * Namingo Registrar
  *
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
+ *
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/**
  * ICANN losing-registrar transfer notification processor.
  *
  * Processes persisted EPP domain transfer poll messages. The current ICANN
  * Transfer Policy requires the Registrar of Record to send the standardized
  * Confirmation of Registrar Transfer Request as soon as operationally
  * possible and no later than 24 hours after receiving the registry request.
- *
- * Written in 2026 by Taras Kondratyuk (https://namingo.org/)
- *
- * @license MIT
  */
 
 declare(strict_types=1);

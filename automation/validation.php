@@ -1,17 +1,23 @@
 <?php
-/**
+
+/*
  * Namingo Registrar
  *
- * Written in 2023-2026 by Taras Kondratyuk (https://namingo.org/)
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
  *
- * @license MIT
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
  *
- * Bounce/inaccuracy/manual triggers:
- * php validation.php --trigger=bounce --domain=example.test
- * php validation.php --trigger=inaccuracy --domain=example.test
- * php validation.php --trigger=manual --domain=example.test
- * php validation.php --verify --domain=example.test --note="ticket/reference"
+ * SPDX-License-Identifier: MIT
  */
+
+// Bounce/inaccuracy/manual triggers:
+// php validation.php --trigger=bounce --domain=example.test
+// php validation.php --trigger=inaccuracy --domain=example.test
+// php validation.php --trigger=manual --domain=example.test
+// php validation.php --verify --domain=example.test --note="ticket/reference"
 
 declare(strict_types=1);
 

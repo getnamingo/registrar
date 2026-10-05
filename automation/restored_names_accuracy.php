@@ -1,4 +1,18 @@
 <?php
+
+/*
+ * Namingo Registrar
+ *
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
+ *
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 /**
  * ICANN Restored Names Accuracy Policy enforcement.
  *
@@ -16,8 +30,6 @@
  * With no action option, the script retries and confirms every required hold.
  * Policy: https://www.icann.org/en/contracted-parties/consensus-policies/
  * restored-names-accuracy-policy/restored-names-accuracy-policy-01-01-2020-en
- *
- * @license MIT
  */
 
 declare(strict_types=1);

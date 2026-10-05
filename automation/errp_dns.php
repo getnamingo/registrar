@@ -1,13 +1,19 @@
 <?php
-/**
+
+/*
  * Namingo Registrar
  *
- * Stateful ICANN ERRP DNS interruption and renewal restoration processor.
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
  *
- * Written in 2023-2026 by Taras Kondratyuk (https://namingo.org/)
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
  *
- * @license MIT
+ * SPDX-License-Identifier: MIT
  */
+
+// Stateful ICANN ERRP DNS interruption and renewal restoration processor.
 
 declare(strict_types=1);
 
