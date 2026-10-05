@@ -54,12 +54,12 @@ install_dns_module() {
         fossbilling)
             repo="fossbilling-dns"
             module="Servicedns"
-            version="1.2.6"
+            version="1.2.7"
             ;;
         whmcs)
             repo="whmcs-dns"
             module="whmcs_dns"
-            version="1.0.1"
+            version="1.0.3"
             ;;
         *)
             die "Unsupported DNS billing system: $billing"
@@ -511,8 +511,8 @@ install_rdap_and_whois_services() {
         echo "Cloning Namingo Registrar from main"
         git clone https://github.com/getnamingo/registrar /opt/registrar
     else
-        echo "Cloning Namingo Registrar v1.2.6"
-        git clone --branch v1.2.6 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+        echo "Cloning Namingo Registrar v1.2.7"
+        git clone --branch v1.2.7 --single-branch https://github.com/getnamingo/registrar /opt/registrar
     fi
 
     # Setup for WHOIS service
@@ -658,7 +658,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.6 ===="
+echo "==== Namingo Registrar v1.2.7 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
@@ -882,7 +882,7 @@ wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 # Download and Extract FOSSBilling
 log "Installing FOSSBilling"
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.7/FOSSBilling-0.8.7.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.8/FOSSBilling-0.8.8.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
@@ -973,7 +973,7 @@ rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
-git clone --branch v1.2.6 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.7 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
 chmod 755 /var/www/themes/tide/assets
