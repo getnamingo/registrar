@@ -911,7 +911,7 @@ rm fossbilling.zip
 
 # Install Namingo branding
 curl -fsSL https://namingo.org/assets/favicon.ico -o /var/www/public/branding/favicon.ico
-curl -fsSL https://namingo.org/assets/logo.svg -o /var/www/public/branding/logo.svg
+curl -fsSL https://namingo.org/assets/logo-dark.svg -o /var/www/public/branding/logo.svg
 curl -fsSL https://namingo.org/assets/logo-dark.svg -o /var/www/public/branding/logo-dark.svg
 
 # Make Directories Writable
@@ -996,7 +996,7 @@ rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
-git clone --branch v1.2.7 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.8 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
 chmod 755 /var/www/themes/tide/assets
@@ -1014,9 +1014,6 @@ if [ -f "$settings_file" ]; then
       -e 's/Welcome to Tide/Welcome to Namingo Registrar/g' \
       -e 's/"footer_link_1_enabled":"0"/"footer_link_1_enabled":"1"/g' \
       -e 's/"footer_link_2_enabled":"0"/"footer_link_2_enabled":"1"/g' \
-      -e 's/"announcement_bar_color":"[^"]*"/"announcement_bar_color":"3"/g' \
-      -e 's/"theme_color_enabled":"[^"]*"/"theme_color_enabled":"1"/g' \
-      -e 's/"theme_color":"[^"]*"/"theme_color":"4"/g' \
       "$settings_file"
 else
     echo "Error: $settings_file not found!"
