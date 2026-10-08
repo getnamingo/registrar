@@ -996,7 +996,7 @@ rm -f /tmp/configure-client-fields.php
 
 # Clone the Tide theme repository
 log "Installing Tide theme"
-git clone --branch v1.2.9 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.10 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 
 # Set the correct permissions for the Tide theme
 chmod 755 /var/www/themes/tide/assets
