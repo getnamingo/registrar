@@ -154,12 +154,28 @@ function validationState(PDO $pdo, int $id): array
 function validationBillingRevalidationRequested(
     array $row,
     array $state,
-    DateTimeImmutable $now
+    DateTimeImmutable $now,
+    array $states
 ): bool {
     if (($state['status'] ?? null) !== 'verified'
         || (int)($row['validation'] ?? 0) !== 0
         || empty($state['verified_at'])) {
         return false;
+    }
+
+    // Issuing a challenge resets the shared billing flag. Do not reopen
+    // already verified domains because another domain is being validated.
+    $token = validationTokenCandidate($row);
+    if ($token !== null) {
+        $tokenHash = hash('sha256', $token);
+        foreach ($states as $pending) {
+            if ($pending['verification_key'] === $state['verification_key']
+                && in_array($pending['status'], ['pending', 'suspended'], true)
+                && !empty($pending['token_hash'])
+                && hash_equals((string)$pending['token_hash'], $tokenHash)) {
+                return false;
+            }
+        }
     }
 
     $verifiedAt = validationDate($state['verified_at'], $now);
@@ -606,7 +622,7 @@ function runValidation(): int
             $forcedTrigger = $isTarget ? $trigger : null;
             if ($forcedTrigger === null
                 && $state !== null
-                && validationBillingRevalidationRequested($row, $state, $now)) {
+                && validationBillingRevalidationRequested($row, $state, $now, $states)) {
                 $forcedTrigger = 'manual';
                 $log->info(
                     'Billing contact was marked unvalidated; reopened validation for '
