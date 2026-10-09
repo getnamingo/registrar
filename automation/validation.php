@@ -545,7 +545,7 @@ function runValidation(): int
             throw new RuntimeException('Another validation job is already running.');
         }
 
-        $options = getopt('', ['trigger:', 'domain:', 'verify', 'note::']) ?: [];
+        $options = getopt('', ['trigger:', 'domain:', 'verify', 'note::', 'audit']) ?: [];
         $trigger = isset($options['trigger']) ? strtolower(trim((string)$options['trigger'])) : null;
         $manualVerify = array_key_exists('verify', $options);
         $targetDomain = strtolower(rtrim(trim((string)($options['domain'] ?? '')), '.'));
@@ -559,6 +559,16 @@ function runValidation(): int
         }
         if (($trigger !== null || $manualVerify) && $targetDomain === '') {
             throw new InvalidArgumentException('--domain is required with --trigger or --verify.');
+        }
+
+        if (array_key_exists('audit', $options)) {
+            if ($trigger !== null || $manualVerify) {
+                throw new InvalidArgumentException('--audit cannot be combined with --trigger or --verify.');
+            }
+            if (!in_array(strtoupper($backend), ['WHMCS', 'FOSS'], true)) {
+                throw new RuntimeException('--audit is supported for WHMCS and FOSSBilling.');
+            }
+            define('NAMINGO_VALIDATION_AUDIT', true);
         }
 
         $now = validationNow();
@@ -579,6 +589,24 @@ function runValidation(): int
             $row['domain_name'] = $domainName;
             $row['verification_key'] = (string)($row['verification_key'] ?? ($backend . ':' . $domainId));
             $domains[$domainId] = $row;
+        }
+
+        if (defined('NAMINGO_VALIDATION_AUDIT')) {
+            // The billing drivers skip their INSERT in this mode. Stop before
+            // state updates, token issuance, notifications or registry calls.
+            fputcsv(STDOUT, ['domain', 'scope', 'registrar', 'status', 'trigger',
+                'deadline', 'overdue', 'billing_validated', 'email_sent_at', 'last_error'], ',', '"', '');
+            foreach (validationCurrentStates($pdo, $backend) as $id => $state) {
+                if (!in_array($state['status'], ['pending', 'suspended'], true)) {
+                    continue;
+                }
+                $row = $domains[$id] ?? null;
+                fputcsv(STDOUT, [$state['domain_name'], $row === null ? 'excluded' : 'eligible',
+                    $row['assigned_registrar'] ?? '', $state['status'], $state['trigger_type'],
+                    $state['deadline_at'], validationDate($state['deadline_at'], $now) <= $now ? 1 : 0,
+                    $row['validation'] ?? '', $state['email_sent_at'], $state['last_error']], ',', '"', '');
+            }
+            return 0;
         }
 
         $legacyImport = validationIsInitialMigration($pdo, $backend);
@@ -728,7 +756,12 @@ function runValidation(): int
                     $eventTime = $forcedTrigger !== null
                         ? $now
                         : validationDate($row['contact_updated_at'] ?? null, $now);
-                    if ($eventTime > $now) {
+                    $previousEvent = validationDate(
+                        $state['verified_at'] ?: $state['triggered_at'], $now
+                    );
+                    if ($eventTime > $now || $eventTime <= $previousEvent) {
+                        // Domain registration/update timestamps may predate
+                        // the contact change just detected by this process.
                         $eventTime = $now;
                     }
                     $reuse = $forcedTrigger === null

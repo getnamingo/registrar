@@ -274,6 +274,23 @@ final class WHMCS extends AbstractDriver
 
     public function getValidationRows(string $registeredAt): array
     {
+        $modules = [];
+        $candidates = $this->pdo->query(
+            "SELECT DISTINCT registrar FROM tblregistrars
+             WHERE setting IN ('gtld', 'is_gtld', 'g_tld', 'min_data_set')"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($candidates as $module) {
+            if (\validationRegistryEnabled(\whmcs_registrar_settings(
+                $this->pdo, $this->config, (string)$module
+            ))) {
+                $modules[] = (string)$module;
+            }
+        }
+        if ($modules === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($modules), '?'));
+
         try {
             $stmt = $this->pdo->prepare("
                 INSERT IGNORE INTO namingo_contact_validation (
@@ -309,13 +326,18 @@ final class WHMCS extends AbstractDriver
                   AND td.registrationdate <> '0000-00-00'
                   AND td.status = 'Active'
                   AND td.expirydate >= CURDATE()
+                  AND td.registrar IN ({$placeholders})
+                  AND CHAR_LENGTH(SUBSTRING_INDEX(TRIM(TRAILING '.' FROM td.domain), '.', -1)) > 2
                   AND ncv.id IS NULL
             ");
-            $stmt->execute();
+            if (!defined('NAMINGO_VALIDATION_AUDIT')) {
+                $stmt->execute($modules);
+            }
 
             $stmt = $this->pdo->prepare("
                 SELECT
                     td.id AS id,
+                    td.registrar AS assigned_registrar,
                     td.domain AS name,
                     ncv.client_id AS cid,
                     ncv.client_id AS registrant,
@@ -420,8 +442,10 @@ final class WHMCS extends AbstractDriver
                   AND td.registrationdate <> '0000-00-00'
                   AND td.status = 'Active'
                   AND td.expirydate >= CURDATE()
+                  AND td.registrar IN ({$placeholders})
+                  AND CHAR_LENGTH(SUBSTRING_INDEX(TRIM(TRAILING '.' FROM td.domain), '.', -1)) > 2
             ");
-            $stmt->execute();
+            $stmt->execute($modules);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             $this->log->warning('WHMCS contact validation table unavailable, falling back to legacy validation query: ' . $e->getMessage());
@@ -431,6 +455,7 @@ final class WHMCS extends AbstractDriver
                     d.registrant,
                     d.name,
                     td.id,
+                    td.registrar AS assigned_registrar,
                     c.id AS cid,
                     c.email,
                     c.validation,
@@ -504,8 +529,10 @@ final class WHMCS extends AbstractDriver
                 INNER JOIN tbldomains td ON LOWER(td.domain) = LOWER(d.name)
                 WHERE td.status = 'Active'
                   AND td.expirydate >= CURDATE()
+                  AND td.registrar IN ({$placeholders})
+                  AND CHAR_LENGTH(SUBSTRING_INDEX(TRIM(TRAILING '.' FROM td.domain), '.', -1)) > 2
             ");
-            $stmt->execute();
+            $stmt->execute($modules);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
@@ -669,7 +696,16 @@ final class WHMCS extends AbstractDriver
         $registrar = \getRegistryExtensionByTld($tld);
 
         try {
-            $config = \whmcs_registrar_settings($this->pdo, $this->config, $registrar);
+            $stmt = $this->pdo->prepare(
+                'SELECT DISTINCT registrar FROM tbldomains WHERE domain = :domain'
+            );
+            $stmt->execute(['domain' => rtrim($domain, '.')]);
+            $modules = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            if (count($modules) !== 1 || trim((string)$modules[0]) === '') {
+                throw new \RuntimeException("Missing or ambiguous WHMCS registrar for {$domain}");
+            }
+            $module = (string)$modules[0];
+            $config = \whmcs_registrar_settings($this->pdo, $this->config, $module);
 
             if (empty($config)) {
                 throw new \RuntimeException("Registrar config is empty for WHMCS registrar: {$registrar}");

@@ -308,6 +308,20 @@ final class FOSS extends AbstractDriver
 
     public function getValidationRows(string $registeredAt): array
     {
+        $modules = [];
+        $candidates = $this->pdo->query('SELECT id, config FROM tld_registrar')
+            ->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($candidates as $candidate) {
+            $settings = json_decode((string)$candidate['config'], true);
+            if (is_array($settings) && \validationRegistryEnabled($settings)) {
+                $modules[] = (int)$candidate['id'];
+            }
+        }
+        if ($modules === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($modules), '?'));
+
         try {
             $stmt = $this->pdo->prepare("
                 INSERT IGNORE INTO domain_contact_validation (
@@ -320,6 +334,7 @@ final class FOSS extends AbstractDriver
                     0,
                     CURRENT_TIMESTAMP
                 FROM service_domain sd
+                JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
                 JOIN client_order co
                   ON co.service_id = sd.id
                  AND co.service_type = 'domain'
@@ -328,13 +343,18 @@ final class FOSS extends AbstractDriver
                 LEFT JOIN domain_contact_validation dcv ON dcv.client_id = c.id
                 WHERE sd.registered_at IS NOT NULL
                   AND sd.expires_at > NOW()
+                  AND sd.tld_registrar_id IN ({$placeholders})
+                  AND CHAR_LENGTH(TRIM(LEADING '.' FROM sd.tld)) > 2
                   AND dcv.id IS NULL
             ");
-            $stmt->execute();
+            if (!defined('NAMINGO_VALIDATION_AUDIT')) {
+                $stmt->execute($modules);
+            }
 
             $stmt = $this->pdo->prepare("
                 SELECT
                     sd.sld,
+                    tr.registrar AS assigned_registrar,
                     sd.tld,
                     c.email AS contact_email,
                     dcv.validation_token AS token,
@@ -380,6 +400,7 @@ final class FOSS extends AbstractDriver
                     dcv.validation_token,
                     dcv.validation_log
                 FROM service_domain sd
+                JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
                 JOIN client_order co
                   ON co.service_id = sd.id
                  AND co.service_type = 'domain'
@@ -389,8 +410,10 @@ final class FOSS extends AbstractDriver
                 LEFT JOIN domain_meta dm ON dm.domain_id = sd.id
                 WHERE sd.registered_at IS NOT NULL
                   AND sd.expires_at > NOW()
+                  AND sd.tld_registrar_id IN ({$placeholders})
+                  AND CHAR_LENGTH(TRIM(LEADING '.' FROM sd.tld)) > 2
             ");
-            $stmt->execute();
+            $stmt->execute($modules);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
             $this->log->warning('FOSSBilling contact validation table unavailable, falling back to legacy validation query: ' . $e->getMessage());
@@ -398,6 +421,7 @@ final class FOSS extends AbstractDriver
             $stmt = $this->pdo->prepare("
                 SELECT
                     sd.sld,
+                    tr.registrar AS assigned_registrar,
                     sd.tld,
                     c.email AS contact_email,
                     sd.token,
@@ -438,6 +462,7 @@ final class FOSS extends AbstractDriver
                     c.phone_cc AS contact_phone_cc,
                     c.phone AS contact_phone
                 FROM service_domain sd
+                JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
                 JOIN client_order co
                   ON co.service_id = sd.id
                  AND co.service_type = 'domain'
@@ -446,8 +471,10 @@ final class FOSS extends AbstractDriver
                 LEFT JOIN domain_meta dm ON dm.domain_id = sd.id
                 WHERE sd.registered_at IS NOT NULL
                   AND sd.expires_at > NOW()
+                  AND sd.tld_registrar_id IN ({$placeholders})
+                  AND CHAR_LENGTH(TRIM(LEADING '.' FROM sd.tld)) > 2
             ");
-            $stmt->execute();
+            $stmt->execute($modules);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
@@ -619,14 +646,18 @@ final class FOSS extends AbstractDriver
         $pdo = $this->getFossPdo();
 
         try {
-            $stmt = $pdo->prepare("SELECT id, config FROM tld_registrar WHERE registrar = :registrar LIMIT 1");
-            $stmt->bindValue(':registrar', $registrar);
-            $stmt->execute();
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$row) {
-                throw new \RuntimeException("Registrar not found: {$registrar}");
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT tr.id, tr.config
+                FROM service_domain sd
+                JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
+                WHERE LOWER(CONCAT(sd.sld, '.', TRIM(LEADING '.' FROM sd.tld))) = LOWER(:domain)
+            ");
+            $stmt->execute(['domain' => rtrim($domain, '.')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (count($rows) !== 1) {
+                throw new \RuntimeException("Missing or ambiguous FOSSBilling registrar for {$domain}");
             }
+            $row = $rows[0];
 
             $config = json_decode($row['config'] ?? '', true);
             if (!is_array($config)) {

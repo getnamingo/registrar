@@ -124,6 +124,21 @@ function whmcs_registrar_settings(PDO $pdo, array $config, string $registrar): a
     return $settings;
 }
 
+// Reuse the registry policy flags already used by ERRP. A flag alone does
+// not make a reseller/API adapter compatible with this direct-EPP workflow.
+function validationRegistryEnabled(array $settings): bool
+{
+    foreach (['gtld', 'is_gtld', 'g_tld', 'min_data_set'] as $key) {
+        if (array_key_exists($key, $settings)) {
+            $enabled = in_array(strtolower(trim((string)$settings[$key])),
+                ['1', 'true', 'yes', 'on', 'enabled'], true);
+            return $enabled && !empty($settings['host'])
+                && !empty($settings['clid']) && !empty($settings['pw']);
+        }
+    }
+    return false;
+}
+
 function epp_client($config)
 {
     $profile = $config['registrar'] ?? 'namingo';
