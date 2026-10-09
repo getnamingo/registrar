@@ -382,6 +382,11 @@ function send_email($to, $subject, $message, $config, $log, $htmlMessage = null)
         $mail->addAddress($to);
         $mail->addReplyTo($config['email']['reply-to']);
 
+        $bcc = trim((string)($config['email']['bcc'] ?? ''));
+        if ($bcc !== '') {
+            $mail->addBCC($bcc);
+        }
+
         // Content
         $mail->CharSet = 'UTF-8';
         $mail->Subject = $subject;

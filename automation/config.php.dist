@@ -25,6 +25,7 @@ $config = array(
     'email' => array(
         'from' => 'no-reply@example.com',
         'reply-to' => 'support@example.com',
+        'bcc' => '', // Optional: set one email address to receive all automation emails.
         'sender' => 'no-reply@example.com',
         'return-path' => 'no-reply@example.com',
         'smtp' => [
