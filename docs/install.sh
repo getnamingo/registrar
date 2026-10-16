@@ -985,15 +985,17 @@ wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/d
 php8.5 /tmp/configure-client-fields.php
 rm -f /tmp/configure-client-fields.php
 
-# Clone the Tide theme repository
+# Install Tide theme
 log "Installing Tide theme"
-git clone --branch v1.2.12 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
-
-# Set the correct permissions for the Tide theme
-chmod 755 /var/www/themes/tide/assets
-chmod 755 /var/www/themes/tide/config/settings_data.json
-chown www-data:www-data /var/www/themes/tide/assets
-chown www-data:www-data /var/www/themes/tide/config/settings_data.json
+TMP=$(mktemp -d)
+git clone --branch v1.2.12 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
+mkdir -p /var/www/themes/tide
+cp -a "$TMP/tide/." /var/www/themes/tide/
+rm -rf /var/www/themes/tide/.git
+chown -Rf www-data:www-data /var/www/themes/tide
+find /var/www/themes/tide -type d -exec chmod 755 {} +
+find /var/www/themes/tide -type f -exec chmod 644 {} +
+rm -rf "$TMP"
 
 # Path to the settings_data.json file
 settings_file="/var/www/themes/tide/config/settings_data.json"

@@ -351,9 +351,10 @@ if [[ -s /var/www/di.php ]]; then
 "A FOSSBilling installation was detected.
 
 This script will also upgrade the Namingo Registrar
-FOSSBilling modules and synchronize their versions.
+FOSSBilling modules, synchronize their versions,
+and upgrade the Tide theme if installed.
 
-FOSSBilling core and Tide will not be upgraded."
+FOSSBilling core will not be upgraded."
 
 fi
 
@@ -687,6 +688,38 @@ PHP
 }
 
 # ---------------------------------------------------------
+# Tide theme
+# ---------------------------------------------------------
+
+upgrade_tide_theme() {
+    [[ -s /var/www/di.php && -d /var/www/themes/tide ]] || return 0
+
+    log "Upgrading FOSSBilling Tide theme"
+
+    local repo_dir="${STAGING_DIR}/tide"
+    local theme_dir="/var/www/themes/tide"
+
+    git clone --branch v1.2.12 --depth 1 \
+        https://github.com/getnamingo/tide.git "$repo_dir"
+
+    # Preserve theme settings
+    cp -a "$theme_dir/config/settings_data.json" \
+        "${STAGING_DIR}/tide-settings.json"
+
+    cp -a "$repo_dir/." "$theme_dir/"
+    cp -a "${STAGING_DIR}/tide-settings.json" \
+        "$theme_dir/config/settings_data.json"
+
+    rm -rf "$theme_dir/.git"
+
+    chown -R www-data:www-data "$theme_dir"
+    find "$theme_dir" -type d -exec chmod 755 {} +
+    find "$theme_dir" -type f -exec chmod 644 {} +
+
+    log "Tide theme upgraded successfully"
+}
+
+# ---------------------------------------------------------
 # PRE migrations
 #
 # Packages, OS dependencies, preparation work, etc.
@@ -842,10 +875,11 @@ composer_sync "${INSTALL_DIR}/rdap"
 run_migrations post
 
 # ---------------------------------------------------------
-# FOSSBilling modules
+# FOSSBilling modules and Tide theme
 # ---------------------------------------------------------
 
 upgrade_fossbilling_modules
+upgrade_tide_theme
 
 # ---------------------------------------------------------
 # Reload services
