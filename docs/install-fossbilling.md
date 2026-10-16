@@ -443,29 +443,18 @@ Once you have successfully configured all automation scripts, you are ready to i
 ## 13. ICANN Registrar Modules:
 
 ```bash
-git clone https://github.com/getnamingo/fossbilling-registrar
-mv fossbilling-registrar/Registrar /var/www/modules/
-
-git clone https://github.com/getnamingo/fossbilling-contact-validation
-mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
-
-git clone https://github.com/getnamingo/fossbilling-validation
-mv fossbilling-validation/Validation /var/www/modules/
-
-git clone https://github.com/getnamingo/fossbilling-contact
-mv fossbilling-contact/Contact /var/www/modules/
-
-git clone https://github.com/getnamingo/fossbilling-whois
-mv fossbilling-whois/Whois /var/www/modules/
-mv fossbilling-whois/check.php /var/www/
-
-git clone https://github.com/getnamingo/fossbilling-tmch
-mv fossbilling-tmch/Tmch /var/www/modules/
+TMP=$(mktemp -d)
+git clone --depth 1 https://github.com/getnamingo/fossbilling-namingo-registrar.git "$TMP/repo"
+cp -a "$TMP/repo"/{Registrar,Domaincontactvalidation,Validation,Contact,Tmch,Whois,Mosapimonitor} /var/www/modules/
+cp -a "$TMP/repo/check.php" /var/www/
+rm -rf "$TMP"
 ```
 
-- Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation", "Registrant Validation Management", "Registrant Contact Verification", "Registrant Contact Form", "WHOIS & RDAP Client", "TMCH Claims Notice".
+- Go to Extensions > Overview in the admin panel and activate "ICANN Registrar Accreditation", "Registrant Validation", "Registrant Contact Verification", "Registrant Contact Form", "WHOIS & RDAP Client", "TMCH Claims Notice". Optionally, activate "ICANN MoSAPI Monitor" as well.
 
 - Edit the `/var/www/check.php` file and set your WHOIS and RDAP server URLs by replacing the placeholder values with your actual server addresses.
+
+- Configure your MoSAPI credentials under **System → Settings**, then view registrar status and METRICA data via the **Extensions** menu.
 
 ## 14. Installing FOSSBilling EPP Registrar Module:
 
@@ -557,20 +546,6 @@ Navigate to https://github.com/getnamingo/fossbilling-dns and follow the install
    - Name of the Chief Executive Officer (CEO)
 
 3. If you experience issues saving any configuration options in the admin panel, enable the Error Reporting option to help identify the problem.
-
-4. **ICANN MoSAPI Monitoring**  
-   MoSAPI is ICANN’s official platform for monitoring registrar compliance and domain abuse reports.
-
-   To enable MoSAPI support, install the Namingo MoSAPI Monitor module:
-
-```bash
-git clone https://github.com/getnamingo/fossbilling-mosapi-monitor
-mv fossbilling-mosapi-monitor/Mosapimonitor /var/www/modules/
-```
-
-Navigate to **Extensions → Overview** in the FOSSBilling admin area and enable **"ICANN MoSAPI Monitor"**.
-
-Once activated, configure your MoSAPI credentials under **System → Settings**, then view registrar status and METRICA data via the **Extensions** menu.
 
 > [!NOTE]
 > Once you have completed the steps in this section, continue with the instructions in [`configuration.md`](configuration.md).
