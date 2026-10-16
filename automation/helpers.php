@@ -70,7 +70,6 @@ function whmcs_decrypt_setting(string $value, array $config): string
     ]);
     $response = curl_exec($ch);
     $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
 
     if (!is_string($response) || $httpCode !== 200) {
         throw new RuntimeException('WHMCS DecryptPassword request failed (HTTP ' . $httpCode . ').');

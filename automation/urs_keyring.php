@@ -67,8 +67,8 @@ try {
         CURLOPT_TIMEOUT => 60,
         CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
         CURLOPT_USERPWD => $username . ':' . $password,
-        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+        CURLOPT_PROTOCOLS_STR => 'HTTPS',
+        CURLOPT_REDIR_PROTOCOLS_STR => 'HTTPS',
         CURLOPT_USERAGENT => 'Namingo-Registrar-URS/1.0',
     ]);
 
@@ -78,7 +78,6 @@ try {
         CURLINFO_RESPONSE_CODE
     );
     $curlError = curl_error($ch);
-    curl_close($ch);
 
     if (
         !is_string($asciiKeyring)
