@@ -54,11 +54,11 @@ $update = static function (array &$lines, string $pattern, int $start, int $end)
 };
 
 try {
-    $update($lines, '/^[ \\t]*@allowedPhp[ \\t]+path(?:[ \\t]|$)/', 0, count($lines));
+    $update($lines, '/^[ \t]*@allowedPhp[ \t]+path(?:[ \t]|$)/', 0, count($lines));
     $blockStart = [];
     $blockEnd = [];
     foreach ($lines as $i => $line) {
-        if (preg_match('/^[ \\t]*@blockedPhp[ \\t]*\\{/', $line)) {
+        if (preg_match('/^[ \t]*@blockedPhp[ \t]*\\{/', $line)) {
             $blockStart[] = $i;
         }
     }
@@ -66,7 +66,7 @@ try {
         throw new RuntimeException('Expected one @blockedPhp block.');
     }
     for ($i = $blockStart[0] + 1; $i < count($lines); $i++) {
-        if (preg_match('/^[ \\t]*\\}/', $lines[$i])) {
+        if (preg_match('/^[ \t]*\\}/', $lines[$i])) {
             $blockEnd[] = $i;
             break;
         }
@@ -74,9 +74,9 @@ try {
     if (count($blockEnd) !== 1) {
         throw new RuntimeException('Unclosed @blockedPhp block.');
     }
-    $update($lines, '/^[ \\t]*not[ \\t]+path(?:[ \\t]|$)/', $blockStart[0] + 1, $blockEnd[0]);
+    $update($lines, '/^[ \t]*not[ \t]+path(?:[ \t]|$)/', $blockStart[0] + 1, $blockEnd[0]);
 } catch (RuntimeException $e) {
-    fwrite(STDERR, $e->getMessage() . "\\n");
+    fwrite(STDERR, $e->getMessage() . "\n");
     exit(1);
 }
 $text = implode('', $lines);
