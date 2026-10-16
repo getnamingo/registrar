@@ -350,9 +350,10 @@ if [[ -s /var/www/di.php ]]; then
     warn \
 "A FOSSBilling installation was detected.
 
-This script upgrades Namingo Registrar services only.
-It does not upgrade FOSSBilling, Tide, or separate
-FOSSBilling modules."
+This script will also upgrade the Namingo Registrar
+FOSSBilling modules and synchronize their versions.
+
+FOSSBilling core and Tide will not be upgraded."
 
 fi
 
@@ -637,6 +638,55 @@ run_migrations() {
 }
 
 # ---------------------------------------------------------
+# FOSSBilling modules
+# ---------------------------------------------------------
+
+upgrade_fossbilling_modules() {
+    [[ -s /var/www/di.php ]] || return 0
+
+    log "Upgrading FOSSBilling Namingo Registrar modules"
+
+    local repo_dir="${STAGING_DIR}/fossbilling-modules"
+
+    git clone --depth 1 \
+        https://github.com/getnamingo/fossbilling-namingo-registrar.git \
+        "$repo_dir"
+
+    for module in Registrar Domaincontactvalidation Validation Contact Tmch Whois Mosapimonitor; do
+        mkdir -p "/var/www/modules/$module"
+        cp -a "$repo_dir/$module/." "/var/www/modules/$module/"
+    done
+
+    # Synchronize installed module versions with manifests
+    php <<'PHP'
+<?php
+$config = require '/var/www/config.php';
+$db = $config['db'];
+
+$pdo = new PDO(
+    "mysql:host={$db['host']};port={$db['port']};dbname={$db['name']};charset=utf8mb4",
+    $db['user'],
+    $db['password'],
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
+
+$stmt = $pdo->prepare(
+    "UPDATE extension SET version = ? WHERE type = 'mod' AND name = ? AND status = 'installed'"
+);
+
+foreach (['Registrar', 'Domaincontactvalidation', 'Validation', 'Contact', 'Tmch', 'Whois', 'Mosapimonitor'] as $module) {
+    $manifest = json_decode(file_get_contents("/var/www/modules/$module/manifest.json"), true, 512, JSON_THROW_ON_ERROR);
+    $stmt->execute([$manifest['version'], strtolower($module)]);
+}
+PHP
+
+    # Clear FOSSBilling filesystem cache
+    rm -rf /var/www/data/cache/*
+
+    log "FOSSBilling modules upgraded successfully"
+}
+
+# ---------------------------------------------------------
 # PRE migrations
 #
 # Packages, OS dependencies, preparation work, etc.
@@ -790,6 +840,12 @@ composer_sync "${INSTALL_DIR}/rdap"
 # ---------------------------------------------------------
 
 run_migrations post
+
+# ---------------------------------------------------------
+# FOSSBilling modules
+# ---------------------------------------------------------
+
+upgrade_fossbilling_modules
 
 # ---------------------------------------------------------
 # Reload services

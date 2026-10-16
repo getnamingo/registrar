@@ -111,6 +111,7 @@ systemctl restart php8.5-fpm
     @allowedPhp path \
         /index.php \
         /ipn.php \
+        /check.php \
         /install/index.php \
         /install/install.php
 
@@ -120,6 +121,7 @@ systemctl restart php8.5-fpm
         not path \
             /index.php \
             /ipn.php \
+            /check.php \
             /install/index.php \
             /install/install.php
     }

@@ -581,25 +581,14 @@ install_rdap_and_whois_services() {
     rm escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
 
     if [ "$panel" = "foss" ]; then
-        cd /tmp
-        git clone https://github.com/getnamingo/fossbilling-registrar
-        mv fossbilling-registrar/Registrar /var/www/modules/
+        TMP=$(mktemp -d)
+        git clone --depth 1 https://github.com/getnamingo/fossbilling-namingo-registrar.git "$TMP/repo"
 
-        git clone https://github.com/getnamingo/fossbilling-contact-validation
-        mv fossbilling-contact-validation/Domaincontactvalidation /var/www/modules/
+        mkdir -p /var/www/modules
+        cp -a "$TMP/repo"/{Registrar,Domaincontactvalidation,Validation,Contact,Tmch,Whois,Mosapimonitor} /var/www/modules/
+        cp -a "$TMP/repo/check.php" /var/www/
 
-        git clone https://github.com/getnamingo/fossbilling-validation
-        mv fossbilling-validation/Validation /var/www/modules/
-
-        git clone https://github.com/getnamingo/fossbilling-contact
-        mv fossbilling-contact/Contact /var/www/modules/
-
-        git clone https://github.com/getnamingo/fossbilling-tmch
-        mv fossbilling-tmch/Tmch /var/www/modules/
-
-        git clone https://github.com/getnamingo/fossbilling-whois
-        mv fossbilling-whois/Whois /var/www/modules/
-        mv fossbilling-whois/check.php /var/www/
+        rm -rf "$TMP"
 
         sed -i "s|\$whoisServer = 'whois.example.com';|\$whoisServer = 'whois.$domain_name';|g" /var/www/check.php
         sed -i "s|\$rdap_url = 'rdap.example.com';|\$rdap_url = 'rdap.$domain_name';|g" /var/www/check.php
@@ -805,6 +794,7 @@ $panel_domain_name {
     @allowedPhp path \
         /index.php \
         /ipn.php \
+        /check.php \
         /install/index.php \
         /install/install.php
 
@@ -814,6 +804,7 @@ $panel_domain_name {
         not path \
             /index.php \
             /ipn.php \
+            /check.php \
             /install/index.php \
             /install/install.php
     }
