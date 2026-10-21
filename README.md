@@ -72,7 +72,7 @@ For migration assistance between **FOSSBilling, WHMCS, Loom, or a custom platfor
 > [!IMPORTANT]
 > Billing systems and integration modules are **not** upgraded automatically.
 >
-> See the **[Upgrade Guide](docs/upgrade.md)** for billing and module upgrade instructions.
+> See the **[Upgrade Guide](docs/upgrade.md#upgrade-to-namingo-registrar-v128)** for billing and module upgrade instructions.
 
 #### Current releases
 
