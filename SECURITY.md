@@ -12,14 +12,14 @@ Only actively supported versions of Namingo Registrar receive security fixes.
 
 | Version | Supported |
 | ------- | --------- |
-| 1.2.7 and later | ✅ Yes |
-| Earlier than 1.2.7 | ❌ No |
+| 1.2.8 and later | ✅ Yes |
+| Earlier than 1.2.8 | ❌ No |
 
 ### Upgrade Notice
 
-**All Namingo Registrar installations should be upgraded to version 1.2.7 or later.**
+**All Namingo Registrar installations should be upgraded to version 1.2.8 or later.**
 
-Versions earlier than **1.2.7 are no longer supported and may contain known security issues or lack security-related improvements included in later releases.**
+Versions earlier than **1.2.8 are no longer supported and may contain known security issues or lack security-related improvements included in later releases.**
 
 If you are operating an older installation, please upgrade before requesting support or reporting behavior that may already have been corrected in a supported release.
 
@@ -186,9 +186,9 @@ We strongly recommend:
 
 At present, the minimum supported release is:
 
-**Namingo Registrar 1.2.7**
+**Namingo Registrar 1.2.8**
 
-If you are running an earlier release, **upgrade to 1.2.7 or later as soon as possible.**
+If you are running an earlier release, **upgrade to 1.2.8 or later as soon as possible.**
 
 ---
 
@@ -305,13 +305,13 @@ We may acknowledge researchers who responsibly disclose valid vulnerabilities, s
 
 ## Security Support for Unsupported Versions
 
-Versions earlier than **1.2.7 are unsupported**.
+Versions earlier than **1.2.8 are unsupported**.
 
 Security issues reported against older versions may be reviewed to determine whether supported versions are affected, but fixes will normally be provided only for supported releases.
 
 Users of older versions may be asked to upgrade before further investigation.
 
-**Please upgrade to Namingo Registrar 1.2.7 or later before deploying or continuing to operate the software in production.**
+**Please upgrade to Namingo Registrar 1.2.8 or later before deploying or continuing to operate the software in production.**
 
 ---
 

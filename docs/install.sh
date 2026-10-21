@@ -54,7 +54,7 @@ install_dns_module() {
         fossbilling)
             repo="fossbilling-dns"
             module="Servicedns"
-            version="1.2.7"
+            version="1.2.8"
             ;;
         whmcs)
             repo="whmcs-dns"
@@ -511,8 +511,8 @@ install_rdap_and_whois_services() {
         echo "Cloning Namingo Registrar from main"
         git clone https://github.com/getnamingo/registrar /opt/registrar
     else
-        echo "Cloning Namingo Registrar v1.2.7"
-        git clone --branch v1.2.7 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+        echo "Cloning Namingo Registrar v1.2.8"
+        git clone --branch v1.2.8 --single-branch https://github.com/getnamingo/registrar /opt/registrar
     fi
 
     # Setup for WHOIS service
@@ -647,7 +647,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.7 ===="
+echo "==== Namingo Registrar v1.2.8 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
