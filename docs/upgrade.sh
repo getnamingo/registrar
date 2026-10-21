@@ -206,6 +206,11 @@ do
     require_command "$cmd"
 done
 
+warn "IMPORTANT: Before proceeding, create and verify backups of your billing
+application database AND all billing files, including configuration.
+The automatic upgrader backup may not cover a separate billing database.
+Do not continue unless both backups can be restored."
+
 # ---------------------------------------------------------
 # Determine installed version
 # ---------------------------------------------------------
@@ -358,13 +363,20 @@ FOSSBilling core will not be upgraded."
 
 fi
 
+if [[ -d /var/www/whmcs/modules/addons/namingo_registrar ]]; then
+    warn "A WHMCS Namingo Registrar module was detected.
+
+The module will be replaced with the v${TARGET_VERSION} release.
+WHMCS core will not be upgraded."
+fi
+
 # ---------------------------------------------------------
 # Confirmation
 # ---------------------------------------------------------
 
 if [[ "$ASSUME_YES" -ne 1 ]]; then
 
-    read -r -p "Create backups and continue? (y/N): " confirm
+    read -r -p "Have you backed up your billing database and files? The upgrader will also create its own backups before proceeding. Continue? (y/N): " confirm
 
     [[ "$confirm" =~ ^[Yy]$ ]] || {
         echo "Upgrade aborted."
@@ -687,6 +699,29 @@ PHP
     log "FOSSBilling modules upgraded successfully"
 }
 
+upgrade_whmcs_modules() {
+    local module_dir="/var/www/whmcs/modules/addons/namingo_registrar"
+    [[ -d "$module_dir" ]] || return 0
+
+    log "Upgrading WHMCS Namingo Registrar module"
+
+    local repo_dir="${STAGING_DIR}/whmcs-modules"
+    git clone --depth 1 --branch "v${TARGET_VERSION}" \
+        https://github.com/getnamingo/whmcs-namingo-registrar.git \
+        "$repo_dir"
+
+    [[ -d "$repo_dir/namingo_registrar" ]] \
+        || die "WHMCS module missing from v${TARGET_VERSION} release."
+
+    cp -a "$module_dir" "${BACKUP_DIR}/whmcs_namingo_registrar_${CURRENT_VERSION}_${BACKUP_STAMP}"
+    rm -rf "$module_dir"
+    mv "$repo_dir/namingo_registrar" "$module_dir"
+    chown -R www-data:www-data "$module_dir"
+    chmod -R 755 "$module_dir"
+
+    log "WHMCS Namingo Registrar module upgraded successfully"
+}
+
 # ---------------------------------------------------------
 # Tide theme
 # ---------------------------------------------------------
@@ -875,10 +910,11 @@ composer_sync "${INSTALL_DIR}/rdap"
 run_migrations post
 
 # ---------------------------------------------------------
-# FOSSBilling modules and Tide theme
+# Billing modules and Tide theme
 # ---------------------------------------------------------
 
 upgrade_fossbilling_modules
+upgrade_whmcs_modules
 upgrade_tide_theme
 
 # ---------------------------------------------------------
