@@ -50,7 +50,9 @@ function whmcs_decrypt_setting(string $value, array $config): string
         throw new RuntimeException('Remote WHMCS requires the PHP cURL extension.');
     }
 
-    $ch = curl_init($api['api_url']);
+    static $handles = [];
+    $url = (string)$api['api_url'];
+    $ch = $handles[$url] ??= curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => http_build_query([
