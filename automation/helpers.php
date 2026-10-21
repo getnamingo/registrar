@@ -55,14 +55,15 @@ function whmcs_decrypt_setting(string $value, array $config): string
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => http_build_query([
             'action' => 'DecryptPassword',
-            'identifier' => $api['api_identifier'],
-            'secret' => $api['api_secret'],
+            'username' => $api['api_identifier'],
+            'password' => $api['api_secret'],
             'password2' => $value,
             'responsetype' => 'json',
         ]),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 30,
+        CURLOPT_IPRESOLVE => !empty($api['ipv4_only']) ? CURL_IPRESOLVE_V4 : CURL_IPRESOLVE_WHATEVER,
         CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_SSL_VERIFYPEER => true,
@@ -70,19 +71,28 @@ function whmcs_decrypt_setting(string $value, array $config): string
     ]);
     $response = curl_exec($ch);
     $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $curlNumber = curl_errno($ch);
+    $curlError = curl_error($ch);
 
-    if (!is_string($response) || $httpCode !== 200) {
+    if ($response === false || $httpCode === 0) {
+        throw new RuntimeException(
+            'WHMCS DecryptPassword transport failed (cURL ' . $curlNumber . ': ' . ($curlError ?: 'no HTTP response') . ').'
+        );
+    }
+    if ($httpCode !== 200) {
         throw new RuntimeException('WHMCS DecryptPassword request failed (HTTP ' . $httpCode . ').');
     }
 
     $result = json_decode($response, true);
+    if (!is_array($result)) {
+        throw new RuntimeException('WHMCS DecryptPassword did not return JSON; check the API URL, redirect rules and reverse proxy.');
+    }
     if (
-        !is_array($result)
-        || ($result['result'] ?? '') !== 'success'
+        ($result['result'] ?? '') !== 'success'
         || !isset($result['password'])
         || !is_string($result['password'])
     ) {
-        throw new RuntimeException('WHMCS DecryptPassword failed; check API credentials, permissions and IP access restrictions.');
+        throw new RuntimeException('WHMCS DecryptPassword API error: ' . ($result['message'] ?? 'check API credentials, permissions and IP restrictions.'));
     }
 
     return $result['password'];

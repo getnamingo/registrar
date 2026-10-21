@@ -27,6 +27,7 @@ $config = array(
         'api_url' => 'https://billing.example.com/includes/api.php',
         'api_identifier' => getenv('WHMCS_API_IDENTIFIER') ?: '',
         'api_secret' => getenv('WHMCS_API_SECRET') ?: '',
+        'ipv4_only' => false, // Set true if the automation host cannot reach WHMCS over IPv6.
     ),
     'email' => array(
         'from' => 'no-reply@example.com',
