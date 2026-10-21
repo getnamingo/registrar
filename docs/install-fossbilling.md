@@ -112,6 +112,7 @@ systemctl restart php8.5-fpm
         /index.php \
         /ipn.php \
         /check.php \
+        /adm.php \
         /install/index.php \
         /install/install.php
 
@@ -122,6 +123,7 @@ systemctl restart php8.5-fpm
             /index.php \
             /ipn.php \
             /check.php \
+            /adm.php \
             /install/index.php \
             /install/install.php
     }

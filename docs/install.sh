@@ -90,22 +90,22 @@ install_dns_module() {
 
 # ---------- Command-line options ----------
 REGISTRAR_SOURCE="release"
-ALPHA_FEATURES=0
+BETA_FEATURES=0
 
 for arg in "$@"; do
   case "$arg" in
     --main)
       REGISTRAR_SOURCE="main"
       ;;
-    --alpha)
-      ALPHA_FEATURES=1
+    --beta)
+      BETA_FEATURES=1
       ;;
     -h|--help)
-      echo "Usage: $0 [--main] [--alpha]"
+      echo "Usage: $0 [--main] [--beta]"
       echo
       echo "  --main    Install Namingo Registrar services from the current main branch"
       echo "            instead of the bundled release version."
-      echo "  --alpha   Show experimental alpha billing systems in the installer menu."
+      echo "  --beta    Show experimental Loom and PNLCS billing systems in the installer menu."
       exit 0
       ;;
     *)
@@ -302,7 +302,7 @@ show_install_summary() {
   [[ -n "$adminer_url" ]] && echo "Adminer:      $adminer_url"
 
   if [[ "$install_rdap_whois" == "unsupported" ]]; then
-      echo "Registrar mode: alpha (backend integration not enabled)"
+      echo "Registrar mode: beta (backend integration not enabled)"
   elif [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
       echo "Registrar mode: gTLD (WHOIS, RDAP and automation)"
   else
@@ -655,10 +655,10 @@ echo "Please choose the billing system you plan to use:"
 echo
 echo "  1) FOSSBilling – free & open-source"
 echo "  2) WHMCS       – commercial billing platform"
-echo "  3) Loom        – lightweight panel (beta)"
-echo "  4) Custom      – use your own billing platform"
-if [[ "$ALPHA_FEATURES" -eq 1 ]]; then
-  echo "  5) PNLCS       – open-source billing platform (alpha)"
+echo "  3) Custom      – use your own billing platform"
+if [[ "$BETA_FEATURES" -eq 1 ]]; then
+  echo "  4) Loom        – lightweight panel (beta)"
+  echo "  5) PNLCS       – open-source billing platform (beta)"
 fi
 echo "  c) Cancel"
 echo
@@ -669,10 +669,10 @@ if [[ -n "$choice" ]]; then
     1|foss|fossbilling) choice=1 ;;
     *) die "NAMINGO_BILLING_SYSTEM supports only fossbilling for unattended installation." ;;
   esac
-elif [[ "$ALPHA_FEATURES" -eq 1 ]]; then
+elif [[ "$BETA_FEATURES" -eq 1 ]]; then
   read -rp "Enter your choice [1/2/3/4/5/c]: " choice
 else
-  read -rp "Enter your choice [1/2/3/4/c]: " choice
+  read -rp "Enter your choice [1/2/3/c]: " choice
 fi
 
 case "$choice" in
@@ -760,6 +760,7 @@ set_php_ini_value "/etc/php/8.5/fpm/php.ini" "expose_php" "0"
 systemctl restart php8.5-fpm
 
 # Configure Caddy
+ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
 systemctl stop caddy
 cat > /etc/caddy/Caddyfile << EOF
 $panel_domain_name {
@@ -796,7 +797,8 @@ $panel_domain_name {
         /ipn.php \
         /check.php \
         /install/index.php \
-        /install/install.php
+        /install/install.php \
+        /${ADMINER_SLUG}
 
     # Block direct access/execution of every other PHP file.
     @blockedPhp {
@@ -806,7 +808,8 @@ $panel_domain_name {
             /ipn.php \
             /check.php \
             /install/index.php \
-            /install/install.php
+            /install/install.php \
+            /${ADMINER_SLUG}
     }
 
     # FOSSBilling root route
@@ -890,7 +893,6 @@ configure_mariadb registrar
 mkdir -p /var/www
 
 # Install Adminer
-ADMINER_SLUG="adminer-$(openssl rand -hex 4).php"
 wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 
 # Download and Extract FOSSBilling
@@ -1442,7 +1444,8 @@ echo "Namingo Registrar is ready for final configuration."
                 ;;
         esac
         ;;
-    3)
+    4)
+        [[ "$BETA_FEATURES" -eq 1 ]] || die "Loom beta installer is disabled. Re-run with --beta."
         echo "Loom selected."
 detect_ips
 
@@ -1733,7 +1736,7 @@ fi
 
 echo "Namingo Registrar is ready for final configuration."
         ;;
-    4)
+    3)
         echo "Custom billing platform selected."
         echo
 
@@ -1831,9 +1834,9 @@ EOF
         echo "   * * * * * /usr/bin/php8.5 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
         ;;
     5)
-        [[ "$ALPHA_FEATURES" -eq 1 ]] || die "PNLCS alpha installer is disabled. Re-run with --alpha."
+        [[ "$BETA_FEATURES" -eq 1 ]] || die "PNLCS beta installer is disabled. Re-run with --beta."
 
-        echo "PNLCS selected (alpha)."
+        echo "PNLCS selected (beta)."
         echo
         echo "Before continuing, make sure your billing domain already points to this server:"
         echo
@@ -1854,7 +1857,7 @@ EOF
         db_user="pnlcs"
         db_pass="$(generate_password)"
 
-        # PNLCS is available as an alpha billing-system installer only for now.
+        # PNLCS is available as a beta billing-system installer only for now.
         # Namingo does not yet ship a PNLCS backend/module for WHOIS/RDAP automation.
         install_rdap_whois="unsupported"
 
@@ -2007,7 +2010,7 @@ EOF
 
         # Final summary
         show_install_summary \
-            "PNLCS (alpha)" \
+            "PNLCS (beta)" \
             "https://$panel_domain_name" \
             "admin" \
             "$INSTALL_PATH/.env" \
@@ -2024,7 +2027,7 @@ EOF
         echo "3. Review the production configuration:"
         echo "   $INSTALL_PATH/.env"
         echo
-        echo "PNLCS alpha installation is complete."
+        echo "PNLCS beta installation is complete."
         ;;
     c|C)
         echo "Installation cancelled."
