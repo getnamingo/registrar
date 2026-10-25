@@ -1035,6 +1035,7 @@ log "Installing DomainX module"
 rm -rf /tmp/fossbilling-domainx
 git clone --depth 1 https://github.com/getnamingo/fossbilling-domainx /tmp/fossbilling-domainx
 mv /tmp/fossbilling-domainx/Domainx /var/www/modules/
+mv /tmp/fossbilling-domainx/Domains /var/www/modules/
 rm -rf /tmp/fossbilling-domainx
 
 wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-fossbilling-modules.php -O /tmp/activate-fossbilling-modules.php
