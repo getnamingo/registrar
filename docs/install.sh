@@ -990,7 +990,7 @@ rm -f /tmp/configure-client-fields.php
 # Install Tide theme
 log "Installing Tide theme"
 TMP=$(mktemp -d)
-git clone --branch v1.2.13 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
+git clone --branch v1.2.14 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
 mkdir -p /var/www/themes/tide
 cp -a "$TMP/tide/." /var/www/themes/tide/
 rm -rf /var/www/themes/tide/.git
