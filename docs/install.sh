@@ -898,7 +898,7 @@ wget -q "https://www.adminer.org/latest.php" -O "/var/www/${ADMINER_SLUG}"
 # Download and Extract FOSSBilling
 log "Installing FOSSBilling"
 cd /tmp
-wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.8/FOSSBilling-0.8.8.zip -O fossbilling.zip
+wget https://github.com/FOSSBilling/FOSSBilling/releases/download/0.8.9/FOSSBilling-0.8.9.zip -O fossbilling.zip
 unzip fossbilling.zip -d /var/www
 rm fossbilling.zip
 
@@ -990,7 +990,7 @@ rm -f /tmp/configure-client-fields.php
 # Install Tide theme
 log "Installing Tide theme"
 TMP=$(mktemp -d)
-git clone --branch v1.2.14 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
+git clone --branch v1.2.15 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
 mkdir -p /var/www/themes/tide
 cp -a "$TMP/tide/." /var/www/themes/tide/
 rm -rf /var/www/themes/tide/.git
