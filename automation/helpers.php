@@ -129,6 +129,15 @@ function whmcs_registrar_settings(PDO $pdo, array $config, string $registrar): a
         $settings[$setting] = whmcs_decrypt_setting((string)$value, $config);
     }
 
+    $certDir = $config['whmcs']['cert_dir'] ?? '';
+    if ($certDir !== '') {
+        foreach (['local_cert', 'local_pk'] as $field) {
+            if (!empty($settings[$field])) {
+                $settings[$field] = rtrim($certDir, '/') . '/' . basename($settings[$field]);
+            }
+        }
+    }
+
     if (!$local) {
         $cache[$key] = $settings;
     }

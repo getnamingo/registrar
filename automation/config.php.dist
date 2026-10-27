@@ -28,6 +28,7 @@ $config = array(
         'api_identifier' => getenv('WHMCS_API_IDENTIFIER') ?: '',
         'api_secret' => getenv('WHMCS_API_SECRET') ?: '',
         'ipv4_only' => false, // Set true if the automation host cannot reach WHMCS over IPv6.
+        'cert_dir' => '', // Optional local directory; preserves WHMCS certificate/key filenames.
     ),
     'email' => array(
         'from' => 'no-reply@example.com',
