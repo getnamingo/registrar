@@ -4,37 +4,13 @@ This guide is for setting up **FOSSBilling 0.8.9** with **PHP 8.5** on Ubuntu 22
 
 ## 1. Install the required packages:
 
-Follow the instructions for your operating system.
-
-```bash
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-```
-
-### Ubuntu 22.04 / 24.04
-
-```bash
-apt install -y curl software-properties-common ufw
-add-apt-repository -y ppa:ondrej/php
-
-apt install -y \
-  bzip2 composer git net-tools unzip wget whois \
-  caddy \
-  php8.5-cli php8.5-common php8.5-curl php8.5-fpm \
-  php8.5-bcmath php8.5-bz2 php8.5-gmp php8.5-intl \
-  php8.5-mbstring php8.5-xml php8.5-zip php8.5-imap \
-  php8.5-swoole php8.5-yaml php8.5-mysql php8.5-gd php8.5-imagick
-```
-
-### Debian 12 / 13 and Ubuntu 26.04
-
 ```bash
 apt update
 apt install -y ca-certificates curl gnupg lsb-release ufw
 
-# PHP (SURY repo)
-curl -fsSL https://packages.sury.org/php/apt.gpg \
- | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+curl -fsSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
 
 echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
  > /etc/apt/sources.list.d/sury-php.list

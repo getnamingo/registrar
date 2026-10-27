@@ -7,34 +7,11 @@ This guide is for setting up **WHMCS 9.0.9** with **PHP 8.3** on Ubuntu 22.04 / 
 
 ## 1. Install the required packages:
 
-Follow the instructions for your operating system.
-
-### Ubuntu 22.04 / 24.04
-
-```bash
-apt install -y curl software-properties-common ufw
-
-add-apt-repository -y ppa:ondrej/php
-
-apt install -y \
-  bzip2 certbot composer git net-tools unzip wget whois \
-  apache2 libapache2-mod-fcgid python3-certbot-apache \
-  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
-  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
-  php8.3-imap php8.3-intl php8.3-mbstring php8.3-soap \
-  php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip \
-  php8.3-mysql
-```
-
-### Debian 12 / 13 and Ubuntu 26.04
-
 ```bash
 apt update
 apt install -y ca-certificates curl gnupg lsb-release ufw
 
-# PHP (SURY repo)
-curl -fsSL https://packages.sury.org/php/apt.gpg \
- | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+curl -fsSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
 
 echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
  > /etc/apt/sources.list.d/sury-php.list
