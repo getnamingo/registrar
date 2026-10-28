@@ -157,8 +157,11 @@ function validationBillingRevalidationRequested(
     DateTimeImmutable $now,
     array $states
 ): bool {
+    // Issuing a token sets the shared billing contact flag to unvalidated.
+    // This must not reopen domains that have already been verified.
     if (($state['status'] ?? null) !== 'verified'
         || (int)($row['validation'] ?? 0) !== 0
+        || ($row['validation_method'] ?? null) === 'email'
         || empty($state['verified_at'])) {
         return false;
     }
