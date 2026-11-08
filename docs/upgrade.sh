@@ -15,6 +15,7 @@ BACKUP_DIR="/opt/backup"
 MIN_SUPPORTED_VERSION="1.2.3"
 
 TARGET_OVERRIDE=""
+USE_MAIN=0
 ASSUME_YES=0
 
 STAGING_DIR=""
@@ -46,12 +47,14 @@ Usage: $0 [options]
 Options:
   --target X.Y.Z   Upgrade to a specific released tag instead of the version
                    published in the repository VERSION file.
+  --main           Deploy GitHub main; run migrations through main/VERSION.
   -y, --yes        Do not ask for confirmation.
   -h, --help       Show this help.
 
 Examples:
   $0
   $0 --target 1.2.5
+  $0 --main
   $0 -y
 EOF
 }
@@ -62,6 +65,11 @@ while [[ $# -gt 0 ]]; do
             [[ $# -ge 2 ]] || die "--target requires a version."
             TARGET_OVERRIDE="$2"
             shift 2
+            ;;
+
+        --main)
+            USE_MAIN=1
+            shift
             ;;
 
         -y|--yes)
@@ -79,6 +87,9 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+[[ "$USE_MAIN" -eq 0 || -z "$TARGET_OVERRIDE" ]] \
+    || die "--main and --target cannot be used together."
 
 require_root() {
     [[ "${EUID:-$(id -u)}" -eq 0 ]] \
@@ -290,7 +301,11 @@ fi
 # Determine target version
 # ---------------------------------------------------------
 
-if [[ -n "$TARGET_OVERRIDE" ]]; then
+if [[ "$USE_MAIN" -eq 1 ]]; then
+
+    TARGET_VERSION="main"
+
+elif [[ -n "$TARGET_OVERRIDE" ]]; then
 
     TARGET_VERSION="$TARGET_OVERRIDE"
 
@@ -304,6 +319,8 @@ else
     )"
 
 fi
+
+if [[ "$USE_MAIN" -eq 0 ]]; then
 
 validate_version "$TARGET_VERSION" \
     || die "Invalid target version: $TARGET_VERSION"
@@ -339,11 +356,16 @@ git ls-remote \
     >/dev/null \
     || die "Release tag v${TARGET_VERSION} does not exist. Upgrade aborted."
 
+fi
+
+CLONE_REF="v${TARGET_VERSION}"
+[[ "$USE_MAIN" -eq 1 ]] && CLONE_REF="main"
+
 echo
 echo "Namingo Registrar upgrade"
 echo
 echo "  Installed: v${CURRENT_VERSION}"
-echo "  Target:    v${TARGET_VERSION}"
+echo "  Target:    ${CLONE_REF}"
 echo
 
 # ---------------------------------------------------------
@@ -366,7 +388,7 @@ fi
 if [[ -d /var/www/whmcs/modules/addons/namingo_registrar ]]; then
     warn "A WHMCS Namingo Registrar module was detected.
 
-The module will be replaced with the v${TARGET_VERSION} release.
+The module will be replaced with the ${CLONE_REF} source.
 WHMCS core will not be upgraded."
 fi
 
@@ -396,7 +418,7 @@ STAGING_DIR="$(mktemp -d /opt/namingo-upgrade.XXXXXX)"
 
 git clone \
     --quiet \
-    --branch "v${TARGET_VERSION}" \
+    --branch "$CLONE_REF" \
     --single-branch \
     "$REPO_URL" \
     "$STAGING_DIR"
@@ -408,10 +430,17 @@ CLONED_VERSION="$(
     tr -d '[:space:]' < "$STAGING_DIR/VERSION"
 )"
 
-[[ "$CLONED_VERSION" == "$TARGET_VERSION" ]] \
-    || die \
-"Target tag says v${TARGET_VERSION},
-but its VERSION file says v${CLONED_VERSION}."
+if [[ "$USE_MAIN" -eq 1 ]]; then
+    TARGET_VERSION="$CLONED_VERSION"
+    validate_version "$TARGET_VERSION" \
+        || die "Invalid VERSION in GitHub main: $TARGET_VERSION"
+    if version_gt "$CURRENT_VERSION" "$TARGET_VERSION"; then
+        die "Installed v${CURRENT_VERSION} is newer than main/VERSION v${TARGET_VERSION}."
+    fi
+else
+    [[ "$CLONED_VERSION" == "$TARGET_VERSION" ]] \
+        || die "Tag v${TARGET_VERSION} has VERSION v${CLONED_VERSION}."
+fi
 
 # ---------------------------------------------------------
 # PHP version
@@ -706,12 +735,12 @@ upgrade_whmcs_modules() {
     log "Upgrading WHMCS Namingo Registrar module"
 
     local repo_dir="${STAGING_DIR}/whmcs-modules"
-    git clone --depth 1 --branch "v${TARGET_VERSION}" \
+    git clone --depth 1 --branch "$CLONE_REF" \
         https://github.com/getnamingo/whmcs-namingo-registrar.git \
         "$repo_dir"
 
     [[ -d "$repo_dir/namingo_registrar" ]] \
-        || die "WHMCS module missing from v${TARGET_VERSION} release."
+        || die "WHMCS module missing from ${CLONE_REF}."
 
     cp -a "$module_dir" "${BACKUP_DIR}/whmcs_namingo_registrar_${CURRENT_VERSION}_${BACKUP_STAMP}"
     rm -rf "$module_dir"

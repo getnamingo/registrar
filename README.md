@@ -8,7 +8,7 @@ Open source ICANN-accredited domain registrar management system.
 
 ## Introduction
 
-**Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs, with integrations for [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), [Loom](https://github.com/getargora/loom), and [PNLCS](https://github.com/Panelica/pnlcs) to fit different billing and operational workflows.
+**Namingo Registrar** is an open-source domain registrar management system built for ICANN-accredited registrars. It helps you manage domains efficiently, stay compliant with ICANN requirements, and reduce operational costs, with integrations for [FOSSBilling](https://fossbilling.org/), [WHMCS](https://www.whmcs.com/), and [PNLCS](https://github.com/Panelica/pnlcs) to fit different billing and operational workflows.
 
 ## Get Involved
 
@@ -62,17 +62,16 @@ Platform-specific manuals are available for reference or troubleshooting:
 
 - [install-fossbilling.md](docs/install-fossbilling.md)
 - [install-whmcs.md](docs/install-whmcs.md)
-- [install-loom.md](docs/install-loom.md) – ***beta***
 - [install-custom.md](docs/install-custom.md)
 
-For migration assistance between **FOSSBilling, WHMCS, Loom, or a custom platform**, contact [help@namingo.org](mailto:help@namingo.org).
+For migration assistance between **FOSSBilling, WHMCS, or a custom platform**, contact [help@namingo.org](mailto:help@namingo.org).
 
 ### Upgrade
 
 > [!IMPORTANT]
 > Billing systems and integration modules are **not** upgraded automatically.
 >
-> See the **[Upgrade Guide](docs/upgrade.md#upgrade-to-namingo-registrar-v128)** for billing and module upgrade instructions.
+> See the **[Upgrade Guide](docs/upgrade.md#upgrade-to-namingo-registrar-v129)** for billing and module upgrade instructions.
 
 #### Current releases
 
@@ -98,7 +97,7 @@ Questions, feedback, and contributions are always welcome.
 
 ## Acknowledgements
 
-Thanks to [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), [**Loom**](https://github.com/getargora/loom), and [**PNLCS**](https://github.com/Panelica/pnlcs) for their work on billing platforms supported by Namingo Registrar, and to **ChatGPT** for assistance with code and documentation.
+Thanks to [**FOSSBilling**](https://fossbilling.org/), [**WHMCS**](https://www.whmcs.com/), and [**PNLCS**](https://github.com/Panelica/pnlcs) for their work on billing platforms supported by Namingo Registrar, and to **ChatGPT** for assistance with code and documentation.
 
 ## Support This Project
 

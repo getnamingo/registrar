@@ -180,7 +180,7 @@ Once these checks have passed, you may continue with the standard Namingo Regist
 
 Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirements:
 
-- **WHMCS:** v9.0.9 or later. WHMCS v8.13.7 may also work, but it is not officially supported and should be used at your own risk.
+- **WHMCS:** v9.1.0 or later. WHMCS v8.13.7 and v9.0.9 may still work, but neither version will be officially supported after December 31, 2026. Continued use will be at your own risk.
 - **FOSSBilling:** You must upgrade to v0.8.9 or later before proceeding.
 
 Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
