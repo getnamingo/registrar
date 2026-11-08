@@ -83,7 +83,7 @@ bash <(wget -qO- https://namingo.org/registrar-upgrade.sh)
 
 #### Legacy releases
 
-Upgrade sequentially to **v1.2.3**, then use the universal upgrader. See the **[Upgrade Guide](docs/upgrade.md)** for the complete upgrade path.
+Upgrade sequentially to **v1.2.3**, then use the universal upgrader. See the **[Upgrade Guide](docs/upgrade.md)**.
 
 ## Support
 
