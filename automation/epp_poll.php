@@ -331,13 +331,27 @@ foreach ($registries as $eppConfig) {
                 unset($transfer['is_transfer']);
 
                 $ourClid = strtolower($recipient);
-                $requestingClid = strtolower((string)($transfer['re_id'] ?? ''));
-                $actingClid = strtolower((string)($transfer['ac_id'] ?? ''));
+                $ourIanaId = (int)($config['epp_iana_ids'][strtolower($registry)][$ourClid] ?? 0);
+                $matchesOurRegistrar = static function (string $id) use ($ourClid, $ourIanaId): bool {
+                    return $id !== '' && (
+                        $id === $ourClid
+                        || ($ourIanaId > 0 && ctype_digit($id) && (int)$id === $ourIanaId)
+                    );
+                };
+                $requestingClid = strtolower(trim((string)($transfer['re_id'] ?? '')));
+                $actingClid = strtolower(trim((string)($transfer['ac_id'] ?? '')));
                 $ourRole = match (true) {
-                    $requestingClid !== '' && $requestingClid === $ourClid => 'gaining',
-                    $actingClid !== '' && $actingClid === $ourClid => 'losing',
+                    $matchesOurRegistrar($requestingClid) && !$matchesOurRegistrar($actingClid) => 'gaining',
+                    $matchesOurRegistrar($actingClid) && !$matchesOurRegistrar($requestingClid) => 'losing',
                     default => 'unknown',
                 };
+                if ($ourRole === 'unknown' && ($transfer['status'] ?? '') === 'pending') {
+                    $log->warning(
+                        "Unknown transfer role for {$poll['domain']} on {$registry}: "
+                        . "EPP clID={$recipient}, reID={$transfer['re_id']}, acID={$transfer['ac_id']}; "
+                        . 'check epp_iana_ids configuration.'
+                    );
+                }
 
                 $metadata['epp']['event'] = 'domain_transfer';
                 $metadata['epp']['transfer'] = array_merge(
@@ -358,6 +372,11 @@ foreach ($registries as $eppConfig) {
 
                 if (is_array($existingMetadata)) {
                     $metadata = array_replace_recursive($metadata, $existingMetadata);
+                    // A re-delivered poll may have been stored before the ID mapping was fixed.
+                    // Prefer a freshly resolved role, but preserve existing FOA audit metadata.
+                    if (!empty($poll['transfer']['is_transfer']) && $ourRole !== 'unknown') {
+                        $metadata['epp']['transfer']['our_role'] = $ourRole;
+                    }
                 }
             } else {
                 $notificationId = $driver->storeEppPollNotification([

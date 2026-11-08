@@ -30,6 +30,10 @@ $config = array(
         'ipv4_only' => false, // Set true if the automation host cannot reach WHMCS over IPv6.
         'cert_dir' => '', // Optional local directory; preserves WHMCS certificate/key filenames.
     ),
+    // Optional IANA IDs for EPP accounts whose transfer reID/acID are numeric.
+    'epp_iana_ids' => [
+        // 'verisign' => ['your-epp-clid' => 1234],
+    ],
     'email' => array(
         'from' => 'no-reply@example.com',
         'reply-to' => 'support@example.com',
