@@ -1,8 +1,8 @@
 # Namingo Registrar: Installation Guide (WHMCS)
 
-This guide is for setting up **WHMCS 9.0.9** with **PHP 8.3** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
+This guide is for setting up **WHMCS 9.1.0** with **PHP 8.4** on Ubuntu 22.04 / 24.04 / 26.04 or Debian 12 / 13.
 
-> **Important:** If **WHMCS 9.0.9** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.  
+> **Important:** If **WHMCS 9.1.0** is already installed on your server or VPS with root access, you can review only **Section 1.3**, **Section 4.1**, and from **Section 9** onwards.
 > Note: Shared hosting is **not supported**.
 
 ## 1. Install the required packages:
@@ -21,11 +21,11 @@ apt update
 apt install -y \
   bzip2 certbot composer git net-tools unzip wget whois \
   apache2 libapache2-mod-fcgid python3-certbot-apache \
-  php8.3-cli php8.3-common php8.3-curl php8.3-fpm \
-  php8.3-bcmath php8.3-bz2 php8.3-gd php8.3-gmp php8.3-imagick \
-  php8.3-imap php8.3-intl php8.3-mbstring php8.3-soap \
-  php8.3-swoole php8.3-xml php8.3-xmlrpc php8.3-yaml php8.3-zip \
-  php8.3-mysql
+  php8.4-cli php8.4-common php8.4-curl php8.4-fpm \
+  php8.4-bcmath php8.4-bz2 php8.4-gd php8.4-gmp php8.4-imagick \
+  php8.4-imap php8.4-intl php8.4-mbstring php8.4-soap \
+  php8.4-swoole php8.4-xml php8.4-xmlrpc php8.4-yaml php8.4-zip \
+  php8.4-mysql
 ```
 
 ### 1.1. Configure PHP Settings:
@@ -33,7 +33,7 @@ apt install -y \
 Open the PHP-FPM configuration file:
 
 ```bash
-nano /etc/php/8.3/fpm/php.ini
+nano /etc/php/8.4/fpm/php.ini
 ```
 
 Add or uncomment the following session security settings:
@@ -58,25 +58,25 @@ Determine the PHP extension directory where the ionCube loader files need to be 
 extension_dir => /usr/lib/php/20230831 => /usr/lib/php/20230831
 ```
 
-Make a note of the directory path (e.g., /usr/lib/php/20230831) and copy the appropriate ionCube loader for your PHP version to the PHP extensions directory by running `cp /tmp/ioncube/ioncube_loader_lin_8.3.so /usr/lib/php/20230831/`
+Make a note of the directory path (e.g., /usr/lib/php/20230831) and copy the appropriate ionCube loader for your PHP version to the PHP extensions directory by running `cp /tmp/ioncube/ioncube_loader_lin_8.4.so /usr/lib/php/20230831/`
 
 You need to edit the PHP configuration files to include ionCube:
 
 ```bash
-nano /etc/php/8.3/fpm/php.ini
-nano /etc/php/8.3/cli/php.ini
+nano /etc/php/8.4/fpm/php.ini
+nano /etc/php/8.4/cli/php.ini
 ```
 
 To enable ionCube, add the following line at the top of each php.ini file:
 
 ```bash
-zend_extension = /usr/lib/php/20230831/ioncube_loader_lin_8.3.so
+zend_extension = /usr/lib/php/20230831/ioncube_loader_lin_8.4.so
 ```
 
 Restart PHP-FPM to apply the changes:
 
 ```bash
-systemctl restart php8.3-fpm
+systemctl restart php8.4-fpm
 ```
 
 ### 1.3. Configure Apache:
@@ -102,7 +102,7 @@ Add the following configuration, edit `ServerAdmin` and `ServerName` at least:
     </Directory>
 
     <FilesMatch "\.php$">
-        SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost/"
+        SetHandler "proxy:unix:/run/php/php8.4-fpm.sock|fcgi://localhost/"
     </FilesMatch>
 
     ErrorLog ${APACHE_LOG_DIR}/whmcs_error.log
@@ -155,9 +155,9 @@ a2enmod proxy
 a2enmod proxy_http
 a2enmod headers
 a2enmod proxy_fcgi
-a2enconf php8.3-fpm
-echo 'opcache.enable=0' > /etc/php/8.3/fpm/conf.d/99-disable-opcache.ini
-systemctl restart php8.3-fpm
+a2enconf php8.4-fpm
+echo 'opcache.enable=0' > /etc/php/8.4/fpm/conf.d/99-disable-opcache.ini
+systemctl restart php8.4-fpm
 systemctl restart apache2
 ```
 
@@ -239,7 +239,7 @@ Then execute the following commands:
 
 ```bash
 apt update
-apt install -y mariadb-client mariadb-server php8.3-mysql
+apt install -y mariadb-client mariadb-server php8.4-mysql
 mariadb-secure-installation
 ```
 
@@ -330,7 +330,7 @@ Add the following line to schedule the WHMCS cron job:
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.8 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.9 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```
@@ -406,7 +406,7 @@ Review and update `config.php` with the appropriate settings for your environmen
 Once you have successfully configured all automation scripts, you are ready to initiate the automation system. Proceed by adding the following cron job to the system crontab using crontab -e:
 
 ```bash
-* * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
+* * * * * /usr/bin/php8.4 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1
 ```
 
 ## 13. Namingo Registrar for WHMCS:

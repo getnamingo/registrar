@@ -416,7 +416,7 @@ install_php_packages() {
       extras=(apcu ds igbinary imagick redis uuid)
       ;;
     whmcs)
-      version="8.3"
+      version="8.4"
       extras=(imagick xmlrpc)
       ;;
     *)
@@ -1136,27 +1136,27 @@ EOF
 apt update -y
 DEBIAN_FRONTEND=noninteractive apt install -y apache2 libapache2-mod-fcgid mariadb-client mariadb-server python3-certbot-apache
 install_php_packages whmcs
-install_composer php8.3
+install_composer php8.4
 
 # Update php.ini files
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_secure" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_httponly" "1"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
-set_php_ini_value "/etc/php/8.3/fpm/php.ini" "expose_php" "0"
+set_php_ini_value "/etc/php/8.4/fpm/php.ini" "session.cookie_secure" "1"
+set_php_ini_value "/etc/php/8.4/fpm/php.ini" "session.cookie_httponly" "1"
+set_php_ini_value "/etc/php/8.4/fpm/php.ini" "session.cookie_samesite" "\"Strict\""
+set_php_ini_value "/etc/php/8.4/fpm/php.ini" "memory_limit" "$PHP_MEMORY_LIMIT"
+set_php_ini_value "/etc/php/8.4/fpm/php.ini" "expose_php" "0"
 
 log "Installing ionCube Loader"
 cd /tmp
 wget -q https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
 tar xfz ioncube_loaders_lin_x86-64.tar.gz
 
-ext_dir=$(php8.3 -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
+ext_dir=$(php8.4 -i | grep extension_dir | awk -F'=> ' '{print $2}' | head -n1 | xargs)
 
 if [[ ! -d "$ext_dir" ]]; then
   die "PHP extension directory not found: $ext_dir"
 fi
 
-loader_file="ioncube_loader_lin_8.3.so"
+loader_file="ioncube_loader_lin_8.4.so"
 loader_path="${ext_dir}/${loader_file}"
 
 echo "== Copying ionCube loader to extension dir =="
@@ -1164,7 +1164,7 @@ cp "/tmp/ioncube/${loader_file}" "$loader_path"
 
 echo "== Adding ionCube loader to php.ini files =="
 
-for ini in /etc/php/8.3/fpm/php.ini /etc/php/8.3/cli/php.ini; do
+for ini in /etc/php/8.4/fpm/php.ini /etc/php/8.4/cli/php.ini; do
     if [[ -f "$ini" ]]; then
         if ! grep -q "ioncube_loader_lin" "$ini"; then
             echo "Adding ionCube to $ini"
@@ -1178,7 +1178,7 @@ for ini in /etc/php/8.3/fpm/php.ini /etc/php/8.3/cli/php.ini; do
 done
 
 # Restart PHP service
-systemctl restart php8.3-fpm
+systemctl restart php8.4-fpm
 
 echo "ionCube Loader installed successfully"
 
@@ -1204,7 +1204,7 @@ cat > "$whmcs_conf" <<EOF
     </Directory>
 
     <FilesMatch "\.php$">
-        SetHandler "proxy:unix:/run/php/php8.3-fpm.sock|fcgi://localhost/"
+        SetHandler "proxy:unix:/run/php/php8.4-fpm.sock|fcgi://localhost/"
     </FilesMatch>
 
     ErrorLog \${APACHE_LOG_DIR}/whmcs_error.log
@@ -1217,7 +1217,7 @@ a2ensite whmcs.conf
 a2enmod rewrite
 a2enmod headers
 a2enmod proxy_fcgi
-a2enconf php8.3-fpm
+a2enconf php8.4-fpm
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
 echo "== Creating RDAP VirtualHost config =="
@@ -1259,8 +1259,8 @@ a2enmod proxy_http
 fi
 
 log "Starting Apache"
-echo 'opcache.enable=0' > /etc/php/8.3/fpm/conf.d/99-disable-opcache.ini
-systemctl restart php8.3-fpm
+echo 'opcache.enable=0' > /etc/php/8.4/fpm/conf.d/99-disable-opcache.ini
+systemctl restart php8.4-fpm
 systemctl restart apache2
 
 echo "Apache configured on $panel_domain_name"
@@ -1275,7 +1275,7 @@ DB_HOST="localhost"
 DB_PORT=3306
 INSTALL_PATH="/var/www/whmcs"
 WHMCS_ZIP="/tmp/whmcs.zip"
-PHP_BIN="php8.3"
+PHP_BIN="php8.4"
 
 # === CHECK FILE EXISTS ===
 if [ ! -f "$WHMCS_ZIP" ]; then
@@ -1343,7 +1343,7 @@ log "Configuring WHMCS cron job"
 command -v crontab >/dev/null 2>&1 || apt install -y cron
 systemctl enable --now cron 2>/dev/null || true
 
-cron_line="*/5 * * * * /usr/bin/php8.3 -q /var/www/whmcs/crons/cron.php"
+cron_line="*/5 * * * * /usr/bin/php8.4 -q /var/www/whmcs/crons/cron.php"
 
 tmp_cron="$(mktemp 2>/dev/null)" || exit 1
 
@@ -1369,7 +1369,7 @@ install_epp_profiles whmcs /var/www/whmcs
 install_dns_module whmcs /var/www/whmcs
 
 wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-whmcs-modules.php -O /tmp/activate-whmcs-modules.php
-WHMCS_SERVER_NAME="$panel_domain_name" php8.3 /tmp/activate-whmcs-modules.php
+WHMCS_SERVER_NAME="$panel_domain_name" php8.4 /tmp/activate-whmcs-modules.php
 rm -f /tmp/activate-whmcs-modules.php
 
 # Final summary
@@ -1396,7 +1396,7 @@ if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     echo "   - /opt/registrar/automation/config.php"
     echo
     echo "5. Add the registrar automation cron job:"
-    echo "   * * * * * /usr/bin/php8.3 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
+    echo "   * * * * * /usr/bin/php8.4 /opt/registrar/automation/cron.php 1>> /dev/null 2>&1"
     echo
     echo "6. Complete the registrar contact, website, escrow, and compliance configuration"
     echo "   described in Sections 12 and 16 of install-whmcs.md and in configuration.md."
@@ -1416,7 +1416,7 @@ echo "Namingo Registrar is ready for final configuration."
                     echo "Please install Namingo Registrar manually by following:"
                     echo "  install-whmcs.md"
                     echo
-                    echo "For WHMCS 9.0.8 already installed on a VPS/server with root access,"
+                    echo "For WHMCS 9.1.0 already installed on a VPS/server with root access,"
                     echo "review Section 1.3, Section 4.1, and Section 9 onwards."
                     echo
                     echo "Note: Shared hosting is not supported."
