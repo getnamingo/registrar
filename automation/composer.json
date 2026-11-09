@@ -3,7 +3,9 @@
         "peppeocchi/php-cron-scheduler": "^4.0",
         "phpmailer/phpmailer": "^7.1.1",
         "monolog/monolog": "^3.10.0",
-        "pinga/tembo": "^1.1.22"
+        "pinga/tembo": "^1.1.22",
+        "php-privacy/openpgp": "^2.2.11",
+        "phpseclib/phpseclib": "^3.0"
     },
     "autoload": {
         "psr-4": {
