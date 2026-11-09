@@ -51,13 +51,28 @@ Only the first part of each series may have a header. Splits must end at CSV
 record boundaries. Originals are read without rewriting; checksums refer to
 canonical CSV names and cover exactly those original bytes.
 
-The default inline header is the existing 12-column Namingo header plus a final
-`rt-org` column. Handle files use DENIC's 10-column header plus a final
-`organization` column. Organization values can be empty only when not collected;
-the explicit column prevents silently discarding Policy 8.2.1 information.
-This is a conservative validation profile; it can reject deposits that would be
-permitted if no organizations were collected. It does not establish that every
-required domain, organization or privacy/proxy customer has been included.
+The default inline header is the existing 12-column Namingo header. Handle files
+use DENIC's 10-column header. LF and CRLF record separators are accepted by
+default; LF produces a warning and original bytes are preserved. A missing
+organization column also produces a warning rather than a rejection. Organization
+data remains required when collected; CSV alone cannot establish whether it was
+collected. The script cannot establish completeness of domain, organization or
+privacy/proxy customer data from syntax alone.
+
+Two independent optional settings in the existing `escrow` array enable stricter
+checks. Both default to `false`; no configuration change is required:
+
+```php
+'rdeRequireCrlf' => false,          // true: reject LF record separators
+'rdeRequireOrganization' => false, // true: require rt-org / organization columns
+```
+
+With `rdeRequireOrganization=true`, default headers include a final `rt-org`
+(inline) or `organization` (handle) column. An `rt-handle` reference delegates the
+organization column requirement to the handle file. If using `rdeHeaders`, its
+exact registered header remains authoritative; the organization check is applied
+in addition. Enabling this check does not make every organization value mandatory:
+it can be empty when no organization was collected.
 
 For an already registered alternate column order or supported handle profile,
 set optional `escrow.rdeHeaders` to the **exact** agreed header arrays. Existing
@@ -73,7 +88,7 @@ aliases are fixed by the validator; this is not an arbitrary semantic mapping:
 
 Absent this setting, the default headers above apply. Submit the header and field
 mapping to DENIC and ICANN before use. The script cannot check their registration
-systems. Required fields, UTF-8, quoting, CRLF record separators, column counts,
+systems. Required fields, UTF-8, quoting, column counts,
 A-label syntax (including ICU round-trip checks), duplicate domains/handles and
 referenced handles are checked. State/postcode may be empty because Policy 8.1
 makes them country-dependent; determining applicability requires source-data
@@ -84,11 +99,12 @@ No absent field is invented or repaired.
 
 All three `automation/src/Escrow/{FOSS,WHMCS,LOOM}.php::generateRDE()` methods:
 
-* Use `fputcsv()` with LF record endings instead of RFC4180 CRLF. Strict validation
-  rejects these files with the source filename in the error.
-* Omit the collected registrant organization field (Policy 8.2.1). This profile
-  requires an explicit `rt-org`/handle `organization` column; the unchanged
-  generators are therefore not accepted as-is.
+* Use `fputcsv()` with LF record endings instead of RFC4180 CRLF. These are accepted
+  with a warning by default; `rdeRequireCrlf=true` rejects them.
+* Omit a registrant organization column. Its absence is accepted with a warning by
+  default. If organization data was collected, it must still be included under
+  Policy 8.2.1 using an agreed header. `rdeRequireOrganization=true` enforces an
+  explicit column; it is not required merely because the deposit uses RDE 2025.
 * Split using `fgets()` physical-line counts, not CSV record boundaries. Embedded
   newlines can produce invalid splits; malformed quoting is rejected.
 * Do not export underlying privacy/proxy customer details where applicable.
@@ -97,7 +113,8 @@ All three `automation/src/Escrow/{FOSS,WHMCS,LOOM}.php::generateRDE()` methods:
 FOSS and WHMCS also substitute `No-State-Land` / `No-ZIP-City` in some paths; the
 validator rejects these values. LOOM can emit missing required contact values;
 these are rejected per record. Fix generation and data completeness separately.
-**This PR does not make the existing generators RDE 2025 compliant.**
+Existing generator headers and LF output are supported by default; this does not
+certify the completeness or compliance of every generated deposit.
 
 ## Prepared directory
 
@@ -208,6 +225,8 @@ covers preparation, checksums, split CSV, signing subkeys, actual recipient-key
 decryption with test keys, signature verification, wrong passphrase, missing and
 incompatible keys, stale input, corrupted packages, read-only modes, upload-only,
 pinned-host/auth failures, partial uploads, remote collisions and session close.
+Regression tests cover existing Namingo headers with LF, unchanged snapshot bytes,
+optional CRLF/organization enforcement, and rejection of bare CR separators.
 The DENIC public fixture tests certificate loading and preparation/packet structure
 only. **No DENIC private-key decryption, live SFTP, server acceptance, or independent
 OpenPGP implementation interoperability has been verified.** Test a deposit with

@@ -131,11 +131,11 @@ final class EscrowSubmission
         return $groups;
     }
 
-    /** Strict RFC4180 scanner: do not let fgetcsv accept malformed quoting or LF record separators. */
-    private static function rows(string $bytes, string $file): Generator
+    /** Validate CSV quoting; LF record separators are accepted unless explicitly disabled. */
+    private function rows(string $bytes, string $file): Generator
     {
         self::check(preg_match('//u', $bytes) === 1 && !str_starts_with($bytes, "\xef\xbb\xbf"), "$file: expected UTF-8 without BOM.");
-        $count = 0; $row = []; $field = ''; $state = 'start';
+        $count = 0; $row = []; $field = ''; $state = 'start'; $warnedLf = false;
         $length = strlen($bytes);
         for ($i = 0; $i < $length; $i++) {
             $c = $bytes[$i];
@@ -155,8 +155,16 @@ final class EscrowSubmission
             if ($c === ',' || $c === "\r" || $c === "\n") {
                 $row[] = $field; $field = ''; $state = 'start';
                 if ($c !== ',') {
-                    self::check($c === "\r" && ($bytes[$i + 1] ?? '') === "\n", "$file: RFC4180 requires CRLF record separators; generator output must be fixed separately.");
-                    $i++;
+                    if ($c === "\r") {
+                        self::check(($bytes[$i + 1] ?? '') === "\n", "$file: bare CR record separator is invalid.");
+                        $i++;
+                    } else {
+                        self::check(!($this->config['rdeRequireCrlf'] ?? false), "$file: rdeRequireCrlf requires CRLF record separators.");
+                        if (!$warnedLf) {
+                            $this->log->warning("$file: LF record separators accepted; RFC4180 specifies CRLF. Original bytes preserved.");
+                            $warnedLf = true;
+                        }
+                    }
                     self::check(++$count <= 1_000_000, "$file: more than 1,000,000 rows.");
                     yield $row; $row = [];
                 }
@@ -210,7 +218,7 @@ final class EscrowSubmission
                 $total += strlen($bytes);
                 self::check($total <= self::MAX_TOTAL, 'Deposit exceeds 32 MiB native memory safety limit.');
                 $file = basename($path);
-                $rows = self::rows($bytes, $file);
+                $rows = $this->rows($bytes, $file);
                 if ($index === 0) {
                     $header = $rows->current();
                     $rows->next();
@@ -218,7 +226,12 @@ final class EscrowSubmission
                     foreach ($header as $field) {
                         self::check((bool)preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/D', $field), "$file: invalid header field name.");
                     }
-                    $expected = $this->config['rdeHeaders'][$type] ?? ($type === 'full' ? array_merge(self::HEADER, ['rt-org']) : array_merge(self::HANDLE_HEADER, ['organization']));
+                    $requireOrganization = (bool)($this->config['rdeRequireOrganization'] ?? false);
+                    $defaultHeader = $type === 'full' ? self::HEADER : self::HANDLE_HEADER;
+                    if ($requireOrganization) {
+                        $defaultHeader[] = $type === 'full' ? 'rt-org' : 'organization';
+                    }
+                    $expected = $this->config['rdeHeaders'][$type] ?? $defaultHeader;
                     self::check(($header[0] ?? '') === ($type === 'full' ? 'domain' : 'handle'), "$file: invalid first header field.");
                     $required = $type === 'full' ? ['domain', 'expiration-date', 'iana'] : ['handle', 'name', 'address', 'city', 'country', 'email', 'phone'];
                     if ($type === 'full') {
@@ -226,9 +239,13 @@ final class EscrowSubmission
                             ? ['rt-handle'] : ['rt-name', 'rt-street', 'rt-city', 'rt-state', 'rt-zip', 'rt-country', 'rt-phone', 'rt-email']);
                     }
                     self::check(!array_diff($required, $header), "$file: missing required 2025 header fields.");
-                    // Organization is mandatory when collected. Preserve an empty column when not collected.
-                    self::check(in_array($type === 'full' ? (in_array('rt-handle', $header, true) ? 'rt-handle' : 'rt-org') : 'organization', $header, true),
-                        "$file: generator omits registrant organization (Policy 8.2.1); use rt-org/organization column, empty only when not collected.");
+                    // CSV alone cannot establish whether an organization was collected.
+                    $organizationAvailable = in_array($type === 'full' ? (in_array('rt-handle', $header, true) ? 'rt-handle' : 'rt-org') : 'organization', $header, true);
+                    self::check(!$requireOrganization || $organizationAvailable,
+                        "$file: rdeRequireOrganization requires rt-org/organization (or rt-handle with a handle file).");
+                    if (!$organizationAvailable) {
+                        $this->log->warning("$file: organization column absent; operator must ensure organization data is included when collected.");
+                    }
                     self::check($header === $expected, "$file: header does not match configured registered rdeHeaders mapping.");
                 }
                 $rowCount = 0;

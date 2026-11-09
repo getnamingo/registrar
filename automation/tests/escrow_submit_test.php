@@ -108,10 +108,27 @@ try {
     rename($root . '/full_1.csv', $config['full']);
     $source = file_get_contents($config['full']);
     file_put_contents($config['full'], str_replace("\r\n", "\n", $source));
-    fails(fn() => $tool->validateSources($tool->discover($date), $date), 'requires CRLF');
+    ok(count($tool->validateSources($tool->discover($date), $date)) === 1, 'LF record separators accepted by default');
+    $strictCrlf = $config; $strictCrlf['rdeRequireCrlf'] = true;
+    fails(fn() => (new EscrowSubmission($strictCrlf, new NullLogger()))->validateSources($tool->discover($date), $date), 'requires CRLF');
+    $bareCr = str_replace("\r\n", "\n", $source);
+    file_put_contents($config['full'], str_replace("\n", "\r", $bareCr));
+    fails(fn() => $tool->validateSources($tool->discover($date), $date), 'bare CR');
     csv($config['full'], [EscrowSubmission::HEADER, array_slice($row, 0, 12)]);
     $legacy = $config; unset($legacy['rdeHeaders']);
-    fails(fn() => (new EscrowSubmission($legacy, new NullLogger()))->validateSources(['full' => [$config['full']]], $date), 'omits registrant organization');
+    $legacyTool = new EscrowSubmission($legacy, new NullLogger());
+    ok(count($legacyTool->validateSources(['full' => [$config['full']]], $date)) === 1, 'original Namingo header accepted by default');
+    $legacySource = file_get_contents($config['full']);
+    file_put_contents($config['full'], str_replace("\r\n", "\n", $legacySource));
+    $legacyEntries = $legacyTool->validateSources(['full' => [$config['full']]], $date);
+    $legacyTool->prepare($legacyEntries, $root . '/legacy-package', $date);
+    ok(count($legacyTool->validatePrepared($root . '/legacy-package', $date)) === 2, 'prepare and reuse original header with LF without rewriting CSV');
+    ok(file_get_contents($root . '/legacy-package/' . $prefix . '_full_1.csv') === file_get_contents($config['full']), 'LF source snapshot preserves original bytes');
+    $strictOrg = $legacy; $strictOrg['rdeRequireOrganization'] = true;
+    fails(fn() => (new EscrowSubmission($strictOrg, new NullLogger()))->validateSources(['full' => [$config['full']]], $date), 'rdeRequireOrganization requires');
+    csv($config['full'], [$header, $row]);
+    $strictBoth = $config + ['rdeRequireCrlf' => true, 'rdeRequireOrganization' => true];
+    ok(count((new EscrowSubmission($strictBoth, new NullLogger()))->validateSources(['full' => [$config['full']]], $date)) === 1, 'strict options accept organization column with CRLF');
     $badRow = $row; $badRow[0] = 'тест.test'; csv($config['full'], [$header, $badRow]);
     fails(fn() => $tool->validateSources(['full' => [$config['full']]], $date), 'invalid A-label');
     csv($config['full'], [$header, $row, $row]);
@@ -136,6 +153,14 @@ try {
     $handleTool->prepare($handleEntries, $root . '/handle-package', $date);
     ok(count($handleTool->validatePrepared($root . '/handle-package', $date)) === 3, 'handle package with organization and resolved references');
     fails(fn() => $handleTool->validateSources(['full' => [$root . '/handles-full.csv']], $date), 'Missing referenced');
+    $plainHandleConfig = $handleConfig;
+    $plainHandleConfig['rdeHeaders']['hdl'] = EscrowSubmission::HANDLE_HEADER;
+    csv($root . '/handles.csv', [EscrowSubmission::HANDLE_HEADER, ['C-1', 'Person', 'Street', '', '', 'Sofia', 'BG', 'test@example.test', '+359.123456789', '']]);
+    $plainHandleTool = new EscrowSubmission($plainHandleConfig, new NullLogger());
+    ok(count($plainHandleTool->validateSources($handleGroups, $date)) === 2, 'handle organization column optional by default');
+    $plainHandleConfig['rdeRequireOrganization'] = true;
+    fails(fn() => (new EscrowSubmission($plainHandleConfig, new NullLogger()))->validateSources($handleGroups, $date), 'rdeRequireOrganization requires');
+
     // Transport mock uses real SSH private/public key parsing and records all remote calls.
     $ssh = EC::createKey('Ed25519');
     file_put_contents($root . '/ssh', $ssh->toString('OpenSSH'));
