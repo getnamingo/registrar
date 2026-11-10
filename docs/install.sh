@@ -573,6 +573,12 @@ install_rdap_and_whois_services() {
         sed -i "s|'backend' => .*|'backend' => '$panel_upper',|" config.php
     fi
 
+    # Install optional standalone CLI tools (available from v1.3.0).
+    if [[ -f /opt/registrar/bin/composer.json ]]; then
+        cd /opt/registrar/bin
+        COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --quiet
+    fi
+
     # Install Escrow RDE Client
     cd /opt/registrar/automation
     wget https://team-escrow.gitlab.io/escrow-rde-client/releases/escrow-rde-client-v2.4.0-linux_x86_64.tar.gz
@@ -975,14 +981,14 @@ chown -R www-data:www-data /var/www/data
 find /var/www/data -type d -exec chmod 755 {} \;
 find /var/www/data -type f -exec chmod 644 {} \;
 
-wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/bin/configure-client-fields.php -O /tmp/configure-client-fields.php
 php8.5 /tmp/configure-client-fields.php
 rm -f /tmp/configure-client-fields.php
 
 # Install Tide theme
 log "Installing Tide theme"
 TMP=$(mktemp -d)
-git clone --branch v1.2.15 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
+git clone --branch v1.2.16 --depth 1 https://github.com/getnamingo/tide.git "$TMP/tide"
 mkdir -p /var/www/themes/tide
 cp -a "$TMP/tide/." /var/www/themes/tide/
 rm -rf /var/www/themes/tide/.git
@@ -1030,7 +1036,7 @@ mv /tmp/fossbilling-domainx/Domainx /var/www/modules/
 mv /tmp/fossbilling-domainx/Domains /var/www/modules/
 rm -rf /tmp/fossbilling-domainx
 
-wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-fossbilling-modules.php -O /tmp/activate-fossbilling-modules.php
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/bin/activate-fossbilling-modules.php -O /tmp/activate-fossbilling-modules.php
 php8.5 /tmp/activate-fossbilling-modules.php
 rm -f /tmp/activate-fossbilling-modules.php
 
@@ -1368,7 +1374,7 @@ fi
 install_epp_profiles whmcs /var/www/whmcs
 install_dns_module whmcs /var/www/whmcs
 
-wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/docs/bin/activate-whmcs-modules.php -O /tmp/activate-whmcs-modules.php
+wget -q https://raw.githubusercontent.com/getnamingo/registrar/refs/heads/main/bin/activate-whmcs-modules.php -O /tmp/activate-whmcs-modules.php
 WHMCS_SERVER_NAME="$panel_domain_name" php8.4 /tmp/activate-whmcs-modules.php
 rm -f /tmp/activate-whmcs-modules.php
 

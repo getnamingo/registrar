@@ -319,7 +319,7 @@ Proceed with the installation as prompted on https://%%DOMAIN%%. If the installe
 Clone the tide theme repository:
 
 ```bash
-git clone --branch v1.2.15 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.16 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
 chmod 755 /var/www/themes/tide/assets
 chmod 755 /var/www/themes/tide/config/settings_data.json
 chown www-data:www-data /var/www/themes/tide/assets
@@ -348,7 +348,7 @@ chmod +x /usr/local/bin/phpbu
 ## 9. Configure FOSSBilling Settings:
 
 ```bash
-php /opt/registrar/docs/bin/configure-client-fields.php
+php /opt/registrar/bin/configure-client-fields.php
 ```
 
 ## 10. Setup WHOIS:

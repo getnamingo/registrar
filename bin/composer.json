@@ -1,0 +1,7 @@
+{
+    "require": {
+        "php": ">=8.3",
+        "php-privacy/openpgp": "^2.2",
+        "phpseclib/phpseclib": "^3.0"
+    }
+}

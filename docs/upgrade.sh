@@ -699,6 +699,18 @@ upgrade_fossbilling_modules() {
         cp -a "$repo_dir/$module/." "/var/www/modules/$module/"
     done
 
+    # Upgrade optional DomainX modules only if already installed.
+    if [[ -d /var/www/modules/Domainx || -d /var/www/modules/Domains ]]; then
+        local domainx_dir="${STAGING_DIR}/fossbilling-domainx"
+        git clone --depth 1 https://github.com/getnamingo/fossbilling-domainx.git "$domainx_dir"
+        for module in Domainx Domains; do
+            [[ -d "/var/www/modules/$module" ]] || continue
+            cp -a "$domainx_dir/$module/." "/var/www/modules/$module/"
+            chown -R www-data:www-data "/var/www/modules/$module"
+            chmod -R u=rwX,go=rX "/var/www/modules/$module"
+        done
+    fi
+
     # Synchronize installed module versions with manifests
     php <<'PHP'
 <?php
@@ -716,7 +728,8 @@ $stmt = $pdo->prepare(
     "UPDATE extension SET version = ? WHERE type = 'mod' AND name = ? AND status = 'installed'"
 );
 
-foreach (['Registrar', 'Domaincontactvalidation', 'Validation', 'Contact', 'Tmch', 'Whois', 'Mosapimonitor'] as $module) {
+foreach (['Registrar', 'Domaincontactvalidation', 'Validation', 'Contact', 'Tmch', 'Whois', 'Mosapimonitor', 'Domainx', 'Domains'] as $module) {
+    if (in_array($module, ['Domainx', 'Domains'], true) && !is_file("/var/www/modules/$module/manifest.json")) continue;
     $manifest = json_decode(file_get_contents("/var/www/modules/$module/manifest.json"), true, 512, JSON_THROW_ON_ERROR);
     $stmt->execute([$manifest['version'], strtolower($module)]);
 }
@@ -763,7 +776,7 @@ upgrade_tide_theme() {
     local repo_dir="${STAGING_DIR}/tide"
     local theme_dir="/var/www/themes/tide"
 
-    git clone --branch v1.2.15 --depth 1 \
+    git clone --branch v1.2.16 --depth 1 \
         https://github.com/getnamingo/tide.git "$repo_dir"
 
     # Preserve theme settings
@@ -882,6 +895,7 @@ if [[ -f "${INSTALL_DIR}/docs/upgrade.sh" ]]; then
 fi
 
 copy_component automation
+copy_component bin
 copy_component whois
 copy_component rdap
 copy_component tests
@@ -927,6 +941,7 @@ composer_sync() {
 }
 
 composer_sync "${INSTALL_DIR}/automation"
+composer_sync "${INSTALL_DIR}/bin"
 composer_sync "${INSTALL_DIR}/whois"
 composer_sync "${INSTALL_DIR}/rdap"
 
