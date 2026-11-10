@@ -342,7 +342,7 @@ class WHMCS implements EscrowInterface {
             return;
         }
 
-        $handle = fopen($path, 'r');
+        $handle = fopen($path, 'rb');
         if (!$handle) {
             return;
         }
@@ -353,9 +353,9 @@ class WHMCS implements EscrowInterface {
             return;
         }
 
-        // Pre-check (count data rows, excluding header)
+        // Pre-check (count CSV records, excluding header)
         $totalLines = 0;
-        while (fgets($handle) !== false) {
+        while (fgetcsv($handle, 0, ',', '"', '\\') !== false) {
             $totalLines++;
         }
 
@@ -384,7 +384,11 @@ class WHMCS implements EscrowInterface {
         $part = 0;
         $out = null;
 
-        while (($line = fgets($handle)) !== false) {
+        $offset = ftell($handle);
+        while (fgetcsv($handle, 0, ',', '"', '\\') !== false) {
+            // Use CSV record boundaries, but copy the original bytes without reserializing.
+            $line = stream_get_contents($handle, ftell($handle) - $offset, $offset);
+            $offset = ftell($handle);
 
             $lineLimit = $part === 1 ? $maxLines - 1 : $maxLines;
 
@@ -399,7 +403,7 @@ class WHMCS implements EscrowInterface {
                 $part++;
                 $target = $dir . DIRECTORY_SEPARATOR . $name . '_' . $part . $ext;
 
-                $out = fopen($target, 'w');
+                $out = fopen($target, 'wb');
                 if (!$out) {
                     fclose($handle);
                     return; // cannot write output
