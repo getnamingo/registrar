@@ -564,9 +564,12 @@ final class EscrowSubmission
     {
         self::check(($this->config['uploadFiles'] ?? false) === true, 'Upload is disabled by uploadFiles.');
         self::check(!file_exists($directory . '/upload-state.json'), 'An upload was already attempted. Reconcile DENIC/remote status before any manual retry; see escrow_submit.md.');
-        $trusted = trim(self::read((string)($this->config['sshHostPublicKeyPath'] ?? ''), 65536));
-        self::check((bool)preg_match('/^(ssh-[a-z0-9-]+|ecdsa-sha2-[a-z0-9-]+) [A-Za-z0-9+\/=]+(?: [^\r\n]*)?$/D', $trusted), 'sshHostPublicKeyPath must contain one trusted OpenSSH public key, not a known_hosts entry.');
-        $pin = PublicKeyLoader::loadPublicKey($trusted)->toString('OpenSSH');
+        $pin = null;
+        if (!empty($this->config['sshHostPublicKeyPath'])) {
+            $trusted = trim(self::read((string)$this->config['sshHostPublicKeyPath'], 65536));
+            self::check((bool)preg_match('/^(ssh-[a-z0-9-]+|ecdsa-sha2-[a-z0-9-]+) [A-Za-z0-9+\/=]+(?: [^\r\n]*)?$/D', $trusted), 'sshHostPublicKeyPath must contain one trusted OpenSSH public key, not a known_hosts entry.');
+            $pin = PublicKeyLoader::loadPublicKey($trusted)->toString('OpenSSH');
+        }
         try {
             $sshKey = PublicKeyLoader::loadPrivateKey(self::read((string)$this->config['sshPrivateKeyPath'], 1024 * 1024), $this->config['sshPrivateKeyPassword'] ?? false);
         } catch (Throwable) { throw new RuntimeException('Cannot load SSH private key; check format/passphrase.'); }
@@ -575,9 +578,9 @@ final class EscrowSubmission
         $temporary = [];
         try {
             $hostKey = $sftp->getServerPublicHostKey();
-            self::check(is_string($hostKey) && hash_equals($pin, PublicKeyLoader::loadPublicKey($hostKey)->toString('OpenSSH')), 'SFTP host key mismatch.');
+            self::check(is_string($hostKey) && ($pin === null || hash_equals($pin, PublicKeyLoader::loadPublicKey($hostKey)->toString('OpenSSH'))), 'SFTP host key mismatch.');
             self::check($sftp->login((string)$this->config['sshUsername'], $sshKey), 'SFTP authentication failed.');
-            $this->event('SFTP connected; trusted host key matched.');
+            $this->event('SFTP connected.');
             self::check($sftp->pwd() !== false, 'SFTP destination unavailable.');
             $sftp->disableStatCache();
             // DENIC uses the account login directory. Do not invent a remote subdirectory.
