@@ -36,7 +36,7 @@ use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SFTP;
 use Psr\Log\LoggerInterface;
 
-/** Standalone RDE 2025 transport. See escrow_submit.md for limits and onboarding. */
+/** Standalone RDE 2025 transport. */
 final class EscrowSubmission
 {
     // RDE per-CSV limit; there is no aggregate deposit size or record-count cap.
@@ -326,7 +326,7 @@ final class EscrowSubmission
                     $rows->next();
                 }
                 self::check($rowCount > 0, "$file: empty or header-only deposit part.");
-                $name = $this->prefix($date) . "_{$type}_" . ($index + 1) . '.csv';
+                $name = $this->prefix($date) . "_{$type}" . (count($paths) > 1 ? '_' . ($index + 1) : '') . '.csv';
                 $entries[] = ['path' => $path, 'name' => $name, 'sha256' => hash('sha256', $bytes), 'size' => strlen($bytes), 'rows' => $rowCount];
                 unset($bytes, $rows);
             }
@@ -356,7 +356,7 @@ final class EscrowSubmission
             $private = OpenPGP::readPrivateKey($secretBytes);
             $receiver = OpenPGP::readPublicKey($publicBytes);
         } catch (Throwable) {
-            throw new RuntimeException('Cannot parse OpenPGP key. Check v6 format and native Argon2 support (parallelism 1); see escrow_submit.md.');
+            throw new RuntimeException('Cannot parse OpenPGP key. Check v6 format and native Argon2 support (parallelism 1).');
         }
         unset($secretBytes, $publicBytes);
         foreach ([$private, $receiver] as $key) {
@@ -391,7 +391,7 @@ final class EscrowSubmission
                     // Upstream prefers an argon2 executable when installed. Never enter that path.
                     $finder = new Symfony\Component\Process\ExecutableFinder();
                     self::check($finder->find('argon2') === null && function_exists('sodium_crypto_pwhash'),
-                        'PHP Privacy Argon2 would use a subprocess. Use a native-compatible protected key (see escrow_submit.md).');
+                        'PHP Privacy Argon2 would use a subprocess. Use a native-compatible protected key.');
                     $s2k = $packet->getS2K()->toBytes();
                     self::check(ord($s2k[18]) === 1 && ord($s2k[19]) <= 18 && ord($s2k[17]) <= 10,
                         'Argon2 key parameters exceed native sodium/memory limits; re-export key with supported protection.');
@@ -479,14 +479,13 @@ final class EscrowSubmission
         $stage = $directory . '.tmp-' . bin2hex(random_bytes(8));
         self::check(mkdir($stage, 0700), 'Cannot create staging directory.');
         // Failed staging directories are retained for inspection, never selected for upload.
-        $metadata = ['version' => 1, 'specification' => 2025, 'date' => $date,
+        $metadata = ['version' => 2, 'specification' => 2025, 'date' => $date,
             'ianaID' => (string)$this->config['ianaID'], 'signer' => $private->getFingerprint(true),
             'recipient' => $receiver->getFingerprint(true), 'entries' => [], 'files' => []];
         $manifest = '';
         foreach ($entries as $entry) {
             $csv = self::read($entry['path']);
             self::check(hash('sha256', $csv) === $entry['sha256'], 'Source changed during preparation.');
-            self::write($stage . '/' . $entry['name'], $csv);
             $manifest .= $entry['sha256'] . '  ' . $entry['name'] . "\n";
             $gzip = gzencode($csv, 6, ZLIB_ENCODING_GZIP);
             self::check(is_string($gzip) && gzdecode($gzip) === $csv, 'Compression round-trip failed.');
@@ -520,8 +519,8 @@ final class EscrowSubmission
         $this->event('Checksum manifest created.');
         // Authenticate local bookkeeping and ciphertext for upload-only without retaining plaintext signatures/gzip.
         $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
-        self::write($stage . '/package.json', $json);
-        self::write($stage . '/package.sig', self::sign(LiteralMessage::fromLiteralData($json), $private)->getSignature()->getPacketList()->encode());
+        self::write($stage . '/.package.json', $json);
+        self::write($stage . '/.package.sig', self::sign(LiteralMessage::fromLiteralData($json), $private)->getSignature()->getPacketList()->encode());
         $this->validatePrepared($stage, $date);
         self::check(!file_exists($directory) && rename($stage, $directory), 'Cannot atomically publish prepared deposit.');
     }
@@ -529,21 +528,24 @@ final class EscrowSubmission
     public function validatePrepared(string $directory, string $date): array
     {
         [$private, $receiver] = $this->keys(false);
-        $json = self::read($directory . '/package.json', 1024 * 1024);
-        $signature = OpenPGP::readSignature(self::read($directory . '/package.sig', 65536), false);
+        $package = is_file($directory . '/.package.json') ? '/.package' : '/package';
+        $json = self::read($directory . $package . '.json', 1024 * 1024);
+        $signature = OpenPGP::readSignature(self::read($directory . $package . '.sig', 65536), false);
         $verification = LiteralMessage::fromLiteralData($json)->verifyDetached([$private->toPublic()], $signature);
         self::check(count($verification) === 1 && $verification[0]->isVerified(), 'Prepared package metadata signature is invalid.');
         $metadata = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
-        self::check(($metadata['version'] ?? null) === 1 && ($metadata['specification'] ?? null) === 2025
+        self::check(in_array($metadata['version'] ?? null, [1, 2], true) && ($metadata['specification'] ?? null) === 2025
             && ($metadata['date'] ?? '') === $date && ($metadata['ianaID'] ?? '') === (string)$this->config['ianaID']
             && ($metadata['signer'] ?? '') === $private->getFingerprint(true)
             && ($metadata['recipient'] ?? '') === $receiver->getFingerprint(true), 'Prepared deposit identity/date/key mismatch.');
         $groups = []; $expectedManifest = ''; $expectedFiles = []; $expectedNames = [];
         foreach ($metadata['entries'] ?? [] as $entry) {
-            self::check((bool)preg_match('~^' . preg_quote($this->prefix($date), '~') . '_(full|hdl)_([1-9][0-9]*)\.csv$~D', $entry['name'], $m), 'Invalid prepared filename.');
+            self::check((bool)preg_match('~^' . preg_quote($this->prefix($date), '~') . '_(full|hdl)(?:_([1-9][0-9]*))?\.csv$~D', $entry['name'], $m), 'Invalid prepared filename.');
             self::check(!isset($expectedNames[$entry['name']]), 'Duplicate prepared source.');
             $expectedNames[$entry['name']] = true;
-            $groups[$m[1]][(int)$m[2]] = $directory . '/' . $entry['name'];
+            $number = (int)($m[2] ?? 1);
+            self::check(!isset($groups[$m[1]][$number]), 'Duplicate prepared sequence.');
+            $groups[$m[1]][$number] = $directory . '/' . $entry['name'];
             $expectedManifest .= $entry['sha256'] . '  ' . $entry['name'] . "\n";
             $output = $entry['name'] . '.gz.gpg';
             $expectedFiles[] = $output;
@@ -558,17 +560,21 @@ final class EscrowSubmission
             ksort($parts); self::check(array_keys($parts) === range(1, count($parts)), 'Incomplete prepared split series.');
         }
         unset($parts);
-        $entries = $this->validateSources($groups, $date);
-        foreach ($entries as $i => $entry) {
-            unset($entry['path']);
-            self::check($entry === $metadata['entries'][$i], 'Prepared source hash/size/row count mismatch.');
+        if ($metadata['version'] === 1) {
+            $entries = $this->validateSources($groups, $date);
+            foreach ($entries as $i => $entry) {
+                unset($entry['path']);
+                $entry['name'] = $metadata['entries'][$i]['name'];
+                self::check($entry === $metadata['entries'][$i], 'Prepared source hash/size/row count mismatch.');
+            }
         }
         $hashName = $this->prefix($date) . '_hash.txt';
         $manifest = self::read($directory . '/' . $hashName, 1024 * 1024);
         self::check($manifest === $expectedManifest && hash('sha256', $manifest) === ($metadata['files'][$hashName] ?? ''), 'Checksum manifest mismatch.');
         $expectedFiles[] = $hashName;
         self::check(array_keys($metadata['files']) === $expectedFiles, 'Unexpected upload file list.');
-        $allowed = array_merge(array_keys($expectedNames), $expectedFiles, ['package.json', 'package.sig', 'upload-state.json']);
+        $allowed = array_merge($metadata['version'] === 1 ? array_keys($expectedNames) : [], $expectedFiles,
+            [basename($package) . '.json', basename($package) . '.sig', 'upload-state.json', '.upload-state.json']);
         self::check(!array_diff(array_diff(scandir($directory), ['.', '..']), $allowed), 'Unexpected file in prepared package.');
         $this->event('Local package validation passed.');
         return $expectedFiles;
@@ -578,7 +584,7 @@ final class EscrowSubmission
     public function upload(string $directory, array $files, ?callable $factory = null): void
     {
         self::check(($this->config['uploadFiles'] ?? false) === true, 'Upload is disabled by uploadFiles.');
-        self::check(!file_exists($directory . '/upload-state.json'), 'An upload was already attempted. Reconcile DENIC/remote status before any manual retry; see escrow_submit.md.');
+        self::check(!file_exists($directory . '/upload-state.json') && !file_exists($directory . '/.upload-state.json'), 'An upload was already attempted. Reconcile DENIC/remote status before any manual retry.');
         $pin = null;
         if (!empty($this->config['sshHostPublicKeyPath'])) {
             $trusted = trim(self::read((string)$this->config['sshHostPublicKeyPath'], 65536));
@@ -603,7 +609,7 @@ final class EscrowSubmission
             foreach ($files as $name) {
                 self::check($sftp->lstat($name) === false, 'Remote deposit file already exists; refusing overwrite.');
             }
-            self::write($directory . '/upload-state.json', json_encode(['state' => 'attempted', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n");
+            self::write($directory . '/.upload-state.json', json_encode(['state' => 'attempted', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n");
             foreach ($files as $name) {
                 $temporary[$name] = '.namingo-' . bin2hex(random_bytes(16));
                 self::check($sftp->lstat($temporary[$name]) === false, 'Remote temporary name collision.');
@@ -616,7 +622,7 @@ final class EscrowSubmission
                 $created[] = $name;
                 $this->event('File uploaded: ' . $name);
             }
-            $state = $directory . '/upload-state.json';
+            $state = $directory . '/.upload-state.json';
             self::check(file_put_contents($state, json_encode(['state' => 'uploaded', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n", LOCK_EX) !== false, 'Could not record uploaded state. Reconcile before retry.');
             $this->event('Deposit uploaded. Check DENIC Control Center for acceptance.');
         } catch (Throwable $error) {
@@ -631,6 +637,23 @@ final class EscrowSubmission
         }
     }
 
+    private function preparedDirectory(string $date): ?string
+    {
+        $matches = [];
+        $legacy = $this->prefix($date) . '-2025';
+        foreach (glob(rtrim((string)$this->config['runDir'], '/') . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            if (basename($dir) !== $legacy && !preg_match('/^\d{4}-\d{2}-\d{2}-\d{6}$/D', basename($dir))) { continue; }
+            $file = $dir . (is_file($dir . '/.package.json') ? '/.package.json' : '/package.json');
+            if (!is_file($file)) { continue; } // Ignore Go deposits and unfinished staging directories.
+            $meta = json_decode(self::read($file, 1024 * 1024), true, 32, JSON_THROW_ON_ERROR);
+            if (($meta['date'] ?? '') === $date && ($meta['ianaID'] ?? '') === (string)$this->config['ianaID']) {
+                $matches[] = $dir;
+            }
+        }
+        self::check(count($matches) <= 1, 'Multiple prepared deposits for this date/IANA ID; keep only the intended package in runDir.');
+        return $matches[0] ?? null;
+    }
+
     public function run(array $options, ?callable $sftpFactory = null): void
     {
         self::check(PHP_VERSION_ID >= 80300 && extension_loaded('intl') && extension_loaded('sodium'), 'Requires PHP 8.3+, intl and sodium.');
@@ -638,7 +661,8 @@ final class EscrowSubmission
         $bytes = (int)$limit * match (strtolower(substr($limit, -1))) { 'g' => 1073741824, 'm' => 1048576, 'k' => 1024, default => 1 };
         self::check($limit === '-1' || $bytes >= 512 * 1024 * 1024, 'Native preparation requires memory_limit >= 512M; use php -d memory_limit=512M.');
         $date = $options['date']; $mode = $options['mode'];
-        $directory = rtrim((string)$this->config['runDir'], '/') . '/' . $this->prefix($date) . '-2025';
+        $directory = $this->preparedDirectory($date)
+            ?? rtrim((string)$this->config['runDir'], '/') . '/' . gmdate('Y-m-d-His');
         if ($mode === 'dry-run') {
             if (is_dir($directory)) {
                 $files = $this->validatePrepared($directory, $date);
@@ -668,6 +692,7 @@ final class EscrowSubmission
         self::check($lock !== false && flock($lock, LOCK_EX | LOCK_NB), 'Another escrow submission is running.');
         try {
             if ($mode !== 'upload-only') {
+                self::check($this->preparedDirectory($date) === null, 'Prepared deposit already exists. Use --upload-only with --date.');
                 self::check(!file_exists($directory), 'Prepared deposit already exists. Use --validate-only or --upload-only with --date.');
                 $entries = $this->validateSources($this->discover($date), $date);
                 $this->prepare($entries, $directory, $date);
