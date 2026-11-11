@@ -265,9 +265,6 @@ final class EscrowSubmission
                     $organizationAvailable = in_array($type === 'full' ? (in_array('rt-handle', $header, true) ? 'rt-handle' : 'rt-org') : 'organization', $header, true);
                     self::check(!$requireOrganization || $organizationAvailable,
                         "$file: rdeRequireOrganization requires rt-org/organization (or rt-handle with a handle file).");
-                    if (!$organizationAvailable) {
-                        $this->log->warning("$file: organization column absent; operator must ensure organization data is included when collected.");
-                    }
                     self::check($header === $expected, "$file: header does not match configured registered rdeHeaders mapping.");
                 }
                 $rowCount = 0;
@@ -290,6 +287,9 @@ final class EscrowSubmission
                         self::check(!isset($domains[$key]), "$where: duplicate domain."); $domains[$key] = true;
                         self::check($record['iana'] === (string)$this->config['ianaID'], "$where: incorrect IANA ID.");
                         $expiry = $record['expiration-date'];
+                        if (preg_match('/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.\d+)?$/D', $expiry, $m)) {
+                            $expiry = "{$m[1]}T{$m[2]}Z";
+                        }
                         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s\Z', $expiry, new DateTimeZone('UTC'));
                         self::check($parsed !== false && $parsed->format('Y-m-d\TH:i:s\Z') === $expiry, "$where: invalid expiration-date.");
                     } else {
@@ -676,8 +676,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
                 . "Modes (mutually exclusive): --prepare-only --upload-only --validate-only --dry-run --help\n"
                 . "Default: prepare, validate, upload if uploadFiles=true. Default date: today UTC.\n"
                 . "Examples:\n  php automation/escrow_submit.php --prepare-only\n"
-                . "  php automation/escrow_submit.php --upload-only --date=2026-11-09\n"
-                . "See automation/escrow_submit.md for generator incompatibilities and setup.\n";
+                . "  php automation/escrow_submit.php --upload-only --date=2026-11-09\n";
             exit(0);
         }
         require_once __DIR__ . '/vendor/autoload.php';
