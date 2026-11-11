@@ -319,7 +319,7 @@ final class EscrowSubmission
         }
         self::check(!array_diff_key($references, $handles), 'Missing referenced contact handle(s).');
         self::check(!$handles || $references, 'Unexpected handle file without domain handle references.');
-        $this->event('Source validation passed: ' . count($entries) . " CSV files, $total bytes. RDE Specification 2025; external completeness and header registration require operator verification.");
+        $this->event('Source validation passed: ' . count($entries) . " CSV files, $total bytes.");
         return $entries;
     }
 
@@ -390,7 +390,7 @@ final class EscrowSubmission
             }
         }
         $this->event('Key validation passed. Signer fingerprint ' . $private->getFingerprint(true)
-            . '; recipient fingerprint ' . $receiver->getFingerprint(true) . '. Confirm these against DENIC onboarding.');
+            . '; recipient fingerprint ' . $receiver->getFingerprint(true) . '.');
         return [$private, $receiver];
     }
 
@@ -555,7 +555,7 @@ final class EscrowSubmission
         self::check(array_keys($metadata['files']) === $expectedFiles, 'Unexpected upload file list.');
         $allowed = array_merge(array_keys($expectedNames), $expectedFiles, ['package.json', 'package.sig', 'upload-state.json']);
         self::check(!array_diff(array_diff(scandir($directory), ['.', '..']), $allowed), 'Unexpected file in prepared package.');
-        $this->event('Local package validation passed. Embedded signature/gzip/AEAD verified during preparation; recipient private-key interoperability and DENIC acceptance remain unverified.');
+        $this->event('Local package validation passed.');
         return $expectedFiles;
     }
 
@@ -600,7 +600,7 @@ final class EscrowSubmission
             }
             $state = $directory . '/upload-state.json';
             self::check(file_put_contents($state, json_encode(['state' => 'uploaded', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n", LOCK_EX) !== false, 'Could not record uploaded state. Reconcile before retry.');
-            $this->event('Upload finished. External acceptance pending; check DENIC Control Center.');
+            $this->event('Deposit uploaded. Check DENIC Control Center for acceptance.');
         } catch (Throwable $error) {
             $reason = get_class($error) === RuntimeException::class && $error->getFile() === __FILE__ ? $error->getMessage() : 'Transport error (details suppressed).';
             $this->log->error($reason);
@@ -689,7 +689,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
             $log = setupLogger('/var/log/namingo/escrow.log', 'Escrow');
         }
         (new EscrowSubmission($config['escrow'], $log))->run($options);
-        echo "Requested operation completed. DENIC acceptance is not implied.\n";
+        echo "Requested operation completed.\n";
     } catch (Throwable $error) {
         // Only our curated RuntimeExceptions may reach logs/terminal, never upstream key/data errors.
         $message = get_class($error) === RuntimeException::class && $error->getFile() === __FILE__
