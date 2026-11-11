@@ -54,6 +54,7 @@ $config = array(
         'hdl'  => '/opt/registrar/escrow/hdl.csv',
 
         // Escrow client configuration
+        // 'upload' => 'native', // Uncomment for native PHP submission; omitted uses the Go client.
         'ianaID' => 0000,
         'specification' => 2024,
         'depositBaseDir' => '/opt/registrar/escrow',
