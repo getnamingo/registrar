@@ -11,16 +11,18 @@
  * See the LICENSE file distributed with this software for the full license text.
  *
  * SPDX-License-Identifier: MIT
- *
- * Usage:
- * php automation/escrow_submit.php --dry-run
- * php automation/escrow_submit.php --validate-only
- * php automation/escrow_submit.php --prepare-only
- * php automation/escrow_submit.php --upload-only --date=2026-11-09
- * php automation/escrow_submit.php
  */
 
 declare(strict_types=1);
+
+namespace Registrar\Escrow;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use Generator;
+use RuntimeException;
+use Throwable;
+
 if (ini_parse_quantity((string)ini_get('memory_limit')) < 512 * 1024 * 1024) {
     ini_set('memory_limit', '512M');
 }
@@ -37,7 +39,7 @@ use phpseclib3\Net\SFTP;
 use Psr\Log\LoggerInterface;
 
 /** Standalone RDE 2025 transport. */
-final class EscrowSubmission
+final class Submission
 {
     // RDE per-CSV limit; there is no aggregate deposit size or record-count cap.
     // PHP Privacy buffers one part at a time: check PHP memory before loading it.
@@ -388,15 +390,14 @@ final class EscrowSubmission
         if ($unlock && $protectedPackets) {
             foreach ($private->getPackets() as $packet) {
                 if ($packet instanceof SecretKeyPacketInterface && $packet->getS2K() instanceof Argon2S2K) {
-                    // Upstream prefers an argon2 executable when installed. Never enter that path.
-                    $finder = new Symfony\Component\Process\ExecutableFinder();
-                    self::check($finder->find('argon2') === null && function_exists('sodium_crypto_pwhash'),
-                        'PHP Privacy Argon2 would use a subprocess. Use a native-compatible protected key.');
                     $s2k = $packet->getS2K()->toBytes();
-                    self::check(ord($s2k[18]) === 1 && ord($s2k[19]) <= 18 && ord($s2k[17]) <= 10,
-                        'Argon2 key parameters exceed native sodium/memory limits; re-export key with supported protection.');
+                    self::check(
+                        ord($s2k[18]) === 1 && ord($s2k[19]) <= 18 && ord($s2k[17]) <= 10,
+                        'Argon2 key parameters exceed native sodium/memory limits; re-export key with supported protection.'
+                    );
                 }
             }
+
             try {
                 $private = $private->decrypt((string)($this->config['gpgPrivateKeyPass'] ?? ''));
             } catch (Throwable) {
@@ -713,39 +714,5 @@ final class EscrowSubmission
                 throw new RuntimeException('Upload disabled by uploadFiles.');
             }
         } finally { flock($lock, LOCK_UN); fclose($lock); }
-    }
-}
-
-if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
-    $log = null;
-    try {
-        $options = EscrowSubmission::options(array_slice($argv, 1));
-        if ($options['mode'] === 'help') {
-            echo "Native PHP RDE Specification 2025 preparation/submission (PHP 8.3+).\n"
-                . "Usage: php automation/escrow_submit.php [MODE] [--date=YYYY-MM-DD]\n"
-                . "Modes (mutually exclusive): --prepare-only --upload-only --validate-only --dry-run --help\n"
-                . "Default: prepare, validate, upload if uploadFiles=true. Default date: today UTC.\n"
-                . "Examples:\n  php automation/escrow_submit.php --prepare-only\n"
-                . "  php automation/escrow_submit.php --upload-only --date=2026-11-09\n";
-            exit(0);
-        }
-        require_once __DIR__ . '/vendor/autoload.php';
-        require __DIR__ . '/config.php';
-        // Console-only logger: read-only modes must not create or append log files.
-        if (in_array($options['mode'], ['dry-run', 'validate-only'], true)) {
-            $log = new Monolog\Logger('Escrow', [new Monolog\Handler\StreamHandler('php://stdout')]);
-        } else {
-            require_once __DIR__ . '/helpers.php';
-            $log = setupLogger('/var/log/namingo/escrow.log', 'Escrow');
-        }
-        (new EscrowSubmission($config['escrow'], $log))->run($options);
-        echo "Requested operation completed.\n";
-    } catch (Throwable $error) {
-        // Only our curated RuntimeExceptions may reach logs/terminal, never upstream key/data errors.
-        $message = get_class($error) === RuntimeException::class && $error->getFile() === __FILE__
-            ? $error->getMessage() : 'Operation failed; check dependencies, key compatibility, configuration and file permissions.';
-        $log?->error($message);
-        fwrite(STDERR, "Escrow: $message\n");
-        exit(1);
     }
 }

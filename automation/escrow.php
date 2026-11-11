@@ -68,78 +68,96 @@ if ((int)$spec === 2007) {
 }
 
 // Submit the escrow deposits
-$configArray = [
-    'ianaID' => $config['escrow']['ianaID'],
-    'specification' => $config['escrow']['specification'],
-    'depositBaseDir' => $config['escrow']['depositBaseDir'],
-    'runDir' => $config['escrow']['runDir'],
-    'compressAndEncrypt' => $config['escrow']['compressAndEncrypt'],
-    'uploadFiles' => $config['escrow']['uploadFiles'],
-    'multi' => $config['escrow']['multi'],
-    'useFileSystemCache' => $config['escrow']['useFileSystemCache'],
-    'gpg' => [
-        'gpgPrivateKeyPath'     => $config['escrow']['gpgPrivateKeyPath'],
-        'gpgPrivateKeyPass'     => $config['escrow']['gpgPrivateKeyPass'] ?? null,
-        'gpgReceiverPubKeyPath' => $config['escrow']['gpgReceiverPubKeyPath'],
-    ],
-    'sftp' => [
-        'sshHostname'           => $config['escrow']['sshHostname'],
-        'sshPort'               => $config['escrow']['sshPort'],
-        'sshUsername'           => $config['escrow']['sshUsername'],
-        'sshPrivateKeyPath'     => $config['escrow']['sshPrivateKeyPath'],
-        'sshPrivateKeyPassword' => $config['escrow']['sshPrivateKeyPassword'] ?? null,
-        'sshHostPublicKeyPath' => $config['escrow']['sshHostPublicKeyPath'] ?? null,
-    ],
-];
+if (($config['escrow']['upload'] ?? '') !== 'native') {
+    $configArray = [
+        'ianaID' => $config['escrow']['ianaID'],
+        'specification' => $config['escrow']['specification'],
+        'depositBaseDir' => $config['escrow']['depositBaseDir'],
+        'runDir' => $config['escrow']['runDir'],
+        'compressAndEncrypt' => $config['escrow']['compressAndEncrypt'],
+        'uploadFiles' => $config['escrow']['uploadFiles'],
+        'multi' => $config['escrow']['multi'],
+        'useFileSystemCache' => $config['escrow']['useFileSystemCache'],
+        'gpg' => [
+            'gpgPrivateKeyPath'     => $config['escrow']['gpgPrivateKeyPath'],
+            'gpgPrivateKeyPass'     => $config['escrow']['gpgPrivateKeyPass'] ?? null,
+            'gpgReceiverPubKeyPath' => $config['escrow']['gpgReceiverPubKeyPath'],
+        ],
+        'sftp' => [
+            'sshHostname'           => $config['escrow']['sshHostname'],
+            'sshPort'               => $config['escrow']['sshPort'],
+            'sshUsername'           => $config['escrow']['sshUsername'],
+            'sshPrivateKeyPath'     => $config['escrow']['sshPrivateKeyPath'],
+            'sshPrivateKeyPassword' => $config['escrow']['sshPrivateKeyPassword'] ?? null,
+            'sshHostPublicKeyPath' => $config['escrow']['sshHostPublicKeyPath'] ?? null,
+        ],
+    ];
 
-// Generate YAML string
-$yaml = yaml_emit($configArray);
+    // Generate YAML string
+    $yaml = yaml_emit($configArray);
 
-// Save to secure temporary file
-$tempFile = tempnam(sys_get_temp_dir(), 'namingo-rde-');
-if ($tempFile === false || !chmod($tempFile, 0600) || file_put_contents($tempFile, $yaml, LOCK_EX) === false) {
-    if (is_string($tempFile)) {
+    // Save to secure temporary file
+    $tempFile = tempnam(sys_get_temp_dir(), 'namingo-rde-');
+    if ($tempFile === false || !chmod($tempFile, 0600) || file_put_contents($tempFile, $yaml, LOCK_EX) === false) {
+        if (is_string($tempFile)) {
+            @unlink($tempFile);
+        }
+        $log->error('Failed to create secure temporary escrow configuration.');
+        exit(1);
+    }
+
+    try {
+        exec(__DIR__ . "/escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
+    } finally {
         @unlink($tempFile);
     }
-    $log->error('Failed to create secure temporary escrow configuration.');
-    exit(1);
-}
 
-try {
-    exec(__DIR__ . "/escrow-rde-client -c " . escapeshellarg($tempFile) . " 2>&1", $output, $exitCode);
-} finally {
-    @unlink($tempFile);
-}
+    // Log results
+    foreach ($output as $line) {
+        // Extract Go timestamp
+        if (preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2}\.\d{3})\s+(.*)$/', $line, $matches)) {
+            $goTimeOnly = $matches[1];  // just the time portion
+            $message = $matches[2] . " [{$goTimeOnly}]";
+        } else {
+            $message = $line;
+        }
 
-// Log results
-foreach ($output as $line) {
-    // Extract Go timestamp
-    if (preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2}\.\d{3})\s+(.*)$/', $line, $matches)) {
-        $goTimeOnly = $matches[1];  // just the time portion
-        $message = $matches[2] . " [{$goTimeOnly}]";
-    } else {
-        $message = $line;
+        if (stripos($line, 'error') !== false) {
+            $log->error($message);
+        } elseif (stripos($line, 'expired') !== false) {
+            $log->warning($message);
+        } elseif (stripos($line, 'validation successful') !== false) {
+            $log->info($message);
+        } elseif (stripos($line, 'processed') !== false) {
+            $log->info($message);
+        } elseif (stripos($line, 'terminated successfully') !== false) {
+            $log->info($message);
+        } else {
+            $log->debug($message); // Default catch-all
+        }
     }
 
-    if (stripos($line, 'error') !== false) {
-        $log->error($message);
-    } elseif (stripos($line, 'expired') !== false) {
-        $log->warning($message);
-    } elseif (stripos($line, 'validation successful') !== false) {
-        $log->info($message);
-    } elseif (stripos($line, 'processed') !== false) {
-        $log->info($message);
-    } elseif (stripos($line, 'terminated successfully') !== false) {
-        $log->info($message);
+    if ($exitCode === 0) {
+        $log->info('Escrow job finished successfully.');
     } else {
-        $log->debug($message); // Default catch-all
+        $log->error("Escrow job failed with exit code: $exitCode", ['output' => $output]);
     }
-}
 
-if ($exitCode === 0) {
-    $log->info('Escrow job finished successfully.');
+    exit($exitCode);
 } else {
-    $log->error("Escrow job failed with exit code: $exitCode", ['output' => $output]);
-}
+    try {
+        $submission = new Submission($config['escrow'], $log);
+        $submission->run(Submission::options([]));
 
-exit($exitCode);
+        $log->info('Escrow job finished successfully.');
+        exit(0);
+    } catch (Throwable $e) {
+        $message = get_class($e) === RuntimeException::class
+            && $e->getFile() === __DIR__ . '/src/Escrow/Submission.php'
+            ? $e->getMessage()
+            : 'Escrow submission failed; check keys, configuration and permissions.';
+
+        $log->error($message);
+        exit(1);
+    }
+}
