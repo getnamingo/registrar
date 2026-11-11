@@ -21,12 +21,6 @@ Display the public key that must be provided to DENIC:
 cat ~/.ssh/denic_escrow.pub
 ```
 
-Do not send or expose the private key:
-
-```text
-~/.ssh/denic_escrow
-```
-
 ### Add the private key to the configuration
 
 Copy the private SSH key to `/opt/registrar/automation`:
@@ -51,20 +45,35 @@ Set `sshPrivateKeyPath` to the full path and filename of the private key, and co
 
 Only provide the public key to DENIC. Do not share the private key.
 
-## 2. Configure GPG encryption for DENIC escrow
+## 2. Configure OpenPGP encryption for DENIC escrow
 
-From **21 January 2027**, DENIC escrow deposits must use RFC 9580-compliant OpenPGP keys. Generate the replacement key with Sequoia PGP rather than GnuPG, upload its public certificate to DENIC, and update the automation configuration as described below.
+Download DENIC’s RFC 9580 public key:
 
-### Install Sequoia PGP
+```bash
+curl -L https://www.denic-services.de/fileadmin/escrow/pgp/Denic-RDE-RFC-9580-Public.asc -o /opt/registrar/escrow/ProviderKey.asc
+```
 
-On Ubuntu 26.04 or Debian 13, install the packaged `sq` command with:
+### Option 1: Built-in key generator
+
+On **Ubuntu 26.04 / Debian 13**, run:
+
+```bash
+php /opt/registrar/bin/escrow_keygen.php
+```
+
+Answer the prompts, then use the generated key paths and passphrase in `automation/config.php` as instructed below. Upload the generated **public certificate only** to the DENIC Services Escrow Control Center.
+
+If the built-in generator fails or you use another operating system version, use Sequoia PGP instead.
+
+### Option 2: Sequoia PGP
+
+Install Sequoia on **Ubuntu 26.04 / Debian 13**:
 
 ```bash
 apt update && apt install -y sq
 ```
 
-> [!IMPORTANT]
-> The `sq` package included with Ubuntu 22.04, Ubuntu 24.04, and Debian 12 is too old to support the required RFC 9580 key profile. For the new DENIC key, use a current Sequoia PGP release.
+On **Ubuntu 22.04 / 24.04 / Debian 12**, install a current release:
 
 ```bash
 apt update && apt install -y \
@@ -85,15 +94,7 @@ apt update && apt install -y \
     && install -m 755 "$HOME/.cargo/bin/sq" /usr/local/bin/sq
 ```
 
-### Generate an RFC 9580 key
-
-Make sure that Sequoia PGP `sq` version 1.3.0 or later is installed:
-
-```bash
-sq --version
-```
-
-Generate a password-protected RFC 9580 key using Ed25519 and X25519:
+Generate the key, replacing the example identity. Enter a strong passphrase when prompted:
 
 ```bash
 sq key generate \
@@ -103,33 +104,18 @@ sq key generate \
     --email "registrar@example.com" \
     --output /opt/registrar/escrow/YourPrivateKey.asc \
     --rev-cert /opt/registrar/escrow/YourPrivateKey.rev
-```
-
-Enter a strong passphrase when prompted. Replace the example registrar name and email address with the appropriate values.
-
-Restrict access to the private key:
-
-```bash
 chmod 600 /opt/registrar/escrow/YourPrivateKey.asc
 ```
 
-### Export and upload the public key
-
-Create a public-only certificate from the generated private key:
+Export the public certificate:
 
 ```bash
 sq key delete --cert-file /opt/registrar/escrow/YourPrivateKey.asc --output /opt/registrar/escrow/YourPublicKey.asc
 ```
 
-Upload `YourPublicKey.asc` to the DENIC Services Escrow Control Center.
+Upload `YourPublicKey.asc` **only** to the DENIC Services Escrow Control Center, then configure the key paths and passphrase as instructed below.
 
-Do not upload or send `YourPrivateKey.asc` or `YourPrivateKey.rev`.
-
-### Download the RFC 9580 DENIC public key
-
-```bash
-curl -L https://www.denic-services.de/fileadmin/escrow/pgp/Denic-RDE-RFC-9580-Public.asc -o /opt/registrar/escrow/ProviderKey.asc
-```
+Keep your private key, revocation certificate and passphrase confidential.
 
 ### Update the configuration
 
@@ -186,14 +172,23 @@ To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit 
 
 ### Send to ICANN
 
-Email the same file to ICANN at:  
-📧 **registrar@icann.org**
+Email the same file to ICANN at: `registrar@icann.org`
 
 Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
 
 After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
 
-## 4. Configure automated backups
+## 4. Enable native PHP escrow submission
+
+In `/opt/registrar/automation/config.php`, add or uncomment `'upload' => 'native'` inside the `'escrow'` array:
+
+```php
+'upload' => 'native',
+```
+
+If `upload` is omitted or commented out, Namingo continues using the DENIC Go client.
+
+## 5. Configure automated backups
 
 Namingo Registrar uses [phpBU](https://www.phpbu.de/) for automated backups.
 
@@ -360,7 +355,7 @@ Check the backup log afterward:
 tail -n 100 /var/log/namingo/backup.log
 ```
 
-## 5. Configure cron failure alerts
+## 6. Configure cron failure alerts
 
 Namingo Registrar can send an email when an automation job exits with an error.
 
@@ -391,7 +386,7 @@ The configured address will receive notifications when scheduled automation jobs
 
 If `cron_alert_email` is not configured, Namingo will fall back to the configured email `reply-to` address when available.
 
-## 6. URS Configuration
+## 7. URS Configuration
 
 Namingo Registrar can process Uniform Rapid Suspension System (URS) notices and automatically maintain the ICANN URS provider PGP keyring.
 
@@ -459,7 +454,7 @@ The table is `namingo_registrar_notifications` for WHMCS and
 `domain_registrar_notification` for FOSSBilling and LOOM. No filesystem
 archive or additional database table is required.
 
-## 7. Restored Names Accuracy hooks
+## 8. Restored Names Accuracy hooks
 
 The [ICANN Restored Names Accuracy Policy](https://www.icann.org/en/contracted-parties/consensus-policies/restored-names-accuracy-policy/restored-names-accuracy-policy-01-01-2020-en) applies when a name is deleted because of false contact data or non-response to registrar inquiries and is later restored from the Redemption Grace Period.
 

@@ -16,6 +16,7 @@
 declare(strict_types=1);
 
 use Registrar\Escrow\EscrowInterface;
+use Registrar\Escrow\Submission;
 
 date_default_timezone_set('UTC');
 
@@ -61,7 +62,12 @@ if ((int)$spec === 2007) {
     $escrowGenerator->generateFull();
     $escrowGenerator->generateHDL();
 } elseif ((int)$spec === 2024) {
+    $log->info('RDE CSV generation started.', [
+        'backend' => $config['escrow']['backend'],
+        'ianaID' => $config['escrow']['ianaID'],
+    ]);
     $escrowGenerator->generateRDE($config['escrow']['ianaID']);
+    $log->info('RDE CSV generation finished.');
 } else {
     $log->error("Error: Escrow specification must be 2007 or 2024.");
     exit(1);
