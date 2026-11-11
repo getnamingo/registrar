@@ -1,5 +1,27 @@
 <?php
-/* Namingo Registrar — SPDX-License-Identifier: MIT */
+
+/*
+ * Namingo Registrar
+ *
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
+ *
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Usage:
+ * php -d memory_limit=512M automation/escrow_submit.php --help
+ * php -d memory_limit=512M automation/escrow_submit.php --dry-run
+ * php -d memory_limit=512M automation/escrow_submit.php --validate-only
+ * php -d memory_limit=512M automation/escrow_submit.php --prepare-only
+ * php -d memory_limit=512M automation/escrow_submit.php --upload-only --date=2026-11-09
+ * php -d memory_limit=512M automation/escrow_submit.php
+ * php -d memory_limit=512M automation/tests/escrow_submit_test.php
+ */
+
 declare(strict_types=1);
 
 use OpenPGP\Common\{Argon2S2K, Config};
@@ -267,6 +289,9 @@ final class EscrowSubmission
                         $key = strtolower($record['domain']);
                         self::check(!isset($domains[$key]), "$where: duplicate domain."); $domains[$key] = true;
                         self::check($record['iana'] === (string)$this->config['ianaID'], "$where: incorrect IANA ID.");
+                        $expiry = $record['expiration-date'];
+                        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s\Z', $expiry, new DateTimeZone('UTC'));
+                        self::check($parsed !== false && $parsed->format('Y-m-d\TH:i:s\Z') === $expiry, "$where: invalid expiration-date.");
                     } else {
                         $key = $record['handle'];
                         self::check(!isset($handles[$key]), "$where: duplicate handle."); $handles[$key] = true;
