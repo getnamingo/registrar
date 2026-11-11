@@ -303,7 +303,7 @@ final class EscrowSubmission
                             self::check(filter_var($value, FILTER_VALIDATE_EMAIL) !== false, "$where: invalid email in $field.");
                         }
                         if (preg_match('/(?:^|-)(?:phone|fax)$/D', $field)) {
-                            self::check((bool)preg_match('/^\+[0-9]{1,3}\.[0-9]+(?:x[0-9]+)?$/D', $value), "$where: invalid RFC5733 telephone in $field.");
+                            self::check((bool)preg_match('/^\+(?:[0-9]{1,3}\.[0-9]+|[1-9][0-9]{1,14})(?:x[0-9]+)?$/D', $value), "$where: invalid telephone in $field.");
                         }
                         if (preg_match('/^(?:rt|tc|ac|bc|prt|ptc|pac|pbc)(?:-[0-9]+)?-handle$/D', $field)) {
                             foreach (explode(' ', $value) as $reference) { $references[$reference] = true; }
