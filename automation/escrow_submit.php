@@ -21,7 +21,9 @@
  */
 
 declare(strict_types=1);
-ini_set('memory_limit', '512M');
+if (ini_parse_quantity((string)ini_get('memory_limit')) < 512 * 1024 * 1024) {
+    ini_set('memory_limit', '512M');
+}
 
 use OpenPGP\Common\{Argon2S2K, Config};
 use OpenPGP\Enum\{AeadAlgorithm, HashAlgorithm, KeyAlgorithm, SymmetricAlgorithm};
@@ -37,10 +39,11 @@ use Psr\Log\LoggerInterface;
 /** Standalone RDE 2025 transport. See escrow_submit.md for limits and onboarding. */
 final class EscrowSubmission
 {
-    // PHP Privacy buffers messages. These deliberately conservative limits are NOT ICANN limits.
-    public const MAX_FILE = 8 * 1024 * 1024;
-    public const MAX_TOTAL = 32 * 1024 * 1024;
-    public const MAX_RECORDS = 100_000;
+    // RDE per-CSV limit; there is no aggregate deposit size or record-count cap.
+    // PHP Privacy buffers one part at a time: check PHP memory before loading it.
+    public const MAX_FILE = 1_000_000_000;
+    // gzip can grow incompressible input; allow framing/signature overhead as well.
+    private const MAX_ENCRYPTED_FILE = self::MAX_FILE + 2 * 1024 * 1024;
     public const HEADER = ['domain', 'expiration-date', 'iana', 'rt-name', 'rt-street',
         'rt-city', 'rt-state', 'rt-zip', 'rt-country', 'rt-phone', 'rt-email', 'bc-name'];
     public const HANDLE_HEADER = ['handle', 'name', 'address', 'state', 'zip', 'city',
@@ -91,12 +94,23 @@ final class EscrowSubmission
         return $id . '_RDE_' . $date;
     }
 
+    private static function checkMemory(int $fileSize = 0): void
+    {
+        $limit = ini_parse_quantity((string)ini_get('memory_limit'));
+        // Conservative estimate for buffered CSV/gzip/OpenPGP copies, plus indexing headroom.
+        $required = memory_get_usage(true) + 16 * $fileSize + 64 * 1024 * 1024;
+        self::check($limit === -1 || $required <= $limit,
+            'Insufficient PHP memory budget. Need approximately ' . (int)ceil($required / 1048576)
+            . ' MiB; increase memory_limit on a host with sufficient RAM, or generate smaller CSV parts.');
+    }
+
     private static function read(string $path, int $limit = self::MAX_FILE): string
     {
         self::check(is_file($path) && !is_link($path) && is_readable($path), 'Missing, unreadable or symlink file: ' . basename($path));
         clearstatcache(true, $path);
         $size = filesize($path);
         self::check($size !== false && $size > 0 && $size <= $limit, 'Empty or oversized file: ' . basename($path));
+        self::checkMemory($size);
         $data = file_get_contents($path, false, null, 0, $limit + 1);
         self::check(is_string($data) && strlen($data) === $size, 'File changed or could not be read: ' . basename($path));
         return $data;
@@ -226,14 +240,12 @@ final class EscrowSubmission
     public function validateSources(array $groups, string $date): array
     {
         $entries = []; $total = 0; $domains = []; $handles = []; $references = [];
-        $recordCount = 0;
         $header = null;
         foreach ($groups as $type => $paths) {
             $header = null;
             foreach (array_values($paths) as $index => $path) {
                 $bytes = self::read($path);
                 $total += strlen($bytes);
-                self::check($total <= self::MAX_TOTAL, 'Deposit exceeds 32 MiB native memory safety limit.');
                 $file = basename($path);
                 $rows = $this->rows($bytes, $file);
                 if ($index === 0) {
@@ -271,7 +283,9 @@ final class EscrowSubmission
                 while ($rows->valid()) {
                     $row = $rows->current();
                     $number = $rowCount++;
-                    self::check(++$recordCount <= self::MAX_RECORDS, 'Deposit exceeds 100,000-record native memory safety limit.');
+                    if (($rowCount % 1024) === 0) {
+                        self::checkMemory(); // Duplicate/reference indexes grow across parts.
+                    }
                     $where = "$file: record " . ($number + 1 + ($index === 0 ? 1 : 0));
                     self::check(count($row) === count($header) && $row !== $header, "$where: column count mismatch or repeated split header.");
                     $record = array_combine($header, $row);
@@ -533,9 +547,10 @@ final class EscrowSubmission
             $expectedManifest .= $entry['sha256'] . '  ' . $entry['name'] . "\n";
             $output = $entry['name'] . '.gz.gpg';
             $expectedFiles[] = $output;
-            $binary = self::read($directory . '/' . $output, self::MAX_FILE + 65536);
+            $binary = self::read($directory . '/' . $output, self::MAX_ENCRYPTED_FILE);
             self::check(hash('sha256', $binary) === ($metadata['files'][$output] ?? ''), 'Prepared ciphertext checksum mismatch.');
             self::envelope($binary, $receiver);
+            unset($binary);
         }
         self::check(isset($groups['full']), 'Prepared deposit has no full file.');
         uksort($groups, static fn($a, $b) => $a === $b ? 0 : ($a === 'full' ? -1 : 1));
