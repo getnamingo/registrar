@@ -13,16 +13,15 @@
  * SPDX-License-Identifier: MIT
  *
  * Usage:
- * php -d memory_limit=512M automation/escrow_submit.php --help
- * php -d memory_limit=512M automation/escrow_submit.php --dry-run
- * php -d memory_limit=512M automation/escrow_submit.php --validate-only
- * php -d memory_limit=512M automation/escrow_submit.php --prepare-only
- * php -d memory_limit=512M automation/escrow_submit.php --upload-only --date=2026-11-09
- * php -d memory_limit=512M automation/escrow_submit.php
- * php -d memory_limit=512M automation/tests/escrow_submit_test.php
+ * php automation/escrow_submit.php --dry-run
+ * php automation/escrow_submit.php --validate-only
+ * php automation/escrow_submit.php --prepare-only
+ * php automation/escrow_submit.php --upload-only --date=2026-11-09
+ * php automation/escrow_submit.php
  */
 
 declare(strict_types=1);
+ini_set('memory_limit', '512M');
 
 use OpenPGP\Common\{Argon2S2K, Config};
 use OpenPGP\Enum\{AeadAlgorithm, HashAlgorithm, KeyAlgorithm, SymmetricAlgorithm};
@@ -157,7 +156,7 @@ final class EscrowSubmission
     private function rows(string $bytes, string $file): Generator
     {
         self::check(preg_match('//u', $bytes) === 1 && !str_starts_with($bytes, "\xef\xbb\xbf"), "$file: expected UTF-8 without BOM.");
-        $count = 0; $row = []; $field = ''; $state = 'start'; $warnedLf = false;
+        $count = 0; $row = []; $field = ''; $state = 'start';
         $length = strlen($bytes);
         for ($i = 0; $i < $length; $i++) {
             $c = $bytes[$i];
@@ -182,10 +181,6 @@ final class EscrowSubmission
                         $i++;
                     } else {
                         self::check(!($this->config['rdeRequireCrlf'] ?? false), "$file: rdeRequireCrlf requires CRLF record separators.");
-                        if (!$warnedLf) {
-                            $this->log->warning("$file: LF record separators accepted; RFC4180 specifies CRLF. Original bytes preserved.");
-                            $warnedLf = true;
-                        }
                     }
                     self::check(++$count <= 1_000_000, "$file: more than 1,000,000 rows.");
                     yield $row; $row = [];
@@ -243,6 +238,9 @@ final class EscrowSubmission
                 $rows = $this->rows($bytes, $file);
                 if ($index === 0) {
                     $header = $rows->current();
+                    if (is_array($header)) {
+                        $header = array_map(static fn($field) => $field === 'rt-mail' ? 'rt-email' : $field, $header);
+                    }
                     $rows->next();
                     self::check(is_array($header) && count(array_unique($header)) === count($header), "$file: invalid header.");
                     foreach ($header as $field) {
@@ -254,13 +252,15 @@ final class EscrowSubmission
                         $defaultHeader[] = $type === 'full' ? 'rt-org' : 'organization';
                     }
                     $expected = $this->config['rdeHeaders'][$type] ?? $defaultHeader;
+                    $expected = array_map(static fn($field) => $field === 'rt-mail' ? 'rt-email' : $field, $expected);
                     self::check(($header[0] ?? '') === ($type === 'full' ? 'domain' : 'handle'), "$file: invalid first header field.");
                     $required = $type === 'full' ? ['domain', 'expiration-date', 'iana'] : ['handle', 'name', 'address', 'city', 'country', 'email', 'phone'];
                     if ($type === 'full') {
                         $required = array_merge($required, in_array('rt-handle', $header, true)
                             ? ['rt-handle'] : ['rt-name', 'rt-street', 'rt-city', 'rt-state', 'rt-zip', 'rt-country', 'rt-phone', 'rt-email']);
                     }
-                    self::check(!array_diff($required, $header), "$file: missing required 2025 header fields.");
+                    $missing = array_diff($required, $header);
+                    self::check(!$missing, "$file: missing required header fields: " . implode(', ', $missing));
                     // CSV alone cannot establish whether an organization was collected.
                     $organizationAvailable = in_array($type === 'full' ? (in_array('rt-handle', $header, true) ? 'rt-handle' : 'rt-org') : 'organization', $header, true);
                     self::check(!$requireOrganization || $organizationAvailable,
