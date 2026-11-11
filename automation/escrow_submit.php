@@ -595,29 +595,36 @@ final class EscrowSubmission
             $sshKey = PublicKeyLoader::loadPrivateKey(self::read((string)$this->config['sshPrivateKeyPath'], 1024 * 1024), $this->config['sshPrivateKeyPassword'] ?? false);
         } catch (Throwable) { throw new RuntimeException('Cannot load SSH private key; check format/passphrase.'); }
         $sftp = $factory ? $factory() : new SFTP((string)$this->config['sshHostname'], (int)($this->config['sshPort'] ?? 22), 30);
+        $sftp->setTimeout(30);
+        $sftp->setPreferredVersion(3);
+        $sftp->disablePathCanonicalization(); // Use the account directory, without REALPATH requests.
         $created = [];
         $temporary = [];
         try {
             $hostKey = $sftp->getServerPublicHostKey();
             self::check(is_string($hostKey) && ($pin === null || hash_equals($pin, PublicKeyLoader::loadPublicKey($hostKey)->toString('OpenSSH'))), 'SFTP host key mismatch.');
             self::check($sftp->login((string)$this->config['sshUsername'], $sshKey), 'SFTP authentication failed.');
+            $this->event('SSH authenticated; initializing SFTP v3.');
+            $sftp->setTimeout(30);
+            self::check($sftp->getNegotiatedVersion() === 3, 'SFTP v3 initialization failed.');
             $this->event('SFTP connected.');
-            self::check($sftp->pwd() !== false, 'SFTP destination unavailable.');
             $sftp->disableStatCache();
-            // DENIC uses the account login directory. Do not invent a remote subdirectory.
-            self::check(is_array($sftp->rawlist('.')), 'Cannot list SFTP destination safely.');
+            // DENIC uses the account login directory.
             foreach ($files as $name) {
+                $this->event('Checking remote file: ' . $name);
                 self::check($sftp->lstat($name) === false, 'Remote deposit file already exists; refusing overwrite.');
             }
             self::write($directory . '/.upload-state.json', json_encode(['state' => 'attempted', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n");
             foreach ($files as $name) {
+                $this->event('Uploading file: ' . $name);
                 $temporary[$name] = '.namingo-' . bin2hex(random_bytes(16));
                 self::check($sftp->lstat($temporary[$name]) === false, 'Remote temporary name collision.');
                 self::check($sftp->put($temporary[$name], $directory . '/' . $name, SFTP::SOURCE_LOCAL_FILE), 'SFTP upload failed; inspect remote status before retry.');
-                self::check($sftp->size($temporary[$name]) === filesize($directory . '/' . $name), 'SFTP remote size mismatch.');
+                $this->event('Checking uploaded size: ' . $name);
+                self::check($sftp->filesize($temporary[$name]) === filesize($directory . '/' . $name), 'SFTP remote size mismatch.');
             }
             foreach ($temporary as $name => $temp) {
-                // Standard SFTP rename has no overwrite flag (phpseclib does not use posix-rename here).
+                $this->event('Finalizing remote file: ' . $name);
                 self::check($sftp->lstat($name) === false && $sftp->rename($temp, $name), 'Remote name conflict or rename failure.');
                 $created[] = $name;
                 $this->event('File uploaded: ' . $name);
@@ -626,7 +633,7 @@ final class EscrowSubmission
             self::check(file_put_contents($state, json_encode(['state' => 'uploaded', 'time' => gmdate(DATE_ATOM)], JSON_THROW_ON_ERROR) . "\n", LOCK_EX) !== false, 'Could not record uploaded state. Reconcile before retry.');
             $this->event('Deposit uploaded. Check DENIC Control Center for acceptance.');
         } catch (Throwable $error) {
-            $reason = get_class($error) === RuntimeException::class && $error->getFile() === __FILE__ ? $error->getMessage() : 'Transport error (details suppressed).';
+            $reason = get_class($error) === RuntimeException::class && $error->getFile() === __FILE__ ? $error->getMessage() : 'SFTP transport error: ' . get_class($error);
             $this->log->error($reason);
             foreach (array_merge($created, array_values($temporary)) as $name) {
                 try { $sftp->delete($name); } catch (Throwable) { /* Reconcile manually after disconnect. */ }
