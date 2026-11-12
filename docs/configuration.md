@@ -188,7 +188,20 @@ In `/opt/registrar/automation/config.php`, add or uncomment `'upload' => 'native
 
 If `upload` is omitted or commented out, Namingo continues using the DENIC Go client.
 
-## 5. Configure automated backups
+## 5. Obtain RRI Rr Credentials
+
+1. Log in to the [ICANN Naming Services Portal (NSP)](https://portal.icann.org/).
+2. Open your registrar profile, click the arrow next to **Manage RDAP URL**, and select **RRI Rr Credentials**.
+3. Whitelist the public IP address of your Namingo Registrar server.
+4. Save the provided username and password for your Namingo configuration.
+
+## 6. Obtain DENIC Escrow API Credentials
+
+1. After completing DENIC escrow onboarding, contact DENIC and request an **Escrow REST API JWT token**.
+2. DENIC will send your credentials in an encrypted ZIP archive and the password separately via SMS.
+3. Decrypt the archive and securely save the JWT token for your Namingo configuration.
+
+## 7. Configure automated backups
 
 Namingo Registrar uses [phpBU](https://www.phpbu.de/) for automated backups.
 
@@ -355,7 +368,7 @@ Check the backup log afterward:
 tail -n 100 /var/log/namingo/backup.log
 ```
 
-## 6. Configure cron failure alerts
+## 8. Configure cron failure alerts
 
 Namingo Registrar can send an email when an automation job exits with an error.
 
@@ -386,7 +399,7 @@ The configured address will receive notifications when scheduled automation jobs
 
 If `cron_alert_email` is not configured, Namingo will fall back to the configured email `reply-to` address when available.
 
-## 7. URS Configuration
+## 9. URS Configuration
 
 Namingo Registrar can process Uniform Rapid Suspension System (URS) notices and automatically maintain the ICANN URS provider PGP keyring.
 
@@ -454,7 +467,7 @@ The table is `namingo_registrar_notifications` for WHMCS and
 `domain_registrar_notification` for FOSSBilling and LOOM. No filesystem
 archive or additional database table is required.
 
-## 8. Restored Names Accuracy hooks
+## 10. Restored Names Accuracy hooks
 
 The [ICANN Restored Names Accuracy Policy](https://www.icann.org/en/contracted-parties/consensus-policies/restored-names-accuracy-policy/restored-names-accuracy-policy-01-01-2020-en) applies when a name is deleted because of false contact data or non-response to registrar inquiries and is later restored from the Redemption Grace Period.
 
