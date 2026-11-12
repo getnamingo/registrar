@@ -365,7 +365,7 @@ try {
     echo "SSH passphrase (KEEP SECRET):      {$directory}/denic_escrow.passphrase\n";
     echo "Configure gpgPrivateKeyPath and sshPrivateKeyPath to the private key paths.\n";
     echo "Set sshPrivateKeyPassword to the CONTENTS of denic_escrow.passphrase (not its path).\n";
-    echo "Move both generated passphrase files into a secure vault after configuring them.\n";
+    echo "Move the SSH passphrase file into a secure vault after configuring it.\n";
 } catch (Throwable $error) {
     if ($directory !== null) {
         foreach ($created as $path) {
