@@ -54,15 +54,9 @@ The recommended way to install Namingo Registrar is with the automated installer
 bash <(wget -qO- https://namingo.org/registrar-install.sh)
 ```
 
-After installation, continue with:
+After installation, follow the [Configuration Guide](docs/configuration.md) to complete your setup.
 
-- [configuration.md](docs/configuration.md) – required post-installation configuration
-
-Platform-specific manuals are available for reference or troubleshooting:
-
-- [install-fossbilling.md](docs/install-fossbilling.md)
-- [install-whmcs.md](docs/install-whmcs.md)
-- [install-custom.md](docs/install-custom.md)
+For additional help, see the installation guides for [FOSSBilling](docs/install-fossbilling.md), [WHMCS](docs/install-whmcs.md), or [custom integrations](docs/install-custom.md).
 
 For migration assistance between **FOSSBilling, WHMCS, or a custom platform**, contact [help@namingo.org](mailto:help@namingo.org).
 
