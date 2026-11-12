@@ -4,6 +4,17 @@
 
 ### Generate the SSH key
 
+The built-in `php bin/escrow_keygen.php` (see section 2) also generates an
+encrypted Ed25519 SSH key, `denic_escrow.pub` for DENIC, and an independent
+`denic_escrow.passphrase` (mode 0600) in its protected output directory.
+Choose **yes** at its optional SSH installation prompt to place the private
+key directly at `/opt/registrar/automation/denic_escrow` (never overwrites).
+Otherwise, use the private key in its generated output directory.
+Set `sshPrivateKeyPassword` to the **contents** of its passphrase file,
+not to the filename. Keep that passphrase in a secure vault.
+
+For manual SSH key generation instead:
+
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/denic_escrow -C "DENIC escrow"
 ```
