@@ -190,6 +190,8 @@ If `upload` is omitted or commented out, Namingo continues using the DENIC Go cl
 3. Whitelist the public IP address of your Namingo Registrar server.
 4. Save the provided username and password for your Namingo configuration.
 
+**Note:** The same RRI Rr credentials and IP allowlisting are also valid for ICANN MoSAPI v2. To enable MoSAPI functionality, configure these credentials separately in the respective Namingo billing module (FOSSBilling, WHMCS, or another supported platform).
+
 ## 6. Obtain DENIC Escrow API Credentials
 
 1. After completing DENIC escrow onboarding, contact DENIC and request an **Escrow REST API JWT token**.
