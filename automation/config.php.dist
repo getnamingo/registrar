@@ -64,14 +64,14 @@ $config = array(
         'multi' => false,
         'useFileSystemCache' => false,
 
-        'gpgPrivateKeyPath' => '/opt/registrar/escrow/YourPrivateKey.asc',
+        'gpgPrivateKeyPath' => '/opt/registrar/escrow/denic_pgp_private.asc',
         'gpgPrivateKeyPass' => 'gpgPrivateKeyPass',
         'gpgReceiverPubKeyPath' => '/opt/registrar/escrow/ProviderKey.asc',
 
         'sshHostname' => 'escrow.denic-services.de',
         'sshPort' => 22,
         'sshUsername' => 'sshUsername',
-        'sshPrivateKeyPath' => '/opt/registrar/escrow/sshPrivateKey',
+        'sshPrivateKeyPath' => '/opt/registrar/escrow/denic_escrow',
         'sshPrivateKeyPassword' => 'sshPrivateKeyPassword',
         // 'sshHostPublicKeyPath' => 'examples/keys/denic.hostkey',
     ),

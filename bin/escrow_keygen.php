@@ -35,13 +35,13 @@ if (PHP_SAPI !== 'cli') {
 }
 if (in_array('--help', $argv, true) || in_array('-h', $argv, true)) {
     echo <<<'HELP'
-Namingo Registrar OpenPGP key generator (RFC 9580)
+Namingo Registrar OpenPGP (RFC 9580) + SSH Ed25519 key generator
 
 Usage:
   php escrow_keygen.php
 
-Interactive prompts collect registrar name, email, key lifetime and a parent
-output directory. A NEW private directory is created for every keypair.
+Interactive prompts collect registrar name, email, key lifetime and an existing
+output directory (default: /opt/registrar/escrow). Existing keys are never overwritten.
 
 Passphrase choices:
   [1] Generate a random 256-bit passphrase and save it to a mode-0600 file.
@@ -49,13 +49,15 @@ Passphrase choices:
       local file after verifying that it is stored safely.
   [2] Read an existing passphrase from a regular mode-0600 file (no echo).
 
-Outputs (in a new mode-0700 directory):
-  YourPrivateKey.asc      Encrypted private OpenPGP key (mode 0600)
-  YourPublicKey.asc       Public OpenPGP certificate (mode 0644)
-  YourPrivateKey.rev.asc  PRE-SIGNED REVOKED public certificate (mode 0600);
-                          NEVER upload unless you intend to revoke the key.
-  YourPrivateKey.passphrase  Only with randomly generated passphrase (0600)
-  FINGERPRINT.txt         Public metadata (mode 0644)
+Outputs (in the selected directory; default /opt/registrar/escrow):
+  denic_pgp_private.asc     Encrypted OpenPGP private key (0600)
+  denic_pgp_public.asc      Public OpenPGP certificate for DENIC (0644)
+  denic_pgp_revocation.asc  PRE-SIGNED REVOKED certificate (0600); KEEP SECRET
+  denic_pgp.passphrase      Only with randomly generated PGP passphrase (0600)
+  denic_pgp_fingerprint.txt Public metadata (0644)
+  denic_escrow              Encrypted SSH Ed25519 private key (0600)
+  denic_escrow.pub          SSH public key for DENIC (0644)
+  denic_escrow.passphrase   Independent random SSH passphrase (0600)
 HELP;
     echo "\n";
     exit(0);
@@ -205,10 +207,9 @@ try {
         if ($days < 0 || $days > 3650) echo "Choose a number from 0 to 3650.\n";
     } while ($days < 0 || $days > 3650);
 
-    $home = getenv('HOME');
-    $defaultParent = is_string($home) && is_dir($home) ? $home : getcwd();
+    $defaultParent = '/opt/registrar/escrow';
     do {
-        $parentInput = promptValue('Parent directory for a NEW protected key directory', $defaultParent);
+        $parentInput = promptValue('Escrow key output directory', $defaultParent);
         $parent = realpath($parentInput);
         if ($parent === false || !is_dir($parent) || !is_writable($parent)) {
             echo "Choose an existing writable directory.\n";
@@ -233,14 +234,29 @@ try {
         $passphrase = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
     }
 
+    // Fail before generating either keypair if any destination already exists.
+    $names = [
+        'denic_pgp_private.asc', 'denic_pgp_public.asc', 'denic_pgp_revocation.asc',
+        'denic_pgp_fingerprint.txt', 'denic_escrow', 'denic_escrow.pub',
+        'denic_escrow.passphrase',
+    ];
+    if ($source === '1') $names[] = 'denic_pgp.passphrase';
+    foreach ($names as $fileName) {
+        $filePath = $parent . DIRECTORY_SEPARATOR . $fileName;
+        if (file_exists($filePath) || is_link($filePath)) {
+            throw new RuntimeException("Refusing to overwrite existing key file: {$filePath}");
+        }
+    }
+
     $keyUserID = "{$name} <{$email}>";
     $expiry = $days === 0 ? 'never' : gmdate('Y-m-d', time() + $days * 86400) . ' UTC';
     echo "\nKey ID:     {$keyUserID}\n";
     echo "Algorithms: Ed25519 signing + X25519 encryption; OpenPGP v6\n";
     echo "Expiry:     {$expiry}\n";
-    echo "Output:     new directory under {$parent}\n";
+    echo "Output:     {$parent} (refuses to overwrite existing files)\n";
     echo "Secret:     " . ($source === '1' ? 'randomly generated, saved with mode 0600' : 'existing protected file') . "\n";
-    $confirm = strtolower(promptValue('Generate key now? Type YES to proceed'));
+    echo "SSH:        Ed25519 (separate encrypted key and passphrase)\n";
+    $confirm = strtolower(promptValue('Generate keys now? Type YES to proceed'));
     if ($confirm !== 'yes') {
         echo "Cancelled; no files created.\n";
         exit(0);
@@ -292,52 +308,61 @@ try {
     }
     $revokedArmor = portableKeyArmor($revocation, ArmorType::PublicKey);
 
-    $directory = $parent . DIRECTORY_SEPARATOR . 'denic-keys-' . gmdate('Ymd-His') . '-' . bin2hex(random_bytes(4));
-    if (!@mkdir($directory, 0700, false)) {
-        throw new RuntimeException('Could not create a new private output directory.');
-    }
-    if (!@chmod($directory, 0700)) {
-        throw new RuntimeException('Could not set directory permissions.');
+    // Independent SSH passphrase; never reuse the OpenPGP passphrase.
+    $sshPassphrase = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+    $sshKey = \phpseclib3\Crypt\EC::createKey('Ed25519');
+    $sshPrivate = $sshKey->withPassword($sshPassphrase)->toString('OpenSSH', ['comment' => 'DENIC escrow']);
+    $sshPublic = $sshKey->getPublicKey()->toString('OpenSSH', ['comment' => 'DENIC escrow']) . "\n";
+    $sshCheck = \phpseclib3\Crypt\PublicKeyLoader::loadPrivateKey($sshPrivate, $sshPassphrase);
+    if ($sshCheck->getPublicKey()->toString('OpenSSH', ['comment' => 'DENIC escrow']) !== trim($sshPublic)) {
+        throw new RuntimeException('SSH key serialization or unlock self-check failed.');
     }
 
+    $directory = $parent;
+
     $files = [
-        'YourPrivateKey.asc' => [$privateArmor, 0600],
-        'YourPublicKey.asc' => [$publicArmor, 0644],
-        'YourPrivateKey.rev.asc' => [$revokedArmor, 0600],
-        'FINGERPRINT.txt' => [
+        'denic_pgp_private.asc' => [$privateArmor, 0600],
+        'denic_pgp_public.asc' => [$publicArmor, 0644],
+        'denic_pgp_revocation.asc' => [$revokedArmor, 0600],
+        'denic_escrow' => [$sshPrivate, 0600],
+        'denic_escrow.pub' => [$sshPublic, 0644],
+        'denic_escrow.passphrase' => [$sshPassphrase . "\n", 0600],
+        'denic_pgp_fingerprint.txt' => [
             "Identity: {$keyUserID}\nOpenPGP: RFC 9580, v6\nPrimary: Ed25519\nEncryption subkey: X25519\nFingerprint (primary): {$fingerprint}\nExpires: {$expiry}\n",
             0644,
         ],
     ];
     if ($source === '1') {
-        $files['YourPrivateKey.passphrase'] = [$passphrase . "\n", 0600];
+        $files['denic_pgp.passphrase'] = [$passphrase . "\n", 0600];
     }
     foreach ($files as $fileName => [$data, $mode]) {
         $filePath = $directory . DIRECTORY_SEPARATOR . $fileName;
         createFile($filePath, $data, $mode, $created);
     }
 
-    echo "\nSUCCESS: keypair generated and verified locally.\n";
+    echo "\nSUCCESS: OpenPGP and SSH keypairs generated and verified locally.\n";
     echo "Fingerprint: {$fingerprint}\n";
-    echo "Public certificate (upload to DENIC): {$directory}/YourPublicKey.asc\n";
-    echo "Private key (NEVER upload):          {$directory}/YourPrivateKey.asc\n";
-    echo "Revocation certificate (KEEP SECRET): {$directory}/YourPrivateKey.rev.asc\n";
+    echo "Public certificate (upload to DENIC): {$directory}/denic_pgp_public.asc\n";
+    echo "Private key (NEVER upload):          {$directory}/denic_pgp_private.asc\n";
+    echo "Revocation certificate (KEEP SECRET): {$directory}/denic_pgp_revocation.asc\n";
     if ($source === '1') {
-        echo "Passphrase (KEEP SECRET):             {$directory}/YourPrivateKey.passphrase\n";
+        echo "Passphrase (KEEP SECRET):             {$directory}/denic_pgp.passphrase\n";
         echo "IMPORTANT: move the passphrase into a separate password vault, then securely remove the local passphrase file.\n";
     }
-    echo "Configure gpgPrivateKeyPath to the private key path.\n";
+    echo "SSH public key (provide to DENIC): {$directory}/denic_escrow.pub\n";
+    echo "SSH private key (KEEP SECRET):     {$directory}/denic_escrow\n";
+    echo "SSH passphrase (KEEP SECRET):      {$directory}/denic_escrow.passphrase\n";
+    echo "Configure gpgPrivateKeyPath and sshPrivateKeyPath to the private key paths.\n";
+    echo "Set sshPrivateKeyPassword to the CONTENTS of denic_escrow.passphrase (not its path).\n";
+    echo "Move the SSH passphrase file into a secure vault after configuring it.\n";
 } catch (Throwable $error) {
-    if ($directory !== null) {
-        foreach ($created as $path) {
-            if (is_file($path)) @unlink($path);
-        }
-        @rmdir($directory);
+    foreach ($created as $path) {
+        if (is_file($path)) @unlink($path);
     }
     // Avoid embedding any file contents or passphrase in exception output.
     fwrite(STDERR, "ERROR: key generation or validation failed (" . get_class($error) . ").\n");
     fwrite(STDERR, "No existing key files were overwritten. Verify dependencies, permissions and your input.\n");
     exit(1);
 } finally {
-    unset($passphrase);
+    unset($passphrase, $sshPassphrase);
 }
