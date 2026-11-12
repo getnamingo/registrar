@@ -1,0 +1,223 @@
+#!/usr/bin/env php
+<?php
+
+/*
+ * Namingo Registrar
+ *
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
+ *
+ * Licensed under the MIT License.
+ * See the LICENSE file distributed with this software for the full license text.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+declare(strict_types=1);
+
+use Namingo\DenicStatus\Api;
+use Namingo\DenicStatus\Monitor;
+use Namingo\DenicStatus\Output;
+use Namingo\DenicStatus\Rri;
+
+function help(): void
+{
+    echo <<<'TEXT'
+DENIC Escrow Status CLI 1.2.3 (DENIC + direct ICANN RRI, read-only)
+
+Usage:
+  php bin/denic-escrow-status --iana=3971
+  php bin/denic-escrow-status --iana=3971 --env=ote --json
+  php bin/denic-escrow-status --uuid=<operator-uuid> --iana=3971
+  php bin/denic-escrow-status --iana=3971 --report=denic:<deposit-id>
+  php bin/denic-escrow-status --iana=3971 --report=icann:<communication-id>
+
+Options:
+  --iana=ID          IANA ID (defaults to DENIC_IANA_ID in .env)
+  --uuid=UUID        Operator UUID; use per-operator list endpoints (optional)
+  --env=production   production (default) or ote; .env DENIC_ESCROW_ENV
+  --limit=5          Number of distinct upload days shown, 1-20 (default 5)
+  --no-reports       No per-deposit reports or RRI lookups (fast DENIC list only)
+  --no-rri           Disable direct ICANN RRI lookups for this invocation
+  --check-rri        Test RRI registrar summary and direct DEA-notification access (DENIC JWT not needed)
+  --rri-date=DATE    RRI date for --check-rri, YYYY-MM-DD (default yesterday UTC)
+  --verbose          Show communication table, status evidence and date-field names
+  --json             JSON instead of aligned tables (no raw sensitive report content)
+  --report=TYPE:ID   Output one raw 'plain' report (TYPE=denic or icann)
+  --strict           Exit 2 for DENIC rejection, daily ICANN failure without success, or exact RRI failure
+  --require-accepted Exit 3 unless both original DENIC/communication statuses are ACCEPTED
+  --require-rri-pass Exit 3 unless all displayed deposits have an exact RRI DVPN match
+  --help             Show this help
+
+Environment:
+  Copy .env.example to .env, fill DENIC_ESCROW_JWT, DENIC_IANA_ID and optionally
+  ICANN_RRI_USERNAME, ICANN_RRI_PASSWORD, ICANN_RRI_BASE_URL.
+  ICANN uses HTTP Basic Auth and an IP allowlist; no ICANN credentials = RRI NOT SET.
+
+Exit codes: 0=success, 1=config/API/schema error, 2=explicit rejection with --strict,
+            3=not proven accepted with --require-accepted or --require-rri-pass.
+
+Important: DENIC API v1.1 draft does not publish JSON response/status schemas.
+A day-only RRI DVPN is shown as PASS (DAY), not as an exact PASS.
+TEXT;
+    echo "\n";
+}
+
+function options(array $argv): array
+{
+    $result = [];
+    foreach (array_slice($argv, 1) as $arg) {
+        if (!str_starts_with($arg, '--')) {
+            throw new InvalidArgumentException('Unexpected argument ' . $arg);
+        }
+        [$key, $value] = array_pad(explode('=', substr($arg, 2), 2), 2, true);
+        if (!in_array($key, ['iana', 'uuid', 'env', 'limit', 'no-reports', 'no-rri', 'check-rri', 'rri-date', 'verbose', 'json', 'report', 'strict', 'require-accepted', 'require-rri-pass', 'help'], true)) {
+            throw new InvalidArgumentException('Unknown option: --' . $key);
+        }
+        if (isset($result[$key])) {
+            throw new InvalidArgumentException('Repeated option: --' . $key);
+        }
+        $flags = ['no-reports', 'no-rri', 'check-rri', 'verbose', 'json', 'strict', 'require-accepted', 'require-rri-pass', 'help'];
+        if (in_array($key, $flags, true) && $value !== true) {
+            throw new InvalidArgumentException('--' . $key . ' must not have a value.');
+        }
+        if (!in_array($key, $flags, true) && ($value === true || trim((string) $value) === '')) {
+            throw new InvalidArgumentException('--' . $key . ' requires a value.');
+        }
+        $result[$key] = $value;
+    }
+    return $result;
+}
+
+try {
+    $o = options($argv);
+    if (isset($o['help'])) {
+        help();
+        exit(0);
+    }
+    $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+    if (!is_file($autoload)) {
+        throw new RuntimeException('Dependencies missing. Run: composer install --no-dev --prefer-dist');
+    }
+    require $autoload;
+    Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
+    // Real process env takes precedence; phpdotenv createImmutable populates $_ENV.
+    $setting = static function (string $name): string {
+        $external = getenv($name);
+        return $external !== false ? $external : (string) ($_ENV[$name] ?? '');
+    };
+    $iana = isset($o['iana']) ? (string) $o['iana'] : ($setting('DENIC_IANA_ID') ?: null);
+    $uuid = isset($o['uuid']) ? (string) $o['uuid'] : ($setting('DENIC_OPERATOR_UUID') ?: null);
+    $env = (string) ($o['env'] ?? ($setting('DENIC_ESCROW_ENV') ?: 'production'));
+    $limit = filter_var((string) ($o['limit'] ?? '5'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 20]]);
+    if ($limit === false) {
+        throw new InvalidArgumentException('--limit must be between 1 and 20.');
+    }
+    if ($iana === null && $uuid === null) {
+        throw new InvalidArgumentException('Provide --iana=ID and/or --uuid=UUID to scope records to your registrar.');
+    }
+    if ($iana !== null && !preg_match('/^\d{1,12}$/', $iana)) {
+        throw new InvalidArgumentException('--iana must contain digits only.');
+    }
+    if ($uuid !== null && !preg_match('/^[A-Za-z0-9._:-]{1,128}$/', $uuid)) {
+        throw new InvalidArgumentException('Invalid operator UUID.');
+    }
+    $rri = null;
+    if (!isset($o['no-rri'])) {
+        $user = $setting('ICANN_RRI_USERNAME');
+        $password = $setting('ICANN_RRI_PASSWORD');
+        $url = $setting('ICANN_RRI_BASE_URL');
+        if ($user !== '' || $password !== '') {
+            if ($user === '' || $password === '' || $url === '') {
+                throw new RuntimeException('ICANN RRI requires ICANN_RRI_USERNAME, ICANN_RRI_PASSWORD and ICANN_RRI_BASE_URL.');
+            }
+            if ($env === 'ote' && strtolower(rtrim($url, '/')) === 'https://rr-api.icann.org') {
+                throw new RuntimeException('DENIC OTE selected, but ICANN RRI URL is production. Set your ICANN-issued RRI OT&E URL or use --no-rri.');
+            }
+            $rri = new Rri($user, $password, $url);
+        }
+    }
+    if (isset($o['check-rri'])) {
+        if ($rri === null || $iana === null) {
+            throw new RuntimeException('--check-rri requires IANA ID and RRI username/password in .env.');
+        }
+        $date = (string)($o['rri-date'] ?? gmdate('Y-m-d', time() - 86400));
+        $checks = $rri->checkAccess($iana, $date);
+        if (isset($o['json'])) {
+            echo json_encode(['iana' => $iana, 'date' => $date, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), "\n";
+        } else {
+            echo "ICANN RRI access check | IANA $iana | date $date\n";
+            foreach ($checks as $label => $check) {
+                echo "  ", str_pad($label, 20), ' ', str_pad((string)$check['code'], 3), ' ', $check['detail'], "\n";
+            }
+            echo "403: check the NSP RRI Rr Credentials allowed outgoing IPv4 AND IPv6, plus account permissions.\n";
+        }
+        $ok = true;
+        foreach ($checks as $check) {
+            if ($check['status'] !== 'OK') {
+                $ok = false;
+            }
+        }
+        exit($ok ? 0 : 1);
+    }
+    $api = new Api($setting('DENIC_ESCROW_JWT'), $env);
+    if (isset($o['require-rri-pass']) && $rri === null) {
+        throw new RuntimeException('--require-rri-pass requires configured ICANN RRI credentials.');
+    }
+    if (isset($o['report'])) {
+        if (!preg_match('/^(denic|icann):([A-Za-z0-9._:-]{1,128})$/', (string) $o['report'], $parts)) {
+            throw new InvalidArgumentException('Expected --report=denic:<ID> or --report=icann:<ID>.');
+        }
+        $report = $parts[1] === 'denic' ? $api->depositReport($parts[2]) : $api->communicationReport($parts[2]);
+        if ($report === null) {
+            throw new RuntimeException('Report unavailable (HTTP 404); this does not prove rejection.');
+        }
+        echo $report, str_ends_with($report, "\n") ? '' : "\n";
+        exit(0);
+    }
+    $result = (new Monitor($api))->run($iana, $uuid, $limit, !isset($o['no-reports']), $rri, isset($o['verbose']));
+    $result['environment'] = $env;
+    if (isset($o['json'])) {
+        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR), "\n";
+    } else {
+        echo Output::table($result, isset($o['verbose']));
+    }
+    if (isset($o['strict'])) {
+        foreach ($result['deposits'] as $d) {
+            if ($d['denic']['value'] === 'REJECTED' || in_array($d['icann']['value'], ['REJECTED', 'FAILED'], true)
+                || in_array($d['rri']['value'], ['FAIL', 'MISSING'], true)) {
+                exit(2);
+            }
+        }
+        // Historical failed retries must not override the successful
+        // communication chosen for the day in the main table.
+    }
+    if (isset($o['require-accepted'])) {
+        foreach ($result['deposits'] as $d) {
+            if ($d['denic']['value'] !== 'ACCEPTED' || $d['icann']['value'] !== 'ACCEPTED'
+                || $d['match'] !== 'deposit ID') {
+                exit(3);
+            }
+        }
+        if ($result['deposits'] === []) {
+            exit(3);
+        }
+    }
+    if (isset($o['require-rri-pass'])) {
+        if ($result['deposits'] === []) {
+            exit(3);
+        }
+        foreach ($result['deposits'] as $d) {
+            if ($d['rri']['value'] !== 'PASS') {
+                exit(3);
+            }
+        }
+    }
+    if ($result['warnings'] !== []) {
+        exit(1);
+    }
+} catch (Throwable $e) {
+    fwrite(STDERR, 'Error: ' . $e->getMessage() . "\n");
+    exit(1);
+}
