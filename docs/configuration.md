@@ -1,71 +1,45 @@
 # Namingo Registrar: Configuration Guide
 
-## 1. Generate an SSH key for DENIC escrow
+Complete the following steps after installing Namingo Registrar.
 
-The built-in `php /opt/registrar/bin/escrow_keygen.php` generates both the
-OpenPGP and SSH Ed25519 keypairs directly in `/opt/registrar/escrow/`
-(the default output directory). It refuses to overwrite any existing keys.
-Both private keys are encrypted using independent passphrases, with generated
-passphrases saved in separate mode-0600 files. See section 2 for usage.
+## 1. DENIC Data Escrow and ICANN RRI
 
-For manual SSH generation instead, ensure the target files do not already exist:
+### 1.1. Registration and Agreement
+
+Start by [registering with DENIC Services](https://www.denic-services.de/en/data-escrow/data-escrow-request) and completing the contractual onboarding process.
+
+Review the [Registrar Data Escrow Agreement](https://www.icann.org/en/system/files/files/denic-rde-template-12sep23-en.pdf) and follow DENIC's instructions to complete and electronically sign the required documents.
+
+### 1.2. Access the DENIC Control Center
+
+DENIC will provide access to its [Control Center](https://escrow.denic-services.de/) during contractual onboarding.
+
+After signing the agreement, you will receive instructions to continue with technical onboarding. Complete the required account and service settings in the portal.
+
+### 1.3. Generate and Register Your Keys
+
+#### Generate keys using Namingo
+
+Namingo includes a built-in generator for both OpenPGP and SSH Ed25519 keys:
+
+```bash
+php /opt/registrar/bin/escrow_keygen.php
+```
+
+Follow the prompts. By default, keys are saved in `/opt/registrar/escrow/`. Existing keys will never be overwritten.
+
+#### Manual Key Generation
+
+If the built-in generator is unavailable or fails on your system, use the manual key generation instructions below.
+
+##### SSH generation
 
 ```bash
 ssh-keygen -t ed25519 -f /opt/registrar/escrow/denic_escrow -C "DENIC escrow"
 chmod 600 /opt/registrar/escrow/denic_escrow
 ```
 
-Provide only `/opt/registrar/escrow/denic_escrow.pub` to DENIC. Keep the
-private key and any passphrase secret.
-
-### Update the SSH configuration
-
-In `/opt/registrar/automation/config.php`, use:
-
-```php
-'sshPrivateKeyPath' => '/opt/registrar/escrow/denic_escrow',
-'sshPrivateKeyPassword' => 'contents-of-denic_escrow.passphrase',
-```
-
-For the built-in generator, copy the **contents**, not the filename, of
-`/opt/registrar/escrow/denic_escrow.passphrase` into this setting, then
-store the passphrase securely. If you generated an unencrypted SSH key
-manually, comment out `sshPrivateKeyPassword` instead.
-
-## 2. Configure OpenPGP encryption for DENIC escrow
-
-Download DENIC’s RFC 9580 public key:
-
-```bash
-curl -L https://www.denic-services.de/fileadmin/escrow/pgp/Denic-RDE-RFC-9580-Public.asc -o /opt/registrar/escrow/ProviderKey.asc
-```
-
-### Option 1: Built-in key generator
-
-On **Ubuntu 26.04 / Debian 13**, run:
-
-```bash
-php /opt/registrar/bin/escrow_keygen.php
-```
-
-Choose `/opt/registrar/escrow` as the output directory (the default). The
-script saves both keypairs there with stable filenames, without overwriting
-any existing key files. Upload **`denic_pgp_public.asc` only** to the
-DENIC Services Escrow Control Center, along with the separate SSH public key
-`denic_escrow.pub` as required. Update the local configuration with both
-private key paths and the **contents** of their passphrase files.
-
-If the built-in generator fails or you use another operating system version, use Sequoia PGP instead.
-
-### Option 2: Sequoia PGP
-
-Install Sequoia on **Ubuntu 26.04 / Debian 13**:
-
-```bash
-apt update && apt install -y sq
-```
-
-On **Ubuntu 22.04 / 24.04 / Debian 12**, install a current release:
+##### PGP key
 
 ```bash
 apt update && apt install -y \
@@ -105,100 +79,130 @@ Export the public certificate:
 sq key delete --cert-file /opt/registrar/escrow/denic_pgp_private.asc --output /opt/registrar/escrow/denic_pgp_public.asc
 ```
 
-Upload `denic_pgp_public.asc` **only** to the DENIC Services Escrow Control Center, then configure the key paths and passphrase as instructed below.
+#### Register the public keys in the DENIC Control Center
 
-Keep your private key, revocation certificate and passphrase confidential.
+In the DENIC Control Center, register:
 
-### Update the configuration
+- **PGP Key:** Upload `denic_pgp_public.asc` for deposit signing.
+- **SSH Keys:** Add the contents of `denic_escrow.pub` for SFTP authentication.
 
-Open the configuration file:
+Keep all private keys, passphrases and revocation certificates secure. Never upload them to DENIC.
+
+### 1.4. Configure Namingo
+
+Download DENIC's public OpenPGP encryption key:
 
 ```bash
-nano /opt/registrar/automation/config.php
+curl -L https://www.denic-services.de/fileadmin/escrow/pgp/Denic-RDE-RFC-9580-Public.asc -o /opt/registrar/escrow/ProviderKey.asc
 ```
 
-Set the RDE specification to `2024` and update the key paths and passphrase:
+Update `/opt/registrar/automation/config.php` with the generated private key paths, their passphrases, your IANA ID and the SFTP credentials provided by DENIC.
+
+Namingo supports native PHP escrow submission and the legacy DENIC Go client. To use the recommended native PHP implementation, add `'upload' => 'native'` to the `'escrow'` configuration array. If omitted or commented out, the Go client remains the default.
 
 ```php
+'upload' => 'native', // Optional; defaults to the DENIC Go client.
+
+'ianaID' => 1234, // Replace with your IANA ID
+'compressAndEncrypt' => true,
+'uploadFiles' => true,
 'specification' => '2024',
+
 'gpgPrivateKeyPath' => '/opt/registrar/escrow/denic_pgp_private.asc',
-'gpgPrivateKeyPass' => 'your-private-key-passphrase',
+'gpgPrivateKeyPass' => 'contents-of-denic_pgp.passphrase',
 'gpgReceiverPubKeyPath' => '/opt/registrar/escrow/ProviderKey.asc',
+
+'sshHostname' => 'escrow.denic-services.de',
+'sshPort' => 22,
+'sshUsername' => 'your-denic-username',
+'sshPrivateKeyPath' => '/opt/registrar/escrow/denic_escrow',
+'sshPrivateKeyPassword' => 'contents-of-denic_escrow.passphrase',
 ```
 
-Replace `your-private-key-passphrase` with the Sequoia passphrase or the
-**contents** of `denic_pgp.passphrase` created by the built-in generator.
-These filenames are defaults for new installations; update an existing
-`automation/config.php` manually if migrating from older key paths.
+Replace the passphrase placeholders with the actual contents of the generated `.passphrase` files, or the passphrases entered during manual key generation. If your SSH key has no passphrase, comment out `sshPrivateKeyPassword`.
 
-Keep the private key and its passphrase confidential.
+Existing installations should update their key paths manually if migrating from older filenames.
 
-## 3. Submitting the Header Mapping File:
+### 1.5. Submit the Header Mapping File
 
-To comply with ICANN Registrar Data Escrow (RDE) Specification, you must submit your Header Mapping File to both DENIC (your DEA) and ICANN.
+Before your first escrow deposit, submit the Header Mapping File to both DENIC and ICANN. This file describes how Namingo's CSV fields correspond to the ICANN RDE specification.
 
-### Upload to DENIC
+#### Upload to DENIC
 
-1. Visit the DENIC escrow portal:  
-   [https://escrow.denic-services.de/icann-header-mapping](https://escrow.denic-services.de/icann-header-mapping)
+Open the [DENIC Header Mapping Portal](https://escrow.denic-services.de/icann-header-mapping) and upload a CSV file with the following mapping:
 
-2. Log in with your credentials.
-
-3. Upload your Header Mapping File in CSV format.  
-   Use the structure below:
-
-    ```csv
-    ICANN RDE Spec,Field Name,Abbreviation
-    8.1.1,domain,domainname
-    8.1.2,expiration-date,expire
-    8.1.3,iana,ianaid
-    8.1.4,rt-name,rt-name
-    8.1.5,rt-street,rt-street
-    8.1.6,rt-city,rt-city
-    8.1.7,rt-state,rt-state
-    8.1.8,rt-zip,rt-zip
-    8.1.9,rt-country,rt-country
-    8.1.10,rt-phone,rt-phone
-    8.1.11,rt-email,rt-mail
-    3.4.1.3,bc-name,bc-name
-    ```
-
-4. Confirm the upload was successful.
-
-### Send to ICANN
-
-Email the same file to ICANN at: `registrar@icann.org`
-
-Include your registrar name and IANA ID in the email subject or body to help them identify your submission.
-
-After submitting to both DENIC and ICANN, you can proceed with regular data escrow deposit generation.
-
-## 4. Enable native PHP escrow submission
-
-In `/opt/registrar/automation/config.php`, add or uncomment `'upload' => 'native'` inside the `'escrow'` array:
-
-```php
-'upload' => 'native',
+```csv
+ICANN RDE Spec,Field Name,Abbreviation
+8.1.1,domain,domainname
+8.1.2,expiration-date,expire
+8.1.3,iana,ianaid
+8.1.4,rt-name,rt-name
+8.1.5,rt-street,rt-street
+8.1.6,rt-city,rt-city
+8.1.7,rt-state,rt-state
+8.1.8,rt-zip,rt-zip
+8.1.9,rt-country,rt-country
+8.1.10,rt-phone,rt-phone
+8.1.11,rt-email,rt-mail
+3.4.1.3,bc-name,bc-name
 ```
 
-If `upload` is omitted or commented out, Namingo continues using the DENIC Go client.
+#### Submit to ICANN
 
-## 5. Obtain RRI Rr Credentials
+Send the same CSV file to `registrar@icann.org`, including your registrar name and IANA ID.
 
-1. Log in to the [ICANN Naming Services Portal (NSP)](https://portal.icann.org/).
-2. Open your registrar profile, click the arrow next to **Manage RDAP URL**, and select **RRI Rr Credentials**.
-3. Whitelist the public IP address of your Namingo Registrar server.
-4. Save the provided username and password for your Namingo configuration.
+### 1.6. Activate Automated Escrow Deposits
 
-**Note:** The same RRI Rr credentials and IP allowlisting are also valid for ICANN MoSAPI v2. To enable MoSAPI functionality, configure these credentials separately in the respective Namingo billing module (FOSSBilling, WHMCS, or another supported platform).
+Before registering your first domain, ensure that Namingo's automation scheduler is running and escrow generation and uploading are enabled in `config.php`.
 
-## 6. Obtain DENIC Escrow API Credentials
+Escrow deposits are scheduled automatically through `automation/cron.php`, **every Friday at 17:00 UTC by default**.
 
-1. After completing DENIC escrow onboarding, contact DENIC and request an **Escrow REST API JWT token**.
-2. DENIC will send your credentials in an encrypted ZIP archive and the password separately via SMS.
-3. Decrypt the archive and securely save the JWT token for your Namingo configuration.
+Once your first domain is registered, ensure that the required deposit is submitted to DENIC within the applicable deadline. Do not wait for the next scheduled run if an earlier submission is required.
 
-## 7. Configure automated backups
+Monitor `/var/log/namingo/escrow.log` and confirm successful acceptance by DENIC.
+
+### 1.7. Obtain ICANN RRI Credentials
+
+Log in to the [ICANN Naming Services Portal (NSP)](https://portal.icann.org/), open your registrar profile, and select **RRI Rr Credentials** from the menu next to **Manage RDAP URL**.
+
+Whitelist your server's public IP address and securely save the provided username and password.
+
+**Note:** The same credentials and IP allowlisting are valid for ICANN MoSAPI v2. Configure them in the respective Namingo billing module (FOSSBilling, WHMCS, or another supported platform) to enable MoSAPI monitoring.
+
+### 1.8. Optional: Escrow Status Monitor (Beta)
+
+Namingo includes a standalone, read-only utility for monitoring escrow deposits and their acceptance status through DENIC's REST API and ICANN RRI.
+
+To enable DENIC monitoring, request an **Escrow API JWT token** from DENIC after completing onboarding. DENIC will provide the credentials in an encrypted ZIP archive, with the password sent separately by SMS.
+
+Install the monitoring utility and its dependencies:
+
+```bash
+cd /opt/registrar/bin/denic-escrow-monitor
+composer update
+```
+
+Create the configuration file:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+nano .env
+```
+
+Configure `DENIC_ESCROW_JWT` and `DENIC_IANA_ID` using your DENIC credentials. Optionally add `ICANN_RRI_USERNAME` and `ICANN_RRI_PASSWORD` to enable cross-checking against ICANN RRI.
+
+Run the monitor:
+
+```bash
+php bin/denic-escrow-status
+```
+
+Use `--help` to see additional options, including JSON output, detailed reports, and strict acceptance checks.
+
+**Note:** This beta utility is optional and does not affect automated escrow generation or submission.
+
+## 2. Configure automated backups
 
 Namingo Registrar uses [phpBU](https://www.phpbu.de/) for automated backups.
 
@@ -365,7 +369,7 @@ Check the backup log afterward:
 tail -n 100 /var/log/namingo/backup.log
 ```
 
-## 8. Configure cron failure alerts
+## 3. Configure cron failure alerts
 
 Namingo Registrar can send an email when an automation job exits with an error.
 
@@ -396,7 +400,7 @@ The configured address will receive notifications when scheduled automation jobs
 
 If `cron_alert_email` is not configured, Namingo will fall back to the configured email `reply-to` address when available.
 
-## 9. URS Configuration
+## 4. URS Configuration
 
 Namingo Registrar can process Uniform Rapid Suspension System (URS) notices and automatically maintain the ICANN URS provider PGP keyring.
 
@@ -464,7 +468,7 @@ The table is `namingo_registrar_notifications` for WHMCS and
 `domain_registrar_notification` for FOSSBilling and LOOM. No filesystem
 archive or additional database table is required.
 
-## 10. Restored Names Accuracy hooks
+## 5. Restored Names Accuracy hooks
 
 The [ICANN Restored Names Accuracy Policy](https://www.icann.org/en/contracted-parties/consensus-policies/restored-names-accuracy-policy/restored-names-accuracy-policy-01-01-2020-en) applies when a name is deleted because of false contact data or non-response to registrar inquiries and is later restored from the Redemption Grace Period.
 
