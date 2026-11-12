@@ -2,59 +2,35 @@
 
 ## 1. Generate an SSH key for DENIC escrow
 
-### Generate the SSH key
+The built-in `php /opt/registrar/bin/escrow_keygen.php` generates both the
+OpenPGP and SSH Ed25519 keypairs directly in `/opt/registrar/escrow/`
+(the default output directory). It refuses to overwrite any existing keys.
+Both private keys are encrypted using independent passphrases, with generated
+passphrases saved in separate mode-0600 files. See section 2 for usage.
 
-The built-in `php bin/escrow_keygen.php` (see section 2) also generates an
-encrypted Ed25519 SSH key, `denic_escrow.pub` for DENIC, and an independent
-`denic_escrow.passphrase` (mode 0600) in its protected output directory.
-Choose **yes** at its optional SSH installation prompt to place the private
-key directly at `/opt/registrar/automation/denic_escrow` (never overwrites).
-Otherwise, use the private key in its generated output directory.
-Set `sshPrivateKeyPassword` to the **contents** of its passphrase file,
-not to the filename. Keep that passphrase in a secure vault.
-
-For manual SSH key generation instead:
+For manual SSH generation instead, ensure the target files do not already exist:
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/denic_escrow -C "DENIC escrow"
+ssh-keygen -t ed25519 -f /opt/registrar/escrow/denic_escrow -C "DENIC escrow"
+chmod 600 /opt/registrar/escrow/denic_escrow
 ```
 
-This creates:
+Provide only `/opt/registrar/escrow/denic_escrow.pub` to DENIC. Keep the
+private key and any passphrase secret.
 
-```text
-~/.ssh/denic_escrow       # private SSH key — keep secret, used by Namingo
-~/.ssh/denic_escrow.pub   # public SSH key — provide to DENIC
-```
+### Update the SSH configuration
 
-Display the public key that must be provided to DENIC:
-
-```bash
-cat ~/.ssh/denic_escrow.pub
-```
-
-### Add the private key to the configuration
-
-Copy the private SSH key to `/opt/registrar/automation`:
-
-```bash
-cp ~/.ssh/denic_escrow /opt/registrar/automation/denic_escrow
-chmod 600 /opt/registrar/automation/denic_escrow
-```
-
-Open the configuration file:
-
-```bash
-nano /opt/registrar/automation/config.php
-```
-
-Set `sshPrivateKeyPath` to the full path and filename of the private key, and comment out `sshPrivateKeyPassword` if the key has no passphrase:
+In `/opt/registrar/automation/config.php`, use:
 
 ```php
-'sshPrivateKeyPath' => '/opt/registrar/automation/denic_escrow',
-// 'sshPrivateKeyPassword' => 'sshPrivateKeyPassword',
+'sshPrivateKeyPath' => '/opt/registrar/escrow/denic_escrow',
+'sshPrivateKeyPassword' => 'contents-of-denic_escrow.passphrase',
 ```
 
-Only provide the public key to DENIC. Do not share the private key.
+For the built-in generator, copy the **contents**, not the filename, of
+`/opt/registrar/escrow/denic_escrow.passphrase` into this setting, then
+store the passphrase securely. If you generated an unencrypted SSH key
+manually, comment out `sshPrivateKeyPassword` instead.
 
 ## 2. Configure OpenPGP encryption for DENIC escrow
 
@@ -72,7 +48,12 @@ On **Ubuntu 26.04 / Debian 13**, run:
 php /opt/registrar/bin/escrow_keygen.php
 ```
 
-Answer the prompts, then use the generated key paths and passphrase in `automation/config.php` as instructed below. Upload the generated **public certificate only** to the DENIC Services Escrow Control Center.
+Choose `/opt/registrar/escrow` as the output directory (the default). The
+script saves both keypairs there with stable filenames, without overwriting
+any existing key files. Upload **`denic_pgp_public.asc` only** to the
+DENIC Services Escrow Control Center, along with the separate SSH public key
+`denic_escrow.pub` as required. Update the local configuration with both
+private key paths and the **contents** of their passphrase files.
 
 If the built-in generator fails or you use another operating system version, use Sequoia PGP instead.
 
@@ -113,18 +94,18 @@ sq key generate \
     --shared-key \
     --name "Registrar Name" \
     --email "registrar@example.com" \
-    --output /opt/registrar/escrow/YourPrivateKey.asc \
-    --rev-cert /opt/registrar/escrow/YourPrivateKey.rev
-chmod 600 /opt/registrar/escrow/YourPrivateKey.asc
+    --output /opt/registrar/escrow/denic_pgp_private.asc \
+    --rev-cert /opt/registrar/escrow/denic_pgp_revocation.asc
+chmod 600 /opt/registrar/escrow/denic_pgp_private.asc
 ```
 
 Export the public certificate:
 
 ```bash
-sq key delete --cert-file /opt/registrar/escrow/YourPrivateKey.asc --output /opt/registrar/escrow/YourPublicKey.asc
+sq key delete --cert-file /opt/registrar/escrow/denic_pgp_private.asc --output /opt/registrar/escrow/denic_pgp_public.asc
 ```
 
-Upload `YourPublicKey.asc` **only** to the DENIC Services Escrow Control Center, then configure the key paths and passphrase as instructed below.
+Upload `denic_pgp_public.asc` **only** to the DENIC Services Escrow Control Center, then configure the key paths and passphrase as instructed below.
 
 Keep your private key, revocation certificate and passphrase confidential.
 
@@ -140,12 +121,15 @@ Set the RDE specification to `2024` and update the key paths and passphrase:
 
 ```php
 'specification' => '2024',
-'gpgPrivateKeyPath' => '/opt/registrar/escrow/YourPrivateKey.asc',
+'gpgPrivateKeyPath' => '/opt/registrar/escrow/denic_pgp_private.asc',
 'gpgPrivateKeyPass' => 'your-private-key-passphrase',
 'gpgReceiverPubKeyPath' => '/opt/registrar/escrow/ProviderKey.asc',
 ```
 
-Replace `your-private-key-passphrase` with the passphrase entered when generating the Sequoia key.
+Replace `your-private-key-passphrase` with the Sequoia passphrase or the
+**contents** of `denic_pgp.passphrase` created by the built-in generator.
+These filenames are defaults for new installations; update an existing
+`automation/config.php` manually if migrating from older key paths.
 
 Keep the private key and its passphrase confidential.
 
