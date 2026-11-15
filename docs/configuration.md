@@ -2,6 +2,31 @@
 
 Complete the following steps after installing Namingo Registrar.
 
+## 0. Before You Begin
+
+The Namingo installer deploys the selected billing platform, registrar components, database, and supporting services. ICANN accreditation and registry-specific onboarding must be completed separately.
+
+Before proceeding:
+
+1. Obtain ICANN accreditation and your registrar IANA ID.
+2. Activate your [ICANN Naming Services Portal](https://portal.icann.org/) account.
+3. Complete onboarding with your selected gTLD registries, including EPP credentials, client certificates, IP allowlisting, and any required OT&E testing.
+4. Configure the appropriate EPP modules and TLD settings in WHMCS, FOSSBilling, or your custom platform.
+5. Confirm that the registrar's legal name, address, support contacts, and abuse contacts are correct.
+
+Review the following files after installation:
+
+| File | Purpose |
+|---|---|
+| `automation/config.php` | Automation, EPP, email, escrow, and policy configuration |
+| `rdap/config.php` | Public RDAP service and registrar identity |
+| `whois/config.php` | Legacy WHOIS service, where applicable |
+| `dns/` | Optional infrastructure required for ERRP DNS interruption |
+
+The installer does not configure DENIC credentials, ICANN portal settings, or the separate ERRP DNS interruption infrastructure. Complete the following sections before accepting production registrations.
+
+Protect configuration files containing credentials and ensure they are not publicly accessible.
+
 ## 1. DENIC Data Escrow and ICANN RRI
 
 ### 1.1. Registration and Agreement
@@ -507,3 +532,286 @@ WHMCS and FOSSBilling normally identify applicable gTLDs from their EPP registra
     'tlds' => ['com', 'net', 'org'],
 ],
 ```
+
+## 6. Configure Registrar Automation
+
+The central automation configuration is located at:
+
+```text
+/opt/registrar/automation/config.php
+```
+
+The installer normally creates this file from `config.php.dist` and configures the database connection. Review the remaining settings manually.
+
+### 6.1. Database and WHMCS Integration
+
+| Setting | Description |
+|---|---|
+| `db.host` | MariaDB server hostname |
+| `db.username` / `db.password` | Database credentials |
+| `db.dbname` | Billing/registrar database name |
+| `whmcs.init_path` | Local WHMCS bootstrap; preferred when available |
+| `whmcs.api_url` | WHMCS API endpoint used when local bootstrap is unavailable |
+| `whmcs.api_identifier` / `api_secret` | Remote WHMCS API credentials |
+| `whmcs.ipv4_only` | Force IPv4 for remote API connections |
+| `whmcs.cert_dir` | Optional directory for locally stored WHMCS EPP certificates and keys |
+
+For remote WHMCS integration, the configured database must still be the live WHMCS database, and the API role must permit `DecryptPassword`.
+
+### 6.2. EPP Connection and Registrar Identity
+
+The following settings are used by registrar automation when connecting directly to a registry:
+
+| Setting | Description |
+|---|---|
+| `host` / `port` | Registry EPP endpoint and port, normally 700 |
+| `username` / `password` | Registry-issued EPP account credentials |
+| `ssl_cert` / `ssl_key` | EPP client certificate and private key paths |
+| `passphrase` | Private key passphrase, or an empty string |
+| `ssl_cafile` | Optional CA certificate bundle |
+| `ns1` / `ns2` | Legacy fallback nameservers for ERRP interruption |
+| `epp_iana_ids` | Optional mapping of registry EPP client IDs to numeric IANA IDs for transfer `reID`/`acID` values |
+
+Configure additional registry connections in the corresponding billing-platform EPP modules.
+
+Set the registrar identity and notification URLs:
+
+```php
+'registrar_name' => 'Example Registrar LLC',
+'registrar_url' => 'https://registrar.example.com/',
+'registration_data_update_url' => 'https://registrar.example.com/account/domains',
+'registration_agreement_url' => 'https://registrar.example.com/legal/domain-registration-agreement',
+```
+
+Use publicly accessible URLs, except where the destination intentionally requires customer authentication.
+
+### 6.3. Outgoing Email
+
+Configure the `email` array:
+
+| Setting | Description |
+|---|---|
+| `from` | Visible sender address |
+| `reply-to` | Address receiving customer replies |
+| `sender` | Sender header address |
+| `return-path` | Bounce/return address |
+| `bcc` | Optional address copied on automation emails |
+| `smtp.host` | Outgoing SMTP server |
+| `smtp.username` / `password` | SMTP authentication credentials |
+| `smtp.encryption` | `tls` or `ssl` |
+| `smtp.port` | Typically 587 for TLS or 465 for SSL |
+
+Use a working mailbox and configure SPF, DKIM, and DMARC for your sending domain.
+
+Test email delivery using:
+
+```bash
+php /opt/registrar/automation/email-test.php
+```
+
+### 6.4. Additional Escrow Options
+
+The DENIC setup is covered in Section 1. The following options in the `escrow` array control generation and submission:
+
+| Setting | Description |
+|---|---|
+| `backend` | Data backend: `FOSS`, `WHMCS`, `LOOM`, or a custom driver |
+| `full` / `hdl` | Intermediate escrow CSV paths |
+| `upload` | `native` for PHP submission; omitted for the legacy Go client |
+| `ianaID` | Your registrar IANA ID |
+| `specification` | Deposit format selected by the implementation |
+| `depositBaseDir` | Escrow deposit output directory |
+| `runDir` | Deposit processing directory |
+| `compressAndEncrypt` | Enable deposit compression and encryption |
+| `uploadFiles` | Enable submission to the escrow agent |
+| `multi` | Go client multi-file processing option |
+| `useFileSystemCache` | Go client filesystem caching option |
+| `gpgPrivateKeyPath` / `gpgPrivateKeyPass` | Deposit signing key and passphrase |
+| `gpgReceiverPubKeyPath` | DENIC public encryption key |
+| `sshHostname` / `sshPort` / `sshUsername` | DENIC SFTP connection |
+| `sshPrivateKeyPath` / `sshPrivateKeyPassword` | SFTP authentication key |
+| `sshHostPublicKeyPath` | Optional pinned SFTP host key file |
+
+Enable `compressAndEncrypt` and `uploadFiles` for production submissions. Leave `multi` and `useFileSystemCache` disabled unless specifically required by the selected Go-client workflow.
+
+### 6.5. Policy Settings
+
+The `errp` array configures expiration DNS interruption:
+
+- `nameservers`: Dedicated interruption nameservers. Falls back to `ns1` and `ns2` if empty.
+- `tlds`: Optional explicit gTLD list. WHMCS and FOSSBilling can infer applicable TLDs from their registrar settings.
+
+The `restored_names_accuracy.tlds` setting is documented in Section 5.
+
+Configure the URS mailbox, ICANN repository credentials, and keyring as described in Section 4.
+
+### 6.6. Automation Scheduler
+
+Namingo's automation scheduler runs through:
+
+```bash
+/usr/bin/php8.5 /opt/registrar/automation/cron.php
+```
+
+Ensure the installer has installed the scheduled invocation every minute, or configure it as described in your installation guide.
+
+The remaining options are:
+
+| Setting | Description |
+|---|---|
+| `cron_alert_email` | Automation failure notification address |
+| `cron_tools` | Enables policy and maintenance jobs, including validation, WDRP, ERRP, URS, and domain purging |
+| `cron_backup` | Enables automated phpBU backups |
+
+Keep `cron_tools` enabled for a production ICANN registrar. Escrow, EPP polling, transfer notifications, and Restored Names Accuracy run independently of this option.
+
+Set `cron_backup` to `true` after completing Section 2.
+
+Check scheduler activity and errors:
+
+```bash
+tail -n 100 /var/log/namingo/cron.log
+```
+
+## 7. Configure RDAP and WHOIS
+
+Namingo provides public registration data services. The installer normally installs and starts these services, but registrar-specific information must be reviewed.
+
+### 7.1. RDAP
+
+Edit:
+
+```text
+/opt/registrar/rdap/config.php
+```
+
+Configure:
+
+- Database connection and selected `backend` (`foss`, `whmcs`, `loom`, or `custom`).
+- `registrar_name`, `registrar_iana`, and `registrar_url`.
+- `rdap_url`, `registry_url`, and `registrar_whois`.
+- `abuse_email` and `abuse_phone`.
+- `privacy` and `minimum_data` according to the applicable Registration Data Policy.
+- Optional `rately`, `limit`, and `period` rate limiting.
+
+Ensure the public HTTPS RDAP endpoint works over IPv4 and IPv6 and returns compliant data for domains sponsored by the registrar.
+
+Register the RDAP base URL and a sponsored test domain using **Manage RDAP URL** in the [ICANN Naming Services Portal](https://portal.icann.org/).
+
+The RDAP base URL must use HTTPS and end with `/`. Verify that ICANN accepts the endpoint and that its URL appears correctly in the IANA Registrar IDs registry.
+
+### 7.2. WHOIS
+
+Edit:
+
+```text
+/opt/registrar/whois/config.php
+```
+
+Review database, backend, registrar identity, abuse contacts, privacy, `minimum_data`, and rate limiting settings.
+
+RDAP is the mandatory service for gTLD registrars. WHOIS is generally no longer mandatory under ICANN requirements, except for applicable exceptions such as `.com`, `.name`, and `.post`.
+
+If required by your registry agreements, keep the WHOIS service available on TCP port 43.
+
+Verify the services:
+
+```bash
+systemctl status rdap.service
+systemctl status whois.service
+```
+
+Test RDAP using a domain actually sponsored by the registrar. Validate public responses against the current ICANN gTLD RDAP Profile.
+
+## 8. Configure ERRP DNS Interruption
+
+Namingo implements the Expired Registration Recovery Policy (ERRP), including DNS interruption for applicable expired registrations.
+
+**The interruption DNS and web services are not configured automatically by the installer.**
+
+The repository includes a ready-to-customize implementation in [`dns/`](../dns/):
+
+| File | Purpose |
+|---|---|
+| `dns/Corefile.example` | CoreDNS authoritative DNS responses for interrupted domains |
+| `dns/Caddyfile.example` | Caddy HTTP expiration notice service |
+| `dns/index.html` | Customer-facing expiration and renewal notice |
+| `dns/README.md` | Full deployment instructions |
+
+### 8.1. Deploy the Interruption Service
+
+1. Allocate dedicated public IP addresses and configure two interruption nameservers, preferably on independent hosts.
+2. Configure public A records and registry host/glue records where necessary.
+3. Install CoreDNS and customize `Corefile.example` with the interruption IP addresses.
+4. Install Caddy, customize `Caddyfile.example`, and deploy the supplied `index.html`.
+5. Replace the example renewal and support URLs in `index.html`.
+6. Permit inbound UDP/TCP 53 and TCP 80 to the interruption infrastructure.
+
+For exact commands and configuration examples, follow [`dns/README.md`](../dns/README.md).
+
+This service is independent of customer DNS hosting and does not require synchronization with the registrar database.
+
+### 8.2. Connect the Service to Automation
+
+In `/opt/registrar/automation/config.php`, configure:
+
+```php
+'errp' => [
+    'nameservers' => [
+        'ns1.expired.registrar.example',
+        'ns2.expired.registrar.example',
+    ],
+    'tlds' => ['com', 'net', 'org'],
+],
+```
+
+Replace the hostnames and TLDs with your actual configuration.
+
+The automation handles interruption, original nameserver preservation, and restoration after renewal. It also coordinates DNSSEC DS record handling for supported registry interfaces.
+
+Domains using unsupported DNSSEC interfaces may be excluded from interruption to avoid damaging their delegation.
+
+### 8.3. Verify the Service
+
+Before production use:
+
+- Verify authoritative DNS responses from both nameservers over UDP and TCP.
+- Confirm that expired domains display a conspicuous expiration notice and renewal instructions.
+- Test interruption and restoration using a controlled domain.
+- Confirm that original nameservers and applicable DS records are restored correctly.
+- Monitor `/var/log/namingo/errp_dns.log` for failures.
+
+The example web service intentionally uses HTTP. See `dns/README.md` for the HTTPS and DNSSEC considerations.
+
+## 9. Final ICANN Production Checklist
+
+Before accepting live gTLD registrations, verify the following:
+
+### Technical Services
+
+- [ ] Registry EPP connections and required OT&E tests are successful.
+- [ ] Domain registration, renewal, transfer, deletion, and restoration workflows have been tested.
+- [ ] Public RDAP is operational, compliant, and registered with ICANN.
+- [ ] Required WHOIS service is operational where applicable.
+- [ ] DENIC escrow onboarding is complete and deposits meet the current specification.
+- [ ] The required escrow schedule is configured and successful deposit acceptance is monitored.
+- [ ] The automation scheduler is running and `cron_tools` is enabled.
+- [ ] ERRP DNS interruption and restoration have been tested.
+- [ ] Outgoing email and automation failure alerts work.
+- [ ] Encrypted off-server backups and restoration procedures have been tested.
+
+### Policies and Registrar Operations
+
+- [ ] Registration Agreement, Privacy Policy, Terms, and required registrant information links are published.
+- [ ] Registrants can update registration data, renew domains, and obtain transfer authorization codes.
+- [ ] Registration data verification, reminders, expiration notices, and transfer notifications are operational.
+- [ ] URS processing and applicable dispute-resolution procedures are configured.
+- [ ] Abuse reporting is publicly accessible, acknowledges reports, and supports documented investigations.
+- [ ] The required 24/7 law-enforcement abuse contact and escalation process are operational.
+- [ ] Nonpublic registration data disclosure requests, including urgent requests, have a documented handling process.
+- [ ] Registrar legal/contact information is accurate in ICANN systems and on the public website.
+- [ ] Access controls, monitoring, incident response, retention, and recovery procedures are established.
+
+The software automates several technical obligations, but accreditation, registry agreements, compliance procedures, and ongoing operational responsibilities remain with the registrar.
+
+Always consult the current [ICANN Registrar Accreditation Agreement](https://www.icann.org/en/contracted-parties/accredited-registrars) and applicable [Consensus Policies](https://www.icann.org/en/contracted-parties/consensus-policies).
