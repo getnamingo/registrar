@@ -292,62 +292,100 @@ final class WHMCS extends AbstractDriver
         $placeholders = implode(',', array_fill(0, count($modules), '?'));
 
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT IGNORE INTO namingo_contact_validation (
-                    client_id,
-                    contact_id,
-                    is_validated,
-                    validation_checked_at
-                )
-                SELECT DISTINCT
-                    td.userid,
-                    CASE
-                        WHEN o.contactid > 0 AND tct.id IS NOT NULL
-                            THEN tct.id
-                        ELSE 0
-                    END,
-                    0,
-                    CURRENT_TIMESTAMP(3)
-                FROM tbldomains td
-                JOIN tblclients tc ON tc.id = td.userid
-                LEFT JOIN tblorders o
-                    ON o.id = td.orderid
-                LEFT JOIN tblcontacts tct
-                    ON tct.id = o.contactid
-                   AND tct.userid = td.userid
+            // Preview is read-only: avoid preparing the INSERT altogether.
+            if (!defined('NAMINGO_VALIDATION_DRY_RUN')) {
+                $stmt = $this->pdo->prepare("
+                    INSERT IGNORE INTO namingo_contact_validation (
+                        client_id,
+                        contact_id,
+                        is_validated,
+                        validation_checked_at
+                    )
+                    SELECT DISTINCT
+                        td.userid,
+                        CASE
+                            WHEN o.contactid > 0 AND tct.id IS NOT NULL
+                                THEN tct.id
+                            ELSE 0
+                        END,
+                        0,
+                        CURRENT_TIMESTAMP(3)
+                    FROM tbldomains td
+                    JOIN tblclients tc ON tc.id = td.userid
+                    LEFT JOIN tblorders o
+                        ON o.id = td.orderid
+                    LEFT JOIN tblcontacts tct
+                        ON tct.id = o.contactid
+                       AND tct.userid = td.userid
+                    LEFT JOIN namingo_contact_validation ncv
+                        ON ncv.client_id = td.userid
+                       AND ncv.contact_id = CASE
+                            WHEN o.contactid > 0 AND tct.id IS NOT NULL
+                                THEN tct.id
+                            ELSE 0
+                        END
+                    WHERE td.registrationdate IS NOT NULL
+                      AND td.registrationdate <> '0000-00-00'
+                      AND td.status = 'Active'
+                      AND td.expirydate >= CURDATE()
+                      AND td.registrar IN ({$placeholders})
+                      AND CHAR_LENGTH(SUBSTRING_INDEX(TRIM(TRAILING '.' FROM td.domain), '.', -1)) > 2
+                      AND ncv.id IS NULL
+                ");
+                if (!defined('NAMINGO_VALIDATION_AUDIT')) {
+                    $stmt->execute($modules);
+                }
+            }
+
+            $preview = defined('NAMINGO_VALIDATION_DRY_RUN');
+            $validationClient = $preview ? 'tc.id' : 'ncv.client_id';
+            $validationContact = $preview ? 'COALESCE(oct.id, 0) AS contact_id' : 'ncv.contact_id';
+            $validationEmailContact = $preview ? 'oct.id' : 'ncv.contact_id';
+            $validationEmail = $preview ? 'oct.email' : 'tct.email';
+            $validationId = $preview
+                ? "COALESCE(ncv.id, CONCAT('new:', tc.id, ':', COALESCE(oct.id, 0)))"
+                : 'ncv.id';
+            $validationFrom = $preview ? "
+                FROM tblclients tc
+                JOIN tbldomains td ON td.userid = tc.id
+                LEFT JOIN tblorders o ON o.id = td.orderid
+                LEFT JOIN tblcontacts oct
+                    ON oct.id = o.contactid AND oct.userid = tc.id AND o.contactid > 0
                 LEFT JOIN namingo_contact_validation ncv
-                    ON ncv.client_id = td.userid
-                   AND ncv.contact_id = CASE
-                        WHEN o.contactid > 0 AND tct.id IS NOT NULL
-                            THEN tct.id
+                    ON ncv.client_id = tc.id AND ncv.contact_id = COALESCE(oct.id, 0)" : "
+                FROM namingo_contact_validation ncv
+                JOIN tblclients tc ON tc.id = ncv.client_id
+                JOIN tbldomains td ON td.userid = ncv.client_id
+                LEFT JOIN tblorders o ON o.id = td.orderid
+                LEFT JOIN tblcontacts tct
+                    ON tct.id = ncv.contact_id
+                   AND tct.userid = ncv.client_id
+                LEFT JOIN tblcontacts oct
+                    ON oct.id = o.contactid
+                   AND oct.userid = ncv.client_id";
+            $validationWhere = $preview ? "
+                WHERE td.registrationdate IS NOT NULL" : "
+                WHERE ncv.contact_id = CASE
+                        WHEN o.contactid > 0 AND oct.id IS NOT NULL
+                            THEN oct.id
                         ELSE 0
                     END
-                WHERE td.registrationdate IS NOT NULL
-                  AND td.registrationdate <> '0000-00-00'
-                  AND td.status = 'Active'
-                  AND td.expirydate >= CURDATE()
-                  AND td.registrar IN ({$placeholders})
-                  AND CHAR_LENGTH(SUBSTRING_INDEX(TRIM(TRAILING '.' FROM td.domain), '.', -1)) > 2
-                  AND ncv.id IS NULL
-            ");
-            if (!defined('NAMINGO_VALIDATION_AUDIT')) {
-                $stmt->execute($modules);
-            }
+                  AND td.registrationdate IS NOT NULL";
 
             $stmt = $this->pdo->prepare("
                 SELECT
                     td.id AS id,
                     td.registrar AS assigned_registrar,
                     td.domain AS name,
-                    ncv.client_id AS cid,
-                    ncv.client_id AS registrant,
-                    ncv.contact_id,
+                    {$validationClient} AS cid,
+                    {$validationClient} AS registrant,
+                    {$validationContact},
                     CASE
-                        WHEN ncv.contact_id > 0 THEN tct.email
+                        WHEN {$validationEmailContact} > 0 THEN {$validationEmail}
                         ELSE tc.email
                     END AS email,
                     COALESCE(NULLIF(rc.email, ''),
-                        CASE WHEN ncv.contact_id > 0 THEN tct.email ELSE tc.email END
+                        CASE WHEN {$validationEmailContact} > 0 THEN {$validationEmail} ELSE tc.email END
                     ) AS registrant_email,
                     CASE WHEN LOWER(td.type) = 'transfer'
                         THEN COALESCE(nd.trdate, TIMESTAMP(td.registrationdate))
@@ -370,7 +408,7 @@ final class WHMCS extends AbstractDriver
                     rc.voice AS registrant_voice,
                     rc.fax AS registrant_fax,
                     COALESCE(NULLIF(rc.email, ''),
-                        CASE WHEN ncv.contact_id > 0 THEN tct.email ELSE tc.email END
+                        CASE WHEN {$validationEmailContact} > 0 THEN {$validationEmail} ELSE tc.email END
                     ) AS registrant_contact_email,
                     ac.identifier AS admin_identifier,
                     ac.name AS admin_name,
@@ -411,34 +449,20 @@ final class WHMCS extends AbstractDriver
                     bc.voice AS billing_voice,
                     bc.fax AS billing_fax,
                     bc.email AS billing_email,
-                    ncv.id AS validation_id,
+                    {$validationId} AS validation_id,
                     ncv.is_validated AS validation,
                     ncv.validation_checked_at AS validation_stamp,
                     ncv.validation_method,
                     ncv.validation_token AS token,
                     ncv.validation_token,
                     ncv.validation_log
-                FROM namingo_contact_validation ncv
-                JOIN tblclients tc ON tc.id = ncv.client_id
-                JOIN tbldomains td ON td.userid = ncv.client_id
-                LEFT JOIN tblorders o ON o.id = td.orderid
-                LEFT JOIN tblcontacts tct
-                    ON tct.id = ncv.contact_id
-                   AND tct.userid = ncv.client_id
-                LEFT JOIN tblcontacts oct
-                    ON oct.id = o.contactid
-                   AND oct.userid = ncv.client_id
+{$validationFrom}
                 LEFT JOIN namingo_domain nd ON LOWER(nd.name) = LOWER(td.domain)
                 LEFT JOIN namingo_contact rc ON rc.id = nd.registrant
                 LEFT JOIN namingo_contact ac ON ac.id = nd.admin
                 LEFT JOIN namingo_contact tec ON tec.id = nd.tech
                 LEFT JOIN namingo_contact bc ON bc.id = nd.billing
-                WHERE ncv.contact_id = CASE
-                        WHEN o.contactid > 0 AND oct.id IS NOT NULL
-                            THEN oct.id
-                        ELSE 0
-                    END
-                  AND td.registrationdate IS NOT NULL
+{$validationWhere}
                   AND td.registrationdate <> '0000-00-00'
                   AND td.status = 'Active'
                   AND td.expirydate >= CURDATE()
