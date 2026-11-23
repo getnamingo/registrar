@@ -323,33 +323,41 @@ final class FOSS extends AbstractDriver
         $placeholders = implode(',', array_fill(0, count($modules), '?'));
 
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT IGNORE INTO domain_contact_validation (
-                    client_id,
-                    is_validated,
-                    validation_checked_at
-                )
-                SELECT DISTINCT
-                    sd.client_id,
-                    0,
-                    CURRENT_TIMESTAMP
-                FROM service_domain sd
-                JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
-                JOIN client_order co
-                  ON co.service_id = sd.id
-                 AND co.service_type = 'domain'
-                 AND co.status = 'active'
-                JOIN client c ON c.id = sd.client_id
-                LEFT JOIN domain_contact_validation dcv ON dcv.client_id = c.id
-                WHERE sd.registered_at IS NOT NULL
-                  AND sd.expires_at > NOW()
-                  AND sd.tld_registrar_id IN ({$placeholders})
-                  AND CHAR_LENGTH(TRIM(LEADING '.' FROM sd.tld)) > 2
-                  AND dcv.id IS NULL
-            ");
-            if (!defined('NAMINGO_VALIDATION_AUDIT')) {
-                $stmt->execute($modules);
+            // In preview mode, do not even prepare a write statement. This
+            // permits strictly read-only connections and avoids side effects.
+            if (!defined('NAMINGO_VALIDATION_DRY_RUN')) {
+                $stmt = $this->pdo->prepare("
+                    INSERT IGNORE INTO domain_contact_validation (
+                        client_id,
+                        is_validated,
+                        validation_checked_at
+                    )
+                    SELECT DISTINCT
+                        sd.client_id,
+                        0,
+                        CURRENT_TIMESTAMP
+                    FROM service_domain sd
+                    JOIN tld_registrar tr ON tr.id = sd.tld_registrar_id
+                    JOIN client_order co
+                      ON co.service_id = sd.id
+                     AND co.service_type = 'domain'
+                     AND co.status = 'active'
+                    JOIN client c ON c.id = sd.client_id
+                    LEFT JOIN domain_contact_validation dcv ON dcv.client_id = c.id
+                    WHERE sd.registered_at IS NOT NULL
+                      AND sd.expires_at > NOW()
+                      AND sd.tld_registrar_id IN ({$placeholders})
+                      AND CHAR_LENGTH(TRIM(LEADING '.' FROM sd.tld)) > 2
+                      AND dcv.id IS NULL
+                ");
+                if (!defined('NAMINGO_VALIDATION_AUDIT')) {
+                    $stmt->execute($modules);
+                }
             }
+
+            $preview = defined('NAMINGO_VALIDATION_DRY_RUN');
+            $validationId = $preview ? "COALESCE(dcv.id, CONCAT('new:', c.id))" : 'dcv.id';
+            $validationJoin = $preview ? 'LEFT JOIN' : 'JOIN';
 
             $stmt = $this->pdo->prepare("
                 SELECT
@@ -392,7 +400,7 @@ final class FOSS extends AbstractDriver
                     c.country AS contact_country,
                     c.phone_cc AS contact_phone_cc,
                     c.phone AS contact_phone,
-                    dcv.id AS validation_id,
+                    {$validationId} AS validation_id,
                     dcv.is_validated AS custom_2,
                     dcv.is_validated AS validation,
                     dcv.validation_checked_at,
@@ -406,7 +414,7 @@ final class FOSS extends AbstractDriver
                  AND co.service_type = 'domain'
                  AND co.status = 'active'
                 JOIN client c ON c.id = sd.client_id
-                JOIN domain_contact_validation dcv ON dcv.client_id = c.id
+                {$validationJoin} domain_contact_validation dcv ON dcv.client_id = c.id
                 LEFT JOIN domain_meta dm ON dm.domain_id = sd.id
                 WHERE sd.registered_at IS NOT NULL
                   AND sd.expires_at > NOW()
