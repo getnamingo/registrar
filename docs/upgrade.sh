@@ -776,7 +776,7 @@ upgrade_tide_theme() {
     local repo_dir="${STAGING_DIR}/tide"
     local theme_dir="/var/www/themes/tide"
 
-    git clone --branch v1.2.16 --depth 1 \
+    git clone --branch v1.2.17 --depth 1 \
         https://github.com/getnamingo/tide.git "$repo_dir"
 
     # Preserve theme settings
