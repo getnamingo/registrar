@@ -64,6 +64,28 @@ function validationPreview(string $domain, string $action, array $details = []):
 
 function validationEppUpdate(object $epp, array $params): mixed
 {
+    // Reflect assumed-success EPP updates in the in-memory registry snapshot.
+    // A later restore/suspend pass must see these simulated changes, not the
+    // unchanged live registry state returned by another domain.info request.
+    $key = validationPreviewRegistryKey((string)$params['domainname']);
+    if (!isset($GLOBALS['validationPreviewRegistryStatuses'][$key])) {
+        throw new RuntimeException("Registry status preview not initialized for {$key}");
+    }
+    $status = (string)$params['status'];
+    $command = (string)$params['command'];
+    $statuses = &$GLOBALS['validationPreviewRegistryStatuses'][$key];
+    if ($command === 'add') {
+        if (!in_array($status, $statuses, true)) {
+            $statuses[] = $status;
+        }
+    } elseif ($command === 'rem') {
+        $statuses = array_values(array_filter(
+            $statuses,
+            static fn(string $current): bool => $current !== $status
+        ));
+    } else {
+        throw new InvalidArgumentException("Unsupported preview EPP status command: {$command}");
+    }
     validationPreview($params['domainname'], 'EPP ' . $params['command'] . ' (assumed successful)', [
         'status' => $params['status'],
     ]);
@@ -405,6 +427,11 @@ function validationDomainAscii(string $domain): string
     return idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: $domain;
 }
 
+function validationPreviewRegistryKey(string $domain): string
+{
+    return strtolower(rtrim(validationDomainAscii($domain), '.'));
+}
+
 function validationEppSucceeded(array $result): bool
 {
     $code = (int)($result['code'] ?? 0);
@@ -413,6 +440,10 @@ function validationEppSucceeded(array $result): bool
 
 function validationRegistryStatuses(object $epp, string $domain): array
 {
+    $key = validationPreviewRegistryKey($domain);
+    if (isset($GLOBALS['validationPreviewRegistryStatuses'][$key])) {
+        return $GLOBALS['validationPreviewRegistryStatuses'][$key];
+    }
     $result = $epp->domainInfo(['domainname' => validationDomainAscii($domain)]);
     if (!is_array($result) || !validationEppSucceeded($result)) {
         $reason = is_array($result)
@@ -420,7 +451,9 @@ function validationRegistryStatuses(object $epp, string $domain): array
             : 'invalid response';
         throw new RuntimeException("EPP domain info failed for {$domain}: {$reason}");
     }
-    return array_values(array_map('strval', (array)($result['status'] ?? [])));
+    $statuses = array_values(array_map('strval', (array)($result['status'] ?? [])));
+    $GLOBALS['validationPreviewRegistryStatuses'][$key] = $statuses;
+    return $statuses;
 }
 
 function validationSuspend(
@@ -655,6 +688,7 @@ function runValidation(): int
             }
             define('NAMINGO_VALIDATION_DRY_RUN', true);
             $GLOBALS['validationPreviewStates'] = [];
+            $GLOBALS['validationPreviewRegistryStatuses'] = [];
             $GLOBALS['validationPreviewHashHistory'] = [];
             $GLOBALS['validationPreviewChangedByHash'] = [];
             $stmt = $pdo->prepare('SELECT * FROM ' . VALIDATION_TABLE
