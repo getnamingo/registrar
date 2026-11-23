@@ -231,6 +231,13 @@ abstract class AbstractDriver implements DriverInterface
             return false;
         }
 
+        if (defined('NAMINGO_VALIDATION_DRY_RUN')) {
+            \validationPreview($domain, 'publish restored-name verification', [
+                'verified_at' => $verifiedAt, 'method' => $method,
+            ]);
+            return true;
+        }
+
         $table = $this->notificationTable();
         $stmt = $this->pdo->prepare("
             UPDATE {$table}
