@@ -314,16 +314,26 @@ find /var/www/data -type f -exec chmod 644 {} \;
 
 Proceed with the installation as prompted on https://%%DOMAIN%%. If the installer stops without any feedback, navigate to https://%%DOMAIN%%/admin in your web browser and try to log in.
 
-## 7. Installing Theme:
+## 7. Installing Themes:
 
-Clone the tide theme repository:
+Clone the Tide theme repository:
 
 ```bash
-git clone --branch v1.2.18 --depth 1 https://github.com/getpinga/tide /var/www/themes/tide
+git clone --branch v1.2.18 --depth 1 https://github.com/getnamingo/tide /var/www/themes/tide
 chmod 755 /var/www/themes/tide/assets
 chmod 755 /var/www/themes/tide/config/settings_data.json
 chown www-data:www-data /var/www/themes/tide/assets
 chown www-data:www-data /var/www/themes/tide/config/settings_data.json
+```
+
+Clone the Kovil theme repository:
+
+```bash
+git clone --branch v1.0.0 --depth 1 https://github.com/getnamingo/kovil /var/www/themes/kovil
+chmod 755 /var/www/themes/kovil/assets
+chmod 755 /var/www/themes/kovil/config/settings_data.json
+chown www-data:www-data /var/www/themes/kovil/assets
+chown www-data:www-data /var/www/themes/kovil/config/settings_data.json
 ```
 
 Activate the Tide theme from the admin panel, `System -> Settings -> Themes`, by clicking on "Set as default".
@@ -333,7 +343,7 @@ Activate the Tide theme from the admin panel, `System -> Settings -> Themes`, by
 Clone the repository to your system:
 
 ```bash
-git clone --branch v1.2.9 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+git clone --branch v1.2.10 --single-branch https://github.com/getnamingo/registrar /opt/registrar
 mkdir /var/log/namingo
 mkdir /opt/registrar/escrow
 ```

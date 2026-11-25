@@ -511,8 +511,8 @@ install_rdap_and_whois_services() {
         echo "Cloning Namingo Registrar from main"
         git clone https://github.com/getnamingo/registrar /opt/registrar
     else
-        echo "Cloning Namingo Registrar v1.2.9"
-        git clone --branch v1.2.9 --single-branch https://github.com/getnamingo/registrar /opt/registrar
+        echo "Cloning Namingo Registrar v1.2.10"
+        git clone --branch v1.2.10 --single-branch https://github.com/getnamingo/registrar /opt/registrar
     fi
 
     # Setup for WHOIS service
@@ -645,7 +645,7 @@ install_php_repo() {
   fi
 }
 
-echo "==== Namingo Registrar v1.2.9 ===="
+echo "==== Namingo Registrar v1.2.10 ===="
 echo
 echo "This tool will guide you through installing Namingo Registrar with your preferred billing system."
 echo
@@ -1015,6 +1015,18 @@ fi
 
 # Update the 'theme' setting in the 'setting' table
 mariadb -u $db_user -p$db_pass registrar -e "UPDATE setting SET value = 'tide' WHERE param = 'theme';"
+
+# Install Kovil theme
+log "Installing Kovil theme"
+TMP=$(mktemp -d)
+git clone --branch v1.0.0 --depth 1 https://github.com/getnamingo/kovil.git "$TMP/kovil"
+mkdir -p /var/www/themes/kovil
+cp -a "$TMP/kovil/." /var/www/themes/kovil/
+rm -rf /var/www/themes/kovil/.git
+chown -Rf www-data:www-data /var/www/themes/kovil
+find /var/www/themes/kovil -type d -exec chmod 755 {} +
+find /var/www/themes/kovil -type f -exec chmod 644 {} +
+rm -rf "$TMP"
 
 if [[ "$install_rdap_whois" == "Y" || "$install_rdap_whois" == "y" ]]; then
     sed -i \
@@ -1422,7 +1434,7 @@ echo "Namingo Registrar is ready for final configuration."
                     echo "Please install Namingo Registrar manually by following:"
                     echo "  install-whmcs.md"
                     echo
-                    echo "For WHMCS 9.1.0 already installed on a VPS/server with root access,"
+                    echo "For WHMCS 9.1.2 already installed on a VPS/server with root access,"
                     echo "review Section 1.3, Section 4.1, and Section 9 onwards."
                     echo
                     echo "Note: Shared hosting is not supported."

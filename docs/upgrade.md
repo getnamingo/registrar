@@ -174,13 +174,46 @@ After all upgrades are complete:
 
 Once these checks have passed, you may continue with the standard Namingo Registrar upgrade process.
 
+## Upgrade to Namingo Registrar v1.2.10
+
+### Step 1: Billing Platform Requirements
+
+Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirements:
+
+- **WHMCS:** v9.1.2 or later. WHMCS v8.13.8 and v9.0.10 may still work, but neither version will be officially supported after December 31, 2026. Continued use will be at your own risk.
+- **FOSSBilling:** You must upgrade to v0.8.9 or later before proceeding.
+
+Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.
+
+### Step 2: Upgrade to Namingo Registrar v1.2.10
+
+Download and run the **v1.2.10** upgrade script:
+
+```bash
+./upgrade.sh
+```
+
+### Step 3: Upgrade the Namingo EPP and DNS Module(s)
+
+Upgrade the Namingo EPP and DNS modules for your billing platform to their latest available versions:
+
+**WHMCS:**
+- **EPP Module:** https://namingo.org/whmcs-module
+- **DNS Module:** https://github.com/getnamingo/whmcs-dns
+
+**FOSSBilling:**
+- **EPP Module:** https://namingo.org/foss-module/
+- **DNS Module:** https://github.com/getnamingo/fossbilling-dns
+
+Follow the upgrade instructions provided for each module and platform.
+
 ## Upgrade to Namingo Registrar v1.2.9
 
 ### Step 1: Billing Platform Requirements
 
 Before upgrading Namingo Registrar, ensure that your billing platform meets the following minimum version requirements:
 
-- **WHMCS:** v9.1.0 or later. WHMCS v8.13.7 and v9.0.9 may still work, but neither version will be officially supported after December 31, 2026. Continued use will be at your own risk.
+- **WHMCS:** v9.1.2 or later. WHMCS v8.13.8 and v9.0.10 may still work, but neither version will be officially supported after December 31, 2026. Continued use will be at your own risk.
 - **FOSSBilling:** You must upgrade to v0.8.9 or later before proceeding.
 
 Follow the platform’s official upgrade instructions before continuing. When upgrading from an older FOSSBilling release, follow the **FOSSBilling Upgrade Path** above.

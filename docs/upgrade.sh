@@ -797,6 +797,38 @@ upgrade_tide_theme() {
 }
 
 # ---------------------------------------------------------
+# Kovil theme
+# ---------------------------------------------------------
+
+upgrade_kovil_theme() {
+    [[ -s /var/www/di.php && -d /var/www/themes/kovil ]] || return 0
+
+    log "Upgrading FOSSBilling Kovil theme"
+
+    local repo_dir="${STAGING_DIR}/kovil"
+    local theme_dir="/var/www/themes/kovil"
+
+    git clone --branch v1.0.0 --depth 1 \
+        https://github.com/getnamingo/kovil.git "$repo_dir"
+
+    # Preserve theme settings
+    cp -a "$theme_dir/config/settings_data.json" \
+        "${STAGING_DIR}/kovil-settings.json"
+
+    cp -a "$repo_dir/." "$theme_dir/"
+    cp -a "${STAGING_DIR}/kovil-settings.json" \
+        "$theme_dir/config/settings_data.json"
+
+    rm -rf "$theme_dir/.git"
+
+    chown -R www-data:www-data "$theme_dir"
+    find "$theme_dir" -type d -exec chmod 755 {} +
+    find "$theme_dir" -type f -exec chmod 644 {} +
+
+    log "Kovil theme upgraded successfully"
+}
+
+# ---------------------------------------------------------
 # PRE migrations
 #
 # Packages, OS dependencies, preparation work, etc.
@@ -954,12 +986,13 @@ composer_sync "${INSTALL_DIR}/rdap"
 run_migrations post
 
 # ---------------------------------------------------------
-# Billing modules and Tide theme
+# Billing modules and themes
 # ---------------------------------------------------------
 
 upgrade_fossbilling_modules
 upgrade_whmcs_modules
 upgrade_tide_theme
+upgrade_kovil_theme
 
 # ---------------------------------------------------------
 # Reload services
